@@ -5,5 +5,4 @@ install:
   - pip install -r requirements.txt
   - pip install .
 script:
-  - black --py36 --check $(find . -type f -name "*.py")
-  - pytest --mypy --pylint
+  - pytest
