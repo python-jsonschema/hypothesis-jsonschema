@@ -1,0 +1,8 @@
+# Development requirements
+hypothesis
+jsonschema
+
+black
+pytest
+pytest-mypy
+pytest-pylint
