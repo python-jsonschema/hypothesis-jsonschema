@@ -1,3 +1,15 @@
+This project is currently available under the Affero General Public License,
+version 3 or, at your option, any later version.
+
+Contributors agree that the project lead, Zac Hatfield-Dodds, may relicense
+all or part of this project under an alternative OSI-approved open source
+license.  For example, it may eventually switch to the more permissive
+Mozilla Public License to match the core Hypothesis library.
+
+If you cannot use AGPL software but would like to use hypothesis-jsonschema
+under another OSI-approved license, please contact Zac to discuss this.
+
+
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
