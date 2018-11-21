@@ -1,5 +1,8 @@
 """A Hypothesis extension for JSON schemata."""
+# pylint: disable=no-value-for-parameter,too-many-return-statements
 
+
+import re
 from typing import Any, Dict, List, Union
 
 import jsonschema
@@ -107,20 +110,54 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
 
 
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
-    """Handle a specific kind of schema."""
+    """Handle schemata for strings."""
+    min_size = schema.get("minLength", 0)
+    max_size = schema.get("maxLength")
+    if "pattern" in schema:
+        if max_size is None:
+            max_size = float("inf")
+        return st.from_regex(schema["pattern"]).filter(
+            lambda s: min_size <= len(s) <= max_size  # type: ignore
+        )
+    return st.text(min_size=min_size, max_size=max_size)
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
-    """Handle a specific kind of schema."""
+    """Handle schemata for arrays."""
+    items = schema.get("items", {})
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
-    """Handle a specific kind of schema."""
+    """Handle schemata for objects."""
+
+
+# OK, now on to the inverse: a strategy for generating schemata themselves.
 
 
 def json_schemata() -> st.SearchStrategy[Union[bool, Dict[str, JSONType]]]:
     """A Hypothesis strategy for arbitrary JSON schemata."""
-    return _json_schemata()  # pylint: disable=no-value-for-parameter
+    return _json_schemata()
+
+
+@st.composite
+def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
+    """A strategy for simple regular expression patterns."""
+    fragments = st.one_of(
+        st.just("."),
+        st.from_regex(r"\[\^?[A-Za-z0-9]+\]"),
+        REGEX_PATTERNS.map("{}+".format),
+        REGEX_PATTERNS.map("{}?".format),
+        REGEX_PATTERNS.map("{}*".format),
+    )
+    result = draw(st.lists(fragments, min_size=1, max_size=3).map("".join))
+    try:
+        re.compile(result)
+    except re.error:
+        assume(False)
+    return result  # type: ignore
+
+
+REGEX_PATTERNS = regex_patterns()
 
 
 @st.composite
@@ -155,21 +192,42 @@ def _json_schemata(draw: Any) -> Any:
     if kind in ("null", "boolean"):
         return {"type": kind}
     if kind in ("number", "integer"):
-        lower = draw(st.none() | st.integers())
-        upper = draw(st.none() | st.integers())
-        if lower is not None and upper is not None and lower > upper:
-            lower, upper = upper, lower
-        multiple_of = draw(st.none() | st.integers(2, 100))
-        assume(
-            None in (multiple_of, lower, upper) or multiple_of <= (upper - lower - 2)
-        )
-        out: Dict[str, JSONType] = {"type": kind}
-        if lower is not None:
-            out["minimum"] = lower
-        if upper is not None:
-            out["maximum"] = upper
-        if multiple_of is not None:
-            out["multipleOf"] = multiple_of
-        return out
-
+        return gen_number(draw, kind)
+    if kind == "string":
+        return gen_string(draw)
     return {}
+
+
+def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
+    """Draw a numeric schema."""
+    lower = draw(st.none() | st.integers())
+    upper = draw(st.none() | st.integers())
+    if lower is not None and upper is not None and lower > upper:
+        lower, upper = upper, lower
+    multiple_of = draw(st.none() | st.integers(2, 100))
+    assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower - 2))
+    out: Dict[str, Union[str, float]] = {"type": kind}
+    if lower is not None:
+        out["minimum"] = lower
+    if upper is not None:
+        out["maximum"] = upper
+    if multiple_of is not None:
+        out["multipleOf"] = multiple_of
+    return out
+
+
+def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
+    """Draw a string schema."""
+    min_size = draw(st.none() | st.integers(0, 1000))
+    max_size = draw(st.none() | st.integers(0, 1000))
+    if min_size is not None and max_size is not None and min_size > max_size:
+        min_size, max_size = max_size, min_size
+    pattern = draw(st.none() | REGEX_PATTERNS)
+    out: Dict[str, Union[str, int]] = {"type": "string"}
+    if pattern is not None:
+        out["pattern"] = pattern
+    if min_size is not None:
+        out["minLength"] = min_size
+    if max_size is not None:
+        out["maxLength"] = max_size
+    return out
