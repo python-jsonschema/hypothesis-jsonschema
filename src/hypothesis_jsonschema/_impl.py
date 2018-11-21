@@ -125,6 +125,11 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     """Handle schemata for arrays."""
     items = schema.get("items", {})
+    additional_items = schema.get("additionalItems", {})
+    min_size = schema.get("minLength", 0)
+    max_size = schema.get("maxItems")
+    unique = schema.get("uniqueItems")  # See todo note below
+    assert 'contains' not in schema,  # TODO: support this
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
@@ -177,6 +182,8 @@ def _json_schemata(draw: Any) -> Any:
         "object",
     ]
     kind = draw(st.sampled_from(kinds))
+    # TODO: work out how to canonicalise JSON per the jsonschema equality rules
+    # so that list elements are hashable and we can use unique_by= to de-dupe.
     hashable_json = st.one_of(
         st.none(),
         st.booleans(),
