@@ -14,9 +14,9 @@ SOURCE = local_file("src")
 README = local_file("README.md")
 
 with open(local_file("src/hypothesis_jsonschema/__init__.py")) as o:
-    __version__ = None
-    exec(o.read())  # pylint: disable=exec-used
-    assert __version__ is not None
+    for line in o:
+        if line.startswith("__version__"):
+            _, __version__, _ = line.split('"')
 
 
 setuptools.setup(

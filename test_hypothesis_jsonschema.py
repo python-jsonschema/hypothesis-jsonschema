@@ -3,8 +3,7 @@
 import os
 import subprocess
 
-from hypothesis import given, reject
-from hypothesis.errors import Unsatisfiable
+from hypothesis import given, settings, HealthCheck
 import hypothesis.strategies as st
 import jsonschema
 import pytest
@@ -26,13 +25,11 @@ def test_all_py_files_are_blackened():
     )
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(st.data(), json_schemata())
 def test_generated_data_matches_schema(data, schema):
     """Check that an object drawn from an arbitrary schema is valid."""
-    try:
-        value = data.draw(from_schema(schema))
-    except Unsatisfiable:
-        reject()
+    value = data.draw(from_schema(schema), "value from schema")
     jsonschema.validate(value, schema)
 
 
