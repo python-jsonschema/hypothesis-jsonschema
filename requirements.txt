@@ -11,6 +11,7 @@ attrs==18.2.0             # via black, hypothesis, pytest
 black==18.9b0
 click==7.0                # via black
 colorama==0.4.0           # via pylint, pytest
+coverage==4.5.2           # via pytest-cov
 hypothesis==3.82.1
 isort==4.3.4              # via pylint
 jsonschema==2.6.0
@@ -22,6 +23,7 @@ mypy==0.641               # via pytest-mypy
 pluggy==0.8.0             # via pytest
 py==1.7.0                 # via pytest
 pylint==2.1.1             # via pytest-pylint
+pytest-cov==2.6.0
 pytest-mypy==0.3.2
 pytest-pylint==0.12.3
 pytest==4.0.0

@@ -4,5 +4,6 @@ jsonschema
 
 black
 pytest
+pytest-cov
 pytest-mypy
 pytest-pylint
