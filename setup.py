@@ -13,7 +13,7 @@ def local_file(name: str) -> str:
 SOURCE = local_file("src")
 README = local_file("README.md")
 
-with open(local_file("src/hypothesis_jsonschema.py")) as o:
+with open(local_file("src/hypothesis_jsonschema/__init__.py")) as o:
     __version__ = None
     exec(o.read())  # pylint: disable=exec-used
     assert __version__ is not None
