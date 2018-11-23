@@ -153,7 +153,34 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
-    """Handle schemata for objects."""
+    """Handle a manageable subset of possible schemata for objects."""
+    hard_keywords = "dependencies if then else allOf anyOf oneOf not".split()
+    assert not any(kw in schema for kw in hard_keywords)
+
+    required = schema.get("required", [])  # required keys
+    names = schema.get("propertyNames", {"type": "string"})  # schema for optional keys
+
+    min_size = schema.get("minProperties", 0)
+    max_size = schema.get("maxProperties")
+    min_size = max(0, min_size - len(required))
+    if max_size is not None:
+        max_size -= len(required)
+
+    properties = schema.get("properties", {})  # exact name: value schema
+    # patterns = schema.get("patternProperties", {})  # regex for names: value schema
+    additional = schema.get("additionalProperties", {})  # schema for other values
+
+    # TODO: an actual implementation, not this quick hack
+    if required:
+        return st.fixed_dictionaries(
+            {k: from_schema(properties.get(k, additional)) for k in required}
+        )
+    return st.dictionaries(
+        string_schema(names),
+        from_schema(additional),
+        min_size=min_size,
+        max_size=max_size,
+    )
 
 
 # OK, now on to the inverse: a strategy for generating schemata themselves.
