@@ -50,48 +50,31 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         return st.sampled_from(schema["enum"])
     if "const" in schema:
         return st.just(schema["const"])
-    if "type" in schema:
-        if schema["type"] == "null":
-            return st.none()
-        if schema["type"] == "boolean":
-            return st.booleans()
-        if schema["type"] in ("number", "integer"):
-            return numeric_schema(schema)
-        if schema["type"] == "string":
-            return string_schema(schema)
-        if schema["type"] == "array":
-            return array_schema(schema)
-        assert schema["type"] == "object"
-        return object_schema(schema)
-
-    # Finally, we just filter arbitrary JSON and hope it passes.  (TODO: rip this out)
-
-    def _filter(value: JSONType) -> bool:
-        try:
-            jsonschema.validate(value, schema=schema)
-        except jsonschema.exceptions.ValidationError:  # pragma: no cover
-            return False
-        return True
-
-    return JSON_STRATEGY.filter(_filter)
+    # Schema must have a type then, so:
+    if schema["type"] == "null":
+        return st.none()
+    if schema["type"] == "boolean":
+        return st.booleans()
+    if schema["type"] in ("number", "integer"):
+        return numeric_schema(schema)
+    if schema["type"] == "string":
+        return string_schema(schema)
+    if schema["type"] == "array":
+        return array_schema(schema)
+    assert schema["type"] == "object"
+    return object_schema(schema)
 
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
-    assert not ("maximum" in schema and "exclusiveMaximum" in schema)
-    assert not ("minimum" in schema and "exclusiveMinimum" in schema)
     multiple_of = schema.get("multipleOf")
+    lower = schema.get("minimum")
+    upper = schema.get("maximum")
     if multiple_of is not None or schema["type"] == "integer":
-        lower = schema.get("exclusiveMinimum")
-        if lower is not None:
+        if lower is not None and schema.get("exclusiveMinimum"):
             lower += 1
-        else:
-            lower = schema.get("minimum")
-        upper = schema.get("exclusiveMaximum")
-        if upper is not None:
+        if upper is not None and schema.get("exclusiveMaximum"):
             upper -= 1
-        else:
-            upper = schema.get("maximum")
         if multiple_of is not None:
             if lower is not None:
                 lower += (multiple_of - lower) % multiple_of
@@ -103,15 +86,17 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
                 lambda x: x * multiple_of  # type: ignore
             )
         return st.integers(lower, upper)
-    lower = schema.get("exclusiveMinimum", schema.get("minimum"))
-    upper = schema.get("exclusiveMaximum", schema.get("maximum"))
-    return st.floats(lower, upper, allow_nan=False, allow_infinity=False).filter(
-        lambda x: x not in (lower, upper)
+    strategy = st.floats(
+        min_value=lower, max_value=upper, allow_nan=False, allow_infinity=False
     )
+    if schema.get("exclusiveMaximum") or schema.get("exclusiveMinimum"):
+        return strategy.filter(lambda x: x not in (lower, upper))
+    return strategy
 
 
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
+    # TODO: https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength")
     if "pattern" in schema:
@@ -217,32 +202,22 @@ def _json_schemata(draw: Any) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
-    kinds = [
-        "null",
-        "boolean",
-        "integer",
-        "number",
-        "string",
-        "const",
-        "enum",
-        "array",
-        "object",
+    unique_list = st.lists(
+        JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
+    )
+    options = [
+        {},
+        {"type": "null"},
+        {"type": "boolean"},
+        gen_number(draw, "integer"),
+        gen_number(draw, "number"),
+        gen_string(draw),
+        {"const": draw(JSON_STRATEGY)},
+        {"enum": draw(unique_list)},
+        gen_array(draw),
+        {"type": "object"},
     ]
-    kind = draw(st.sampled_from(kinds))
-    if kind == "const":
-        return {"const": draw(JSON_STRATEGY)}
-    if kind == "enum":
-        unique_list = st.lists(
-            JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
-        )
-        return {"enum": draw(unique_list)}
-    if kind in ("null", "boolean"):
-        return {"type": kind}
-    if kind in ("number", "integer"):
-        return gen_number(draw, kind)
-    if kind == "string":
-        return gen_string(draw)
-    return {}
+    return draw(st.sampled_from(options))
 
 
 def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
@@ -257,8 +232,12 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     out: Dict[str, Union[str, float]] = {"type": kind}
     if lower is not None:
         out["minimum"] = lower
+        if draw(st.booleans()):
+            out["exclusiveMinimum"] = True
     if upper is not None:
         out["maximum"] = upper
+        if draw(st.booleans()):
+            out["exclusiveMaximum"] = True
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
@@ -278,4 +257,29 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
         out["minLength"] = min_size
     if max_size is not None:
         out["maxLength"] = max_size
+    return out
+
+
+def gen_array(draw: Any) -> Dict[str, JSONType]:
+    """Draw an array schema."""
+    min_size = draw(st.none() | st.integers(0, 5))
+    max_size = draw(st.none() | st.integers(2, 5))
+    if min_size is not None and max_size is not None and min_size > max_size:
+        min_size, max_size = max_size, min_size
+    items = draw(
+        st.builds(dict)
+        | json_schemata()
+        | st.lists(json_schemata(), min_size=1, max_size=2)
+    )
+    unique = False
+    if isinstance(items, list):
+        if max_size is not None:
+            max_size += len(items)
+    else:
+        unique = draw(st.booleans())
+    out = {"type": "array", "items": items, "uniqueItems": unique}
+    if min_size is not None:
+        out["minItems"] = min_size
+    if max_size is not None:
+        out["maxItems"] = max_size
     return out

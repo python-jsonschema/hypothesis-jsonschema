@@ -25,7 +25,7 @@ def test_all_py_files_are_blackened():
     )
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=1000, suppress_health_check=[HealthCheck.too_slow])
 @given(st.data(), json_schemata())
 def test_generated_data_matches_schema(data, schema):
     """Check that an object drawn from an arbitrary schema is valid."""
