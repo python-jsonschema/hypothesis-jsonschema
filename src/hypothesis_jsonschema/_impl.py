@@ -228,16 +228,18 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     if lower is not None and upper is not None and lower > upper:
         lower, upper = upper, lower
     multiple_of = draw(st.none() | st.integers(2, 100))
-    assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower - 2))
+    assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     out: Dict[str, Union[str, float]] = {"type": kind}
     if lower is not None:
         out["minimum"] = lower
         if draw(st.booleans()):
             out["exclusiveMinimum"] = True
+            out["minimum"] -= 1
     if upper is not None:
         out["maximum"] = upper
         if draw(st.booleans()):
             out["exclusiveMaximum"] = True
+            out["maximum"] += 1
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
