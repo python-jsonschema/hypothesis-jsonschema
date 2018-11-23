@@ -5,6 +5,7 @@
 import re
 from typing import Any, Dict, List, Union
 
+from canonicaljson import encode_canonical_json
 import jsonschema
 from hypothesis import assume
 import hypothesis.strategies as st
@@ -126,10 +127,29 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     """Handle schemata for arrays."""
     items = schema.get("items", {})
     additional_items = schema.get("additionalItems", {})
-    min_size = schema.get("minLength", 0)
+    min_size = schema.get("minItems", 0)
     max_size = schema.get("maxItems")
-    unique = schema.get("uniqueItems")  # See todo note below
-    assert 'contains' not in schema,  # TODO: support this
+    unique = schema.get("uniqueItems")
+    assert "contains" not in schema, "contains is not yet supported"
+    if isinstance(items, list):
+        min_size = max(0, min_size - len(items))
+        if max_size is not None:
+            max_size -= len(items)
+        fixed_items = st.tuples(*map(from_schema, items))
+        extra_items = st.lists(
+            from_schema(additional_items), min_size=min_size, max_size=max_size
+        )
+        return st.tuples(fixed_items, extra_items).map(
+            lambda t: list(t[0]) + t[1]  # type: ignore
+        )
+    if unique:
+        return st.lists(
+            from_schema(items),
+            min_size=min_size,
+            max_size=max_size,
+            unique_by=encode_canonical_json,
+        )
+    return st.lists(from_schema(items), min_size=min_size, max_size=max_size)
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
@@ -182,20 +202,13 @@ def _json_schemata(draw: Any) -> Any:
         "object",
     ]
     kind = draw(st.sampled_from(kinds))
-    # TODO: work out how to canonicalise JSON per the jsonschema equality rules
-    # so that list elements are hashable and we can use unique_by= to de-dupe.
-    hashable_json = st.one_of(
-        st.none(),
-        st.booleans(),
-        st.floats(allow_nan=False, allow_infinity=False),
-        st.text(),
-    )
     if kind == "const":
-        return {"const": draw(hashable_json)}
+        return {"const": draw(JSON_STRATEGY)}
     if kind == "enum":
-        return {
-            "enum": draw(st.lists(hashable_json, min_size=1, max_size=10, unique=True))
-        }
+        unique_list = st.lists(
+            JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
+        )
+        return {"enum": draw(unique_list)}
     if kind in ("null", "boolean"):
         return {"type": kind}
     if kind in ("number", "integer"):

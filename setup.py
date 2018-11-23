@@ -31,7 +31,11 @@ setuptools.setup(
     license="AGPLv3+",
     description="Generate test data from JSON schemata with Hypothesis",
     zip_safe=False,
-    install_requires=["hypothesis>=3.82.1", "jsonschema>=2.6.0"],
+    install_requires=[
+        "canonicaljson>=1.1.4",
+        "hypothesis>=3.82.1",
+        "jsonschema>=2.6.0",
+    ],
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 3 - Alpha",
