@@ -220,8 +220,9 @@ def _json_schemata(draw: Any) -> Any:
 
 def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     """Draw a numeric schema."""
-    lower = draw(st.none() | st.integers())
-    upper = draw(st.none() | st.integers())
+    max_int_float = 2 ** 53
+    lower = draw(st.none() | st.integers(-max_int_float, max_int_float))
+    upper = draw(st.none() | st.integers(-max_int_float, max_int_float))
     if lower is not None and upper is not None and lower > upper:
         lower, upper = upper, lower
     multiple_of = draw(st.none() | st.integers(2, 100))
