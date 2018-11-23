@@ -96,7 +96,7 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
 
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
-    # TODO: https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
+    # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength")
     if "pattern" in schema:
@@ -155,7 +155,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     # patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
 
-    # TODO: an actual implementation, not this quick hack
+    # quick hack, real implementation TBD.
     if required:
         return st.fixed_dictionaries(
             {k: from_schema(properties.get(k, additional)) for k in required}
@@ -231,15 +231,15 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     out: Dict[str, Union[str, float]] = {"type": kind}
     if lower is not None:
-        out["minimum"] = lower
         if draw(st.booleans()):
             out["exclusiveMinimum"] = True
-            out["minimum"] -= 1
+            lower -= 1
+        out["minimum"] = lower
     if upper is not None:
-        out["maximum"] = upper
         if draw(st.booleans()):
             out["exclusiveMaximum"] = True
-            out["maximum"] += 1
+            upper += 1
+        out["maximum"] = upper
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
