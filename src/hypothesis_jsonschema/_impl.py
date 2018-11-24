@@ -149,23 +149,31 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     max_size = schema.get("maxProperties")
     min_size = max(0, min_size - len(required))
     if max_size is not None:
-        max_size -= len(required)
+        max_size = max(0, max_size - len(required))
 
     properties = schema.get("properties", {})  # exact name: value schema
     # patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
 
     # quick hack, real implementation TBD.
-    if required:
-        return st.fixed_dictionaries(
-            {k: from_schema(properties.get(k, additional)) for k in required}
-        )
-    return st.dictionaries(
+    unconstrained = st.dictionaries(
         string_schema(names),
         from_schema(additional),
         min_size=min_size,
         max_size=max_size,
     )
+    if required:
+
+        def combine(dicts: tuple) -> dict:
+            d1, d2 = dicts
+            assume(set(d1).isdisjoint(d2))
+            return {**d1, **d2}
+
+        reqed = st.fixed_dictionaries(
+            {k: from_schema(properties.get(k, additional)) for k in required}
+        )
+        return st.tuples(reqed, unconstrained).map(combine)
+    return unconstrained
 
 
 # OK, now on to the inverse: a strategy for generating schemata themselves.
@@ -198,7 +206,7 @@ REGEX_PATTERNS = regex_patterns()
 
 
 @st.composite
-def _json_schemata(draw: Any) -> Any:
+def _json_schemata(draw: Any, *, recur: bool = True) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
@@ -214,9 +222,9 @@ def _json_schemata(draw: Any) -> Any:
         gen_string(draw),
         {"const": draw(JSON_STRATEGY)},
         {"enum": draw(unique_list)},
-        gen_array(draw),
-        {"type": "object"},
     ]
+    if recur:
+        options.extend([gen_array(draw), gen_object(draw)])
     return draw(st.sampled_from(options))
 
 
@@ -247,7 +255,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
 
 def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     """Draw a string schema."""
-    min_size = draw(st.none() | st.integers(0, 1000))
+    min_size = draw(st.none() | st.integers(0, 10))
     max_size = draw(st.none() | st.integers(0, 1000))
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
@@ -270,8 +278,8 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
         min_size, max_size = max_size, min_size
     items = draw(
         st.builds(dict)
-        | json_schemata()
-        | st.lists(json_schemata(), min_size=1, max_size=2)
+        | _json_schemata(recur=False)
+        | st.lists(_json_schemata(recur=False), min_size=1, max_size=10)
     )
     unique = False
     if isinstance(items, list):
@@ -284,4 +292,25 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
         out["minItems"] = min_size
     if max_size is not None:
         out["maxItems"] = max_size
+    return out
+
+
+def gen_object(draw: Any) -> Dict[str, JSONType]:
+    """Draw an object schema."""
+    out: Dict[str, JSONType] = {"type": "object"}
+    required = draw(st.none() | st.lists(st.text(), min_size=1, unique=True))
+    min_size = draw(st.none() | st.integers(0, 5))
+    max_size = draw(st.none() | st.integers(2, 5))
+    if min_size is not None and max_size is not None and min_size > max_size:
+        min_size, max_size = max_size, min_size
+    if required is not None:
+        out["required"] = required
+        if min_size is not None:
+            min_size += len(required)
+        if max_size is not None:
+            max_size += len(required)
+    if min_size is not None:
+        out["minProperties"] = min_size
+    if max_size is not None:
+        out["maxProperties"] = max_size
     return out
