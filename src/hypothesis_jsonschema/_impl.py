@@ -165,9 +165,9 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     if required:
 
         def combine(dicts: tuple) -> dict:
-            d1, d2 = dicts
-            assume(set(d1).isdisjoint(d2))
-            return {**d1, **d2}
+            required, extra = dicts
+            assume(set(required).isdisjoint(extra))
+            return {**required, **extra}
 
         reqed = st.fixed_dictionaries(
             {k: from_schema(properties.get(k, additional)) for k in required}
