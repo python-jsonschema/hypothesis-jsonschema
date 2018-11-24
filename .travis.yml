@@ -2,7 +2,13 @@ language: python
 python:
   - "3.6"
 install:
+  - pip install --upgrade pip setuptools twine
   - pip install -r requirements.txt
   - pip install .
 script:
   - pytest
+deploy:
+  provider: script
+  script: python setup.py sdist && twine upload --skip-existing dist/*
+  on:
+    branch: master
