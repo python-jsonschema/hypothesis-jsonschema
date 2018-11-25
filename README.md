@@ -6,12 +6,47 @@ It is currently in early alpha, but you can use it if you want.
 
 The public API consists of a just two functions:
 
-1. `hypothesis_jsonschema.from_schema` takes a JSON schema and returns a
-   Hypothesis strategy which generates objects that match the schema.
-2. `hypothesis_jsonschema.json_schemata` returns a Hypothesis strategy
-   which generates arbitrary JSON schemata.
+
+### hypothesis_jsonschema.from_schema
+Takes a JSON schema and return a strategy for allowed JSON objects.
+
+This strategy supports almost all of the schema elements described in the
+draft RFC as of November 2018 (draft 7), with the following exceptions:
+
+For arrays, the "contains" keyword is not supported.
+For objects, the "dependencies" keyword is not supported.
+Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
+and the "allOf, "anyOf", "oneOf", and "not" keywords.
+For strings, the "format" keyword is not supported.
+Schema reuse with "definitions" is not supported.
+
+The following features are deemed out of scope - pull requests would be
+accepted (if maintainable) but issues would not:
+- string-encoding of non-JSON data
+- schema annotations, i.e. "title", "description", "default",
+  "readOnly", "writeOnly", and "examples"
+- JSON pointers
+
+
+### hypothesis_jsonschema.json_schemata
+A Hypothesis strategy for arbitrary JSON schemata.
+
+This strategy may generate anything that can be handled by `from_schema`,
+and is used to provide full branch coverage when testing this package.
+
+
+## Supported versions
 
 `hypothesis-jsonschema` does not support Python 2, because
 [it's close to end of life](https://pythonclock.org/) and Python 3.6+ is a
 much nicer language.  Contact me if you would like this changed and are
 willing to either pay for or do the work to support Python 2.
+
+In general, 0.x versions will require very recent versions of all dependencies
+because I don't want to deal with compatibility workarounds.
+
+`hypothesis-jsonschema` may make backwards-incompatible changes at any time
+before version 1.x - that's what semver means! - but I've kept the API surface
+small enough that this should be avoidable.  The main source of breaks will be
+if or when schema that never really worked turn into explicit errors instead
+of generating values that don't quite match.

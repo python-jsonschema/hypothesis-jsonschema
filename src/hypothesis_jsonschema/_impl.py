@@ -28,7 +28,25 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
 
 
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
-    """Take a JSON schema and return a strategy for allowed JSON objects."""
+    """Take a JSON schema and return a strategy for allowed JSON objects.
+
+    This strategy supports almost all of the schema elements described in the
+    draft RFC as of November 2018 (draft 7), with the following exceptions:
+
+    For arrays, the "contains" keyword is not supported.
+    For objects, the "dependencies" keyword is not supported.
+    Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
+    and the "allOf, "anyOf", "oneOf", and "not" keywords.
+    For strings, the "format" keyword is not supported.
+    Schema reuse with "definitions" is not supported.
+
+    The following features are deemed out of scope - pull requests would be
+    accepted (if maintainable) but issues would not:
+    - string-encoding of non-JSON data
+    - schema annotations, i.e. "title", "description", "default",
+      "readOnly", "writeOnly", and "examples"
+    - JSON pointers
+    """
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema is False:
         return st.nothing()
@@ -98,14 +116,13 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
-    max_size = schema.get("maxLength")
+    max_size = schema.get("maxLength", float("inf"))
+    assert "format" not in schema, "format is not yet supported"
     if "pattern" in schema:
-        if max_size is None:
-            max_size = float("inf")
         return st.from_regex(schema["pattern"]).filter(
             lambda s: min_size <= len(s) <= max_size  # type: ignore
         )
-    return st.text(min_size=min_size, max_size=max_size)
+    return st.text(min_size=min_size, max_size=schema.get("maxLength"))
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
@@ -206,7 +223,11 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
 
 def json_schemata() -> st.SearchStrategy[Union[bool, Dict[str, JSONType]]]:
-    """A Hypothesis strategy for arbitrary JSON schemata."""
+    """A Hypothesis strategy for arbitrary JSON schemata.
+
+    This strategy may generate anything that can be handled by `from_schema`,
+    and is used to provide full branch coverage when testing this package.
+    """
     return _json_schemata()
 
 
