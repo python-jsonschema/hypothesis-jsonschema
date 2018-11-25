@@ -1,5 +1,5 @@
 """A Hypothesis extension for JSON schemata."""
-# pylint: disable=no-value-for-parameter,too-many-return-statements
+# pylint: disable=no-value-for-parameter,too-many-return-statements,bad-continuation
 
 
 import re
@@ -34,18 +34,14 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     This strategy supports almost all of the schema elements described in the
     draft RFC as of November 2018 (draft 7), with the following exceptions:
 
-    For arrays, the "contains" keyword is not supported.
-    For objects, the "dependencies" keyword is not supported.
-    Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
-    and the "allOf, "anyOf", "oneOf", and "not" keywords.
-    Schema reuse with "definitions" is not supported.
-
-    The following features are deemed out of scope - pull requests would be
-    accepted (if maintainable) but issues would not:
-    - string-encoding of non-JSON data
+    - For objects, the "dependencies" keyword is not supported.
+    - Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
+      and the "allOf, "anyOf", "oneOf", and "not" keywords.
+    - Schema reuse with "definitions" is not supported.
+    - string-encoding of non-JSON data is not supported.
     - schema annotations, i.e. "title", "description", "default",
-      "readOnly", "writeOnly", and "examples"
-    - JSON pointers
+    "readOnly", "writeOnly", and "examples" are not supported.
+    - JSON pointers are not supported.
     """
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema is False:
@@ -109,7 +105,8 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     )
     if schema.get("exclusiveMaximum") or schema.get("exclusiveMinimum"):
         return strategy.filter(lambda x: x not in (lower, upper))
-    return strategy
+    # Negative-zero does not round trip through JSON, so force it to positive
+    return strategy.map(lambda n: 0.0 if n == 0 else n)
 
 
 RFC3339_FORMATS = (
@@ -223,11 +220,17 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     min_size = schema.get("minItems", 0)
     max_size = schema.get("maxItems")
     unique = schema.get("uniqueItems")
-    assert "contains" not in schema, "contains is not yet supported"
+    contains = schema.get("contains", {})
     if isinstance(items, list):
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
+        if contains != {}:
+            assert (
+                additional_items == {}
+            ), "Cannot handle additionalItems and contains togther"
+            additional_items = contains
+            min_size = max(min_size, len(items) + 1)
         fixed_items = st.tuples(*map(from_schema, items))
         extra_items = st.lists(
             from_schema(additional_items), min_size=min_size, max_size=max_size
@@ -235,6 +238,9 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         return st.tuples(fixed_items, extra_items).map(
             lambda t: list(t[0]) + t[1]  # type: ignore
         )
+    if contains != {}:
+        assert items == {}, "Cannot handle items and contains togther"
+        items = contains
     if unique:
         return st.lists(
             from_schema(items),
@@ -423,13 +429,24 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
         | _json_schemata(recur=False)
         | st.lists(_json_schemata(recur=False), min_size=1, max_size=10)
     )
-    unique = False
+    out = {"type": "array", "items": items}
     if isinstance(items, list):
+        increment = len(items)
+        additional = draw(st.none() | _json_schemata(recur=False))
+        if additional is not None:
+            out["additionalItems"] = additional
+        elif draw(st.booleans()):
+            out["contains"] = draw(_json_schemata(recur=False))
+            increment += 1
+        if min_size is not None:
+            min_size += increment
         if max_size is not None:
-            max_size += len(items)
+            max_size += increment
     else:
-        unique = draw(st.booleans())
-    out = {"type": "array", "items": items, "uniqueItems": unique}
+        if draw(st.booleans()):
+            out["uniqueItems"] = True
+        if items == {}:
+            out["contains"] = draw(_json_schemata(recur=False))
     if min_size is not None:
         out["minItems"] = min_size
     if max_size is not None:
