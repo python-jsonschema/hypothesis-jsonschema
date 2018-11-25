@@ -324,7 +324,14 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
 def gen_object(draw: Any) -> Dict[str, JSONType]:
     """Draw an object schema."""
     out: Dict[str, JSONType] = {"type": "object"}
-    required = draw(st.none() | st.lists(st.text(), min_size=1, unique=True))
+    names = draw(st.sampled_from([None, None, None, gen_string(draw)]))
+    required = draw(st.booleans())
+    if required and names is None:
+        required = draw(st.lists(st.text(), min_size=1, max_size=5, unique=True))
+    elif required:
+        required = draw(
+            st.lists(from_schema(names), min_size=1, max_size=5, unique=True)
+        )
 
     # Trying to generate schemata that are consistent would mean dealing with
     # overlapping regex and names, and that would suck.  So instead we ensure that
@@ -341,7 +348,9 @@ def gen_object(draw: Any) -> Dict[str, JSONType]:
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
 
-    if required is not None:
+    if names is not None:
+        out["propertyNames"] = names
+    if required:
         out["required"] = required
         if min_size is not None:
             min_size += len(required)
