@@ -9,6 +9,7 @@ from canonicaljson import encode_canonical_json
 import jsonschema
 from hypothesis import assume
 import hypothesis.strategies as st
+import hypothesis.provisional as prov
 from hypothesis.errors import InvalidArgument
 
 # Mypy does not (yet!) support recursive type definitions.
@@ -112,17 +113,110 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     return strategy
 
 
+RFC3339_FORMATS = (
+    "date-fullyear",
+    "date-month",
+    "date-mday",
+    "time-hour",
+    "time-minute",
+    "time-second",
+    "time-secfrac",
+    "time-numoffset",
+    "time-offset",
+    "partial-time",
+    "full-date",
+    "full-time",
+    "date-time",
+)
+JSON_SCHEMA_STRING_FORMATS = RFC3339_FORMATS + (
+    "email",
+    "idn-email",
+    # "hostname",
+    # "idn-hostname",
+    "ipv4",
+    "ipv6",
+    # "uri",
+    # "uri-reference",
+    # "iri",
+    # "iri-reference",
+    # "uri-template",
+    # "json-pointer",
+    # "relative-json-pointer",
+    "regex",
+)
+
+
+def rfc3339(name: str) -> st.SearchStrategy[str]:
+    """Given the name of an RFC3339 date or time format,
+    return a strategy for conforming values.
+
+    See https://tools.ietf.org/html/rfc3339#section-5.6
+    """
+    # Hmm, https://github.com/HypothesisWorks/hypothesis/issues/170
+    # would make this a lot easier...
+    assert name in RFC3339_FORMATS
+    simple = {
+        "date-fullyear": st.integers(0, 9999).map(str),
+        "date-month": st.integers(1, 12).map(str),
+        "date-mday": st.integers(1, 28).map(str),  # incomplete but valid
+        "time-hour": st.integers(0, 23).map(str),
+        "time-minute": st.integers(0, 59).map(str),
+        "time-second": st.integers(0, 59).map(str),  # ignore negative leap seconds
+        "time-secfrac": st.from_regex(r"\.[0-9]+"),
+    }
+    if name in simple:
+        return simple[name]
+    if name == "time-numoffset":
+        return st.tuples(
+            st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")
+        ).map(":".join)
+    if name == "time-offset":
+        return st.just("Z") | rfc3339("time-numoffset")  # type: ignore
+    if name == "partial-time":
+        return st.times().map(str)
+    if name == "full-date":
+        return st.dates().map(str)
+    if name == "full-time":
+        return st.tuples(rfc3339("partial-time"), rfc3339("time-offset")).map("".join)
+    assert name == "date-time"
+    return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)
+
+
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength", float("inf"))
-    assert "format" not in schema, "format is not yet supported"
+    strategy: Any = st.text(min_size=min_size, max_size=schema.get("maxLength"))
+    assert not (
+        "format" in schema and "pattern" in schema
+    ), "format and regex constraints are supported, but not both at once."
     if "pattern" in schema:
-        return st.from_regex(schema["pattern"]).filter(
-            lambda s: min_size <= len(s) <= max_size  # type: ignore
-        )
-    return st.text(min_size=min_size, max_size=schema.get("maxLength"))
+        strategy = st.from_regex(schema["pattern"])
+    elif "format" in schema:
+        strategy = {
+            # A value of None indicates a known but unsupported format.
+            **{name: rfc3339(name) for name in RFC3339_FORMATS},
+            "date": rfc3339("full-date"),
+            "time": rfc3339("full-time"),
+            "email": st.emails(),  # type: ignore
+            "idn-email": st.emails(),  # type: ignore
+            "hostname": None,
+            "idn-hostname": None,
+            "ipv4": prov.ip4_addr_strings(),  # type: ignore
+            "ipv6": prov.ip6_addr_strings(),  # type: ignore
+            "uri": None,
+            "uri-reference": None,
+            "iri": None,
+            "iri-reference": None,
+            "uri-template": None,
+            "json-pointer": None,
+            "relative-json-pointer": None,
+            "regex": REGEX_PATTERNS,
+        }.get(schema["format"])
+        if strategy is None:
+            raise InvalidArgument(f"Unsupported string format={schema['format']}")
+    return strategy.filter(lambda s: min_size <= len(s) <= max_size)  # type: ignore
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
@@ -202,6 +296,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 key = draw(
                     (
                         from_schema(names)
+                        | st.sampled_from(sorted(properties))
                         | st.one_of(*map(st.from_regex, sorted(patterns)))
                     ).filter(lambda s: s not in out)
                 )
@@ -307,9 +402,12 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
     pattern = draw(st.none() | REGEX_PATTERNS)
+    format_ = draw(st.none() | st.sampled_from(JSON_SCHEMA_STRING_FORMATS))
     out: Dict[str, Union[str, int]] = {"type": "string"}
     if pattern is not None:
         out["pattern"] = pattern
+    elif format_ is not None:
+        out["format"] = format_
     if min_size is not None:
         out["minLength"] = min_size
     if max_size is not None:

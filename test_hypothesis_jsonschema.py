@@ -43,7 +43,15 @@ def test_boolean_true_is_valid_schema_and_resolvable():
     from_schema(True).example()
 
 
-@pytest.mark.parametrize("schema", [None, False, {"type": "an unknown type"}])
+@pytest.mark.parametrize(
+    "schema",
+    [
+        None,
+        False,
+        {"type": "an unknown type"},
+        {"type": "string", "format": "not a real format"},
+    ],
+)
 def test_invalid_schemas_raise(schema):
     """Trigger all the validation exceptions for full coverage."""
     with pytest.raises(Exception):
