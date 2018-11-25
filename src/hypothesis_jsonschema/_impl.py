@@ -351,7 +351,7 @@ REGEX_PATTERNS = regex_patterns()
 
 
 @st.composite
-def _json_schemata(draw: Any, *, recur: bool = True) -> Any:
+def _json_schemata(draw: Any, recur: bool = True) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
@@ -436,7 +436,7 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
         if additional is not None:
             out["additionalItems"] = additional
         elif draw(st.booleans()):
-            out["contains"] = draw(_json_schemata(recur=False))
+            out["contains"] = draw(_json_schemata(recur=False).filter(bool))
             increment += 1
         if min_size is not None:
             min_size += increment
