@@ -38,7 +38,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     For objects, the "dependencies" keyword is not supported.
     Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
     and the "allOf, "anyOf", "oneOf", and "not" keywords.
-    For strings, the "format" keyword is not supported.
     Schema reuse with "definitions" is not supported.
 
     The following features are deemed out of scope - pull requests would be
@@ -131,17 +130,17 @@ RFC3339_FORMATS = (
 JSON_SCHEMA_STRING_FORMATS = RFC3339_FORMATS + (
     "email",
     "idn-email",
-    # "hostname",
-    # "idn-hostname",
+    "hostname",
+    "idn-hostname",
     "ipv4",
     "ipv6",
-    # "uri",
-    # "uri-reference",
-    # "iri",
-    # "iri-reference",
-    # "uri-template",
-    # "json-pointer",
-    # "relative-json-pointer",
+    "uri",
+    "uri-reference",
+    "iri",
+    "iri-reference",
+    "uri-template",
+    "json-pointer",
+    "relative-json-pointer",
     "regex",
 )
 
@@ -194,6 +193,8 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     if "pattern" in schema:
         strategy = st.from_regex(schema["pattern"])
     elif "format" in schema:
+        url_synonyms = ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
+        domains = prov.domains()  # type: ignore
         strategy = {
             # A value of None indicates a known but unsupported format.
             **{name: rfc3339(name) for name in RFC3339_FORMATS},
@@ -201,17 +202,13 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
             "time": rfc3339("full-time"),
             "email": st.emails(),  # type: ignore
             "idn-email": st.emails(),  # type: ignore
-            "hostname": None,
-            "idn-hostname": None,
+            "hostname": domains,
+            "idn-hostname": domains,
             "ipv4": prov.ip4_addr_strings(),  # type: ignore
             "ipv6": prov.ip6_addr_strings(),  # type: ignore
-            "uri": None,
-            "uri-reference": None,
-            "iri": None,
-            "iri-reference": None,
-            "uri-template": None,
-            "json-pointer": None,
-            "relative-json-pointer": None,
+            **{name: domains.map("https://{}".format) for name in url_synonyms},
+            "json-pointer": st.just(""),
+            "relative-json-pointer": st.just(""),
             "regex": REGEX_PATTERNS,
         }.get(schema["format"])
         if strategy is None:
