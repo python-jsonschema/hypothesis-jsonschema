@@ -208,9 +208,9 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
             if key in properties:
                 out[key] = draw(from_schema(properties[key]))
             else:
-                for r, s in patterns.items():
-                    if re.search(r, string=key) is not None:
-                        out[key] = draw(from_schema(s))
+                for rgx, matching_schema in patterns.items():
+                    if re.search(rgx, string=key) is not None:
+                        out[key] = draw(from_schema(matching_schema))
                         break
                 else:
                     out[key] = draw(from_schema(additional))
