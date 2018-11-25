@@ -144,36 +144,62 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
     required = schema.get("required", [])  # required keys
     names = schema.get("propertyNames", {"type": "string"})  # schema for optional keys
-
-    min_size = schema.get("minProperties", 0)
-    max_size = schema.get("maxProperties")
-    min_size = max(0, min_size - len(required))
-    if max_size is not None:
-        max_size = max(0, max_size - len(required))
+    min_size = max(len(required), schema.get("minProperties", 0))
+    max_size = schema.get("maxProperties", float("inf"))
 
     properties = schema.get("properties", {})  # exact name: value schema
-    # patterns = schema.get("patternProperties", {})  # regex for names: value schema
+    patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
 
-    # quick hack, real implementation TBD.
-    unconstrained = st.dictionaries(
-        string_schema(names),
-        from_schema(additional),
-        min_size=min_size,
-        max_size=max_size,
-    )
-    if required:
+    @st.composite
+    def from_object_schema(draw: Any) -> Any:
+        """Here, we do some black magic with private Hypothesis internals.
 
-        def combine(dicts: tuple) -> dict:
-            required, extra = dicts
-            assume(set(required).isdisjoint(extra))
-            return {**required, **extra}
+        It's unfortunate, but also the only way that I know of to satisfy all
+        the interacting constraints without making shrinking totally hopeless.
 
-        reqed = st.fixed_dictionaries(
-            {k: from_schema(properties.get(k, additional)) for k in required}
+        If any Hypothesis maintainers are reading this... I'm so, so sorry.
+        """
+        import hypothesis.internal.conjecture.utils as cu
+
+        # changing in https://github.com/HypothesisWorks/hypothesis/pull/1609
+        # Will update and bump min Hypothesis version once that's merged.
+        data_st = st.data()
+        data_st.supports_find = True  # lies, but if it works...
+        data_obj = draw(data_st)
+        data = getattr(data_obj, "conjecture_data", getattr(data_obj, "data"))
+
+        elements = cu.many(  # type: ignore
+            data,
+            min_size=min_size,
+            max_size=max_size,
+            average_size=min(min_size + 5, (min_size + max_size) // 2),
         )
-        return st.tuples(reqed, unconstrained).map(combine)
-    return unconstrained
+        out: dict = {}
+        while elements.more():
+            for name in required:
+                if name not in out:
+                    key = name
+                    break
+            else:
+                key = draw(
+                    (
+                        from_schema(names)
+                        | st.one_of(*map(st.from_regex, sorted(patterns)))
+                    ).filter(lambda s: s not in out)
+                )
+            if key in properties:
+                out[key] = draw(from_schema(properties[key]))
+            else:
+                for r, s in patterns.items():
+                    if re.search(r, string=key) is not None:
+                        out[key] = draw(from_schema(s))
+                        break
+                else:
+                    out[key] = draw(from_schema(additional))
+        return out
+
+    return from_object_schema()
 
 
 # OK, now on to the inverse: a strategy for generating schemata themselves.
@@ -299,10 +325,22 @@ def gen_object(draw: Any) -> Dict[str, JSONType]:
     """Draw an object schema."""
     out: Dict[str, JSONType] = {"type": "object"}
     required = draw(st.none() | st.lists(st.text(), min_size=1, unique=True))
+
+    # Trying to generate schemata that are consistent would mean dealing with
+    # overlapping regex and names, and that would suck.  So instead we ensure that
+    # there *are* no overlapping requirements, which is much easier.
+    properties = draw(st.dictionaries(st.text(), _json_schemata(recur=False)))
+    disjoint = REGEX_PATTERNS.filter(
+        lambda r: all(re.search(r, string=name) is None for name in properties)
+    )
+    patterns = draw(st.dictionaries(disjoint, _json_schemata(recur=False), max_size=1))
+    additional = draw(st.none() | _json_schemata(recur=False))
+
     min_size = draw(st.none() | st.integers(0, 5))
     max_size = draw(st.none() | st.integers(2, 5))
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
+
     if required is not None:
         out["required"] = required
         if min_size is not None:
@@ -313,4 +351,10 @@ def gen_object(draw: Any) -> Dict[str, JSONType]:
         out["minProperties"] = min_size
     if max_size is not None:
         out["maxProperties"] = max_size
+    if properties:
+        out["properties"] = properties
+    if patterns:
+        out["patternProperties"] = patterns
+    if additional is not None:
+        out["additionalProperties"] = additional
     return out
