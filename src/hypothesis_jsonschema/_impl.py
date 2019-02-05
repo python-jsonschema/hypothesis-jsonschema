@@ -230,7 +230,7 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
                 additional_items == {}
             ), "Cannot handle additionalItems and contains togther"
             additional_items = contains
-            min_size = max(min_size, len(items) + 1)
+            min_size = max(min_size, 1)
         fixed_items = st.tuples(*map(from_schema, items))
         extra_items = st.lists(
             from_schema(additional_items), min_size=min_size, max_size=max_size
