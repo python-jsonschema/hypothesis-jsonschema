@@ -28,7 +28,7 @@ setuptools.setup(
     package_dir={"": SOURCE},
     package_data={"": ["py.typed"]},
     url="https://github.com/Zac-HD/hypothesis-jsonschema",
-    license="AGPLv3+",
+    license="MPL 2.0",
     description="Generate test data from JSON schemata with Hypothesis",
     zip_safe=False,
     install_requires=[
@@ -41,7 +41,7 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Framework :: Hypothesis",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
