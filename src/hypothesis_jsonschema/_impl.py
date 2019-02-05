@@ -276,15 +276,8 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         """
         import hypothesis.internal.conjecture.utils as cu
 
-        # changing in https://github.com/HypothesisWorks/hypothesis/pull/1609
-        # Will update and bump min Hypothesis version once that's merged.
-        data_st = st.data()
-        data_st.supports_find = True  # lies, but if it works...
-        data_obj = draw(data_st)
-        data = getattr(data_obj, "conjecture_data", getattr(data_obj, "data"))
-
         elements = cu.many(  # type: ignore
-            data,
+            draw(st.data()).conjecture_data,
             min_size=min_size,
             max_size=max_size,
             average_size=min(min_size + 5, (min_size + max_size) // 2),

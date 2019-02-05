@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from hypothesis import given, settings, unlimited, HealthCheck
+from hypothesis import given, settings, HealthCheck
 import hypothesis.strategies as st
 import jsonschema
 import pytest
@@ -28,7 +28,6 @@ def test_all_py_files_are_blackened():
 @settings(
     max_examples=1000,
     suppress_health_check=[HealthCheck.too_slow],
-    timeout=unlimited,
     deadline=100,  # maximum milliseconds per test case
 )
 @given(st.data(), json_schemata())
