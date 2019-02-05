@@ -3,6 +3,7 @@
 A [Hypothesis](https://hypothesis.readthedocs.io) strategy for generating data
 that matches some [JSON schema](https://json-schema.org/).
 It is currently in early alpha, but you can use it if you want.
+[Here's the PyPI page.](https://pypi.org/project/hypothesis-jsonschema/)
 
 The public API consists of a just two functions:
 
