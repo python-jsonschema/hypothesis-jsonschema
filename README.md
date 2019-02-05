@@ -49,6 +49,11 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.4.0 - 2019-02-06
+- Relicensed under the more permissive Mozilla Public License, like Hypothesis
+- Requires Hypothesis version 4.0 or later
+- Fixed an array bounds bug with `maxItems` and `contains` keywords
+
 #### 0.4.0 - 2018-11-25
 Supports string formats (email, datetime, etc) and simple use of the
 `"contains"` keyword for arrays.
