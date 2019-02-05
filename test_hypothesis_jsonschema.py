@@ -11,14 +11,29 @@ import pytest
 from hypothesis_jsonschema import from_schema, json_schemata
 
 
-def test_all_py_files_are_blackened():
-    """Check that all .py files are formatted with Black."""
+def files_to_check():
+    """Return a list of all .py files in the repo."""
     files = []
     for dirpath, _, fnames in os.walk("."):
         files.extend(os.path.join(dirpath, f) for f in fnames if f.endswith(".py"))
     assert len(files) >= 3
+    return files
+
+
+def test_all_py_files_are_blackened():
+    """Check that all .py files are formatted with Black."""
     subprocess.run(
-        ["black", "--py36", "--check"] + files,
+        ["black", "--py36", "--check"] + files_to_check(),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def test_pylint_passes():
+    """Check that pylint passes on all .py files."""
+    subprocess.run(
+        ["pylint"] + files_to_check(),
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
