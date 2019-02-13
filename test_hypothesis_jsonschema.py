@@ -1,4 +1,5 @@
 """Tests for the hypothesis-jsonschema library."""
+# pylint: disable=no-value-for-parameter,wrong-import-order
 
 import os
 import subprocess
@@ -9,6 +10,12 @@ import jsonschema
 import pytest
 
 from hypothesis_jsonschema import from_schema, json_schemata
+from hypothesis_jsonschema._impl import (
+    gen_number,
+    gen_string,
+    gen_array,
+    gen_object,
+)
 
 
 def files_to_check():
@@ -40,14 +47,28 @@ def test_pylint_passes():
     )
 
 
+schema_strategies = [
+    gen_number("integer"),
+    gen_number("number"),
+    gen_string(),
+    gen_array(),
+    gen_object(),
+    json_schemata(),
+]
+for s in schema_strategies:
+    s.validate()
+
+
 @settings(
-    max_examples=1000,
+    max_examples=200,
     suppress_health_check=[HealthCheck.too_slow],
     deadline=100,  # maximum milliseconds per test case
 )
-@given(st.data(), json_schemata())
-def test_generated_data_matches_schema(data, schema):
+@given(data=st.data())
+@pytest.mark.parametrize("schema_strategy", schema_strategies)
+def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
+    schema = data.draw(schema_strategy)
     value = data.draw(from_schema(schema), "value from schema")
     jsonschema.validate(value, schema)
 
