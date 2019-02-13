@@ -2,10 +2,10 @@
 # pylint: disable=no-value-for-parameter,too-many-return-statements,bad-continuation
 
 
+import json
 import re
 from typing import Any, Dict, List, Union
 
-from canonicaljson import encode_canonical_json
 import jsonschema
 from hypothesis import assume
 import hypothesis.strategies as st
@@ -20,12 +20,27 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
     lambda: st.one_of(
         st.none(),
         st.booleans(),
-        st.floats(allow_nan=False, allow_infinity=False),
+        st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0),
         st.text(),
         st.lists(JSON_STRATEGY, max_size=3),
         st.dictionaries(st.text(), JSON_STRATEGY, max_size=3),
     )
 )
+
+
+def encode_canonical_json(value: JSONType) -> str:
+    """Canonical form serialiser, for uniqueness testing."""
+    if isinstance(value, (type(None), bool, str, int, float)):
+        return json.dumps(value)
+    if isinstance(value, list):
+        return "[" + ",".join(map(encode_canonical_json, value)) + "]"
+    assert isinstance(value, dict)
+    assert all(isinstance(k, str) for k in value)
+    elems = sorted(
+        f"{encode_canonical_json(k)}:{encode_canonical_json(v)}"
+        for k, v in value.items()
+    )
+    return "{" + ",".join(elems) + "}"
 
 
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:

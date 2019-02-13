@@ -1,5 +1,4 @@
 # Development requirements
-canonicaljson
 hypothesis
 jsonschema
 

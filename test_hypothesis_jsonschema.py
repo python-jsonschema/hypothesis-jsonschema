@@ -1,6 +1,7 @@
 """Tests for the hypothesis-jsonschema library."""
 # pylint: disable=no-value-for-parameter,wrong-import-order
 
+import json
 import os
 import subprocess
 
@@ -11,6 +12,8 @@ import pytest
 
 from hypothesis_jsonschema import from_schema, json_schemata
 from hypothesis_jsonschema._impl import (
+    JSON_STRATEGY,
+    encode_canonical_json,
     gen_number,
     gen_string,
     gen_array,
@@ -45,6 +48,15 @@ def test_pylint_passes():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+
+@given(JSON_STRATEGY)
+def test_canonical_json_encoding(v):
+    """Test our hand-rolled canonicaljson implementation."""
+    encoded = encode_canonical_json(v)
+    v2 = json.loads(encoded)
+    assert v == v2
+    assert encode_canonical_json(v2) == encoded
 
 
 schema_strategies = [
