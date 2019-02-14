@@ -1,10 +1,10 @@
 # Development requirements
-canonicaljson
 hypothesis
 jsonschema
 
 black
-pylint
+flake8
+isort
 pytest
 pytest-cov
 pytest-mypy

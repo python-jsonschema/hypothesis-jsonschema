@@ -50,7 +50,11 @@ of generating values that don't quite match.
 
 ### Changelog:
 
-#### 0.4.0 - 2019-02-06
+#### 0.4.2 - 2019-02-14
+- Dropped dependency on `canonicaljson`
+- Less warnings on Python 3.7
+
+#### 0.4.1 - 2019-02-06
 - Relicensed under the more permissive Mozilla Public License, like Hypothesis
 - Requires Hypothesis version 4.0 or later
 - Fixed an array bounds bug with `maxItems` and `contains` keywords

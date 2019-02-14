@@ -1,14 +1,21 @@
 language: python
+sudo: required
+dist: xenial
 python:
   - "3.6"
+  - "3.7"
 install:
   - pip install --upgrade pip setuptools twine
   - pip install -r requirements.txt
   - pip install .
 script:
-  - pytest
+  - source check.sh
+  - git diff --exit-code
 deploy:
   provider: script
   script: python setup.py sdist && twine upload --skip-existing dist/*
   on:
     branch: master
+branches:
+  only:
+  - master

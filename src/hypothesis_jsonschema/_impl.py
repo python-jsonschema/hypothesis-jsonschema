@@ -2,14 +2,14 @@
 # pylint: disable=no-value-for-parameter,too-many-return-statements,bad-continuation
 
 
+import json
 import re
 from typing import Any, Dict, List, Union
 
-from canonicaljson import encode_canonical_json
+import hypothesis.provisional as prov
+import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
-import hypothesis.strategies as st
-import hypothesis.provisional as prov
 from hypothesis.errors import InvalidArgument
 
 # Mypy does not (yet!) support recursive type definitions.
@@ -20,12 +20,27 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
     lambda: st.one_of(
         st.none(),
         st.booleans(),
-        st.floats(allow_nan=False, allow_infinity=False),
+        st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0),
         st.text(),
         st.lists(JSON_STRATEGY, max_size=3),
         st.dictionaries(st.text(), JSON_STRATEGY, max_size=3),
     )
 )
+
+
+def encode_canonical_json(value: JSONType) -> str:
+    """Canonical form serialiser, for uniqueness testing."""
+    if isinstance(value, (type(None), bool, str, int, float)):
+        return json.dumps(value)
+    if isinstance(value, list):
+        return "[" + ",".join(map(encode_canonical_json, value)) + "]"
+    assert isinstance(value, dict)
+    assert all(isinstance(k, str) for k in value)
+    elems = sorted(
+        f"{encode_canonical_json(k)}:{encode_canonical_json(v)}"
+        for k, v in value.items()
+    )
+    return "{" + ",".join(elems) + "}"
 
 
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
@@ -352,20 +367,21 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
     )
     options = [
-        {},
-        {"type": "null"},
-        {"type": "boolean"},
-        gen_number(draw, "integer"),
-        gen_number(draw, "number"),
-        gen_string(draw),
-        {"const": draw(JSON_STRATEGY)},
-        {"enum": draw(unique_list)},
+        st.builds(dict),
+        st.just({"type": "null"}),
+        st.just({"type": "boolean"}),
+        gen_number("integer"),
+        gen_number("number"),
+        gen_string(),
+        st.fixed_dictionaries(dict(const=JSON_STRATEGY)),
+        st.fixed_dictionaries(dict(enum=unique_list)),
     ]
     if recur:
-        options.extend([gen_array(draw), gen_object(draw)])
-    return draw(st.sampled_from(options))
+        options.extend([gen_array(), gen_object()])
+    return draw(draw(st.sampled_from(options)))
 
 
+@st.composite
 def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     """Draw a numeric schema."""
     max_int_float = 2 ** 53
@@ -391,6 +407,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     return out
 
 
+@st.composite
 def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     """Draw a string schema."""
     min_size = draw(st.none() | st.integers(0, 10))
@@ -411,6 +428,7 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     return out
 
 
+@st.composite
 def gen_array(draw: Any) -> Dict[str, JSONType]:
     """Draw an array schema."""
     min_size = draw(st.none() | st.integers(0, 5))
@@ -447,10 +465,11 @@ def gen_array(draw: Any) -> Dict[str, JSONType]:
     return out
 
 
+@st.composite
 def gen_object(draw: Any) -> Dict[str, JSONType]:
     """Draw an object schema."""
     out: Dict[str, JSONType] = {"type": "object"}
-    names = draw(st.sampled_from([None, None, None, gen_string(draw)]))
+    names = draw(st.sampled_from([None, None, None, draw(gen_string())]))
     required = draw(st.booleans())
     if required and names is None:
         required = draw(st.lists(st.text(), min_size=1, max_size=5, unique=True))
