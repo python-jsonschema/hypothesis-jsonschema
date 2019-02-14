@@ -100,10 +100,10 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     lower = schema.get("minimum")
     upper = schema.get("maximum")
     if multiple_of is not None or schema["type"] == "integer":
-        if lower is not None and schema.get("exclusiveMinimum"):
-            lower += 1
-        if upper is not None and schema.get("exclusiveMaximum"):
-            upper -= 1
+        if lower is not None and schema.get("exclusiveMinimum") is True:
+            lower += 1  # pragma: no cover
+        if upper is not None and schema.get("exclusiveMaximum") is True:
+            upper -= 1  # pragma: no cover
         if multiple_of is not None:
             if lower is not None:
                 lower += (multiple_of - lower) % multiple_of
@@ -118,7 +118,10 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     strategy = st.floats(
         min_value=lower, max_value=upper, allow_nan=False, allow_infinity=False
     )
-    if schema.get("exclusiveMaximum") or schema.get("exclusiveMinimum"):
+    if (
+        schema.get("exclusiveMaximum") is not None
+        or schema.get("exclusiveMinimum") is not None
+    ):
         return strategy.filter(lambda x: x not in (lower, upper))
     # Negative-zero does not round trip through JSON, so force it to positive
     return strategy.map(lambda n: 0.0 if n == 0 else n)
@@ -393,16 +396,25 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     multiple_of = draw(st.none() | st.integers(2, 100))
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     out: Dict[str, Union[str, float]] = {"type": kind}
-    if lower is not None:
-        if draw(st.booleans()):
-            out["exclusiveMinimum"] = True
-            lower -= 1
+    # Generate the latest draft supported by jsonschema.
+    # We skip coverage for version branches because it's a pain to combine.
+    boolean_bounds = not hasattr(jsonschema, "Draft7Validator")
+    if lower is not None:  # pragma: no cover
         out["minimum"] = lower
-    if upper is not None:
-        if draw(st.booleans()):
-            out["exclusiveMaximum"] = True
-            upper += 1
+        if boolean_bounds:
+            if draw(st.booleans()):
+                out["exclusiveMinimum"] = True
+                lower -= 1
+        elif draw(st.booleans()):
+            out["exclusiveMinimum"] = lower - 1
+    if upper is not None:  # pragma: no cover
         out["maximum"] = upper
+        if boolean_bounds:
+            if draw(st.booleans()):
+                out["exclusiveMaximum"] = True
+                upper += 1
+        elif draw(st.booleans()):
+            out["exclusiveMaximum"] = upper + 1
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
