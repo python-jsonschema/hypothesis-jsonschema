@@ -12,7 +12,7 @@ The public API consists of a just two functions:
 Takes a JSON schema and return a strategy for allowed JSON objects.
 
 This strategy supports almost all of the schema elements described in the
-draft RFC as of November 2018 (draft 7), with the following exceptions:
+draft RFC as of February 2019 (draft07), with the following exceptions:
 
 - For objects, the "dependencies" keyword is not supported.
 - Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
@@ -22,6 +22,10 @@ draft RFC as of November 2018 (draft 7), with the following exceptions:
 - schema annotations, i.e. "title", "description", "default",
   "readOnly", "writeOnly", and "examples" are not supported.
 - JSON pointers are not supported.
+
+Draft07 support depends on having a compatible version of `jsonschema`,
+which at time of writing is limited to the pre-release 3.0.0x versions.
+Draft04 remains fully supported with the same exceptions.
 
 
 ### hypothesis_jsonschema.json_schemata
