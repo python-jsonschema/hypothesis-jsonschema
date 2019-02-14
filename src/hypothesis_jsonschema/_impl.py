@@ -6,10 +6,10 @@ import json
 import re
 from typing import Any, Dict, List, Union
 
+import hypothesis.provisional as prov
+import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
-import hypothesis.strategies as st
-import hypothesis.provisional as prov
 from hypothesis.errors import InvalidArgument
 
 # Mypy does not (yet!) support recursive type definitions.
