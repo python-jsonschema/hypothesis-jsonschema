@@ -235,12 +235,12 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     min_size = schema.get("minItems", 0)
     max_size = schema.get("maxItems")
     unique = schema.get("uniqueItems")
-    contains = schema.get("contains", {})
+    contains = schema.get("contains")
     if isinstance(items, list):
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
-        if contains != {}:
+        if contains is not None:
             assert (
                 additional_items == {}
             ), "Cannot handle additionalItems and contains togther"
@@ -253,9 +253,10 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         return st.tuples(fixed_items, extra_items).map(
             lambda t: list(t[0]) + t[1]  # type: ignore
         )
-    if contains != {}:
+    if contains is not None:
         assert items == {}, "Cannot handle items and contains togther"
         items = contains
+        min_size = max(min_size, 1)
     if unique:
         return st.lists(
             from_schema(items),
