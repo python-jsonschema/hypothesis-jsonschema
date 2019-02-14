@@ -471,18 +471,15 @@ def gen_object(draw: Any) -> Dict[str, JSONType]:
     """Draw an object schema."""
     out: Dict[str, JSONType] = {"type": "object"}
     names = draw(st.sampled_from([None, None, None, draw(gen_string())]))
-    required = draw(st.booleans())
-    if required and names is None:
-        required = draw(st.lists(st.text(), min_size=1, max_size=5, unique=True))
-    elif required:
-        required = draw(
-            st.lists(from_schema(names), min_size=1, max_size=5, unique=True)
-        )
+    name_strat = st.text() if names is None else from_schema(names)
+    required = draw(
+        st.just(False) | st.lists(name_strat, min_size=1, max_size=5, unique=True)
+    )
 
     # Trying to generate schemata that are consistent would mean dealing with
     # overlapping regex and names, and that would suck.  So instead we ensure that
     # there *are* no overlapping requirements, which is much easier.
-    properties = draw(st.dictionaries(st.text(), _json_schemata(recur=False)))
+    properties = draw(st.dictionaries(name_strat, _json_schemata(recur=False)))
     disjoint = REGEX_PATTERNS.filter(
         lambda r: all(re.search(r, string=name) is None for name in properties)
     )
