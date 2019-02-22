@@ -100,10 +100,10 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     lower = schema.get("minimum")
     upper = schema.get("maximum")
     if multiple_of is not None or schema["type"] == "integer":
-        if lower is not None and schema.get("exclusiveMinimum"):
-            lower += 1
-        if upper is not None and schema.get("exclusiveMaximum"):
-            upper -= 1
+        if lower is not None and schema.get("exclusiveMinimum") is True:
+            lower += 1  # pragma: no cover
+        if upper is not None and schema.get("exclusiveMaximum") is True:
+            upper -= 1  # pragma: no cover
         if multiple_of is not None:
             if lower is not None:
                 lower += (multiple_of - lower) % multiple_of
@@ -118,7 +118,10 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     strategy = st.floats(
         min_value=lower, max_value=upper, allow_nan=False, allow_infinity=False
     )
-    if schema.get("exclusiveMaximum") or schema.get("exclusiveMinimum"):
+    if (
+        schema.get("exclusiveMaximum") is not None
+        or schema.get("exclusiveMinimum") is not None
+    ):
         return strategy.filter(lambda x: x not in (lower, upper))
     # Negative-zero does not round trip through JSON, so force it to positive
     return strategy.map(lambda n: 0.0 if n == 0 else n)
@@ -235,12 +238,12 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     min_size = schema.get("minItems", 0)
     max_size = schema.get("maxItems")
     unique = schema.get("uniqueItems")
-    contains = schema.get("contains", {})
+    contains = schema.get("contains")
     if isinstance(items, list):
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
-        if contains != {}:
+        if contains is not None:
             assert (
                 additional_items == {}
             ), "Cannot handle additionalItems and contains togther"
@@ -253,9 +256,10 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         return st.tuples(fixed_items, extra_items).map(
             lambda t: list(t[0]) + t[1]  # type: ignore
         )
-    if contains != {}:
+    if contains is not None:
         assert items == {}, "Cannot handle items and contains togther"
         items = contains
+        min_size = max(min_size, 1)
     if unique:
         return st.lists(
             from_schema(items),
@@ -264,6 +268,14 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
             unique_by=encode_canonical_json,
         )
     return st.lists(from_schema(items), min_size=min_size, max_size=max_size)
+
+
+def is_valid(instance: JSONType, schema: JSONType) -> bool:
+    try:
+        jsonschema.validate(instance, schema)
+        return True
+    except jsonschema.ValidationError:
+        return False
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
@@ -279,6 +291,12 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     properties = schema.get("properties", {})  # exact name: value schema
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
+
+    all_names_strategy = st.one_of(
+        from_schema(names),
+        st.sampled_from(sorted(properties)),
+        st.one_of([st.from_regex(p) for p in sorted(patterns)]),
+    ).filter(lambda instance: is_valid(instance, names))
 
     @st.composite
     def from_object_schema(draw: Any) -> Any:
@@ -304,13 +322,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                     key = name
                     break
             else:
-                key = draw(
-                    (
-                        from_schema(names)
-                        | st.sampled_from(sorted(properties))
-                        | st.one_of(*map(st.from_regex, sorted(patterns)))
-                    ).filter(lambda s: s not in out)
-                )
+                key = draw(all_names_strategy.filter(lambda s: s not in out))
             if key in properties:
                 out[key] = draw(from_schema(properties[key]))
             else:
@@ -392,16 +404,25 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     multiple_of = draw(st.none() | st.integers(2, 100))
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     out: Dict[str, Union[str, float]] = {"type": kind}
-    if lower is not None:
-        if draw(st.booleans()):
-            out["exclusiveMinimum"] = True
-            lower -= 1
+    # Generate the latest draft supported by jsonschema.
+    # We skip coverage for version branches because it's a pain to combine.
+    boolean_bounds = not hasattr(jsonschema, "Draft7Validator")
+    if lower is not None:  # pragma: no cover
         out["minimum"] = lower
-    if upper is not None:
-        if draw(st.booleans()):
-            out["exclusiveMaximum"] = True
-            upper += 1
+        if boolean_bounds:
+            if draw(st.booleans()):
+                out["exclusiveMinimum"] = True
+                lower -= 1
+        elif draw(st.booleans()):
+            out["exclusiveMinimum"] = lower - 1
+    if upper is not None:  # pragma: no cover
         out["maximum"] = upper
+        if boolean_bounds:
+            if draw(st.booleans()):
+                out["exclusiveMaximum"] = True
+                upper += 1
+        elif draw(st.booleans()):
+            out["exclusiveMaximum"] = upper + 1
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
@@ -470,18 +491,15 @@ def gen_object(draw: Any) -> Dict[str, JSONType]:
     """Draw an object schema."""
     out: Dict[str, JSONType] = {"type": "object"}
     names = draw(st.sampled_from([None, None, None, draw(gen_string())]))
-    required = draw(st.booleans())
-    if required and names is None:
-        required = draw(st.lists(st.text(), min_size=1, max_size=5, unique=True))
-    elif required:
-        required = draw(
-            st.lists(from_schema(names), min_size=1, max_size=5, unique=True)
-        )
+    name_strat = st.text() if names is None else from_schema(names)
+    required = draw(
+        st.just(False) | st.lists(name_strat, min_size=1, max_size=5, unique=True)
+    )
 
     # Trying to generate schemata that are consistent would mean dealing with
     # overlapping regex and names, and that would suck.  So instead we ensure that
     # there *are* no overlapping requirements, which is much easier.
-    properties = draw(st.dictionaries(st.text(), _json_schemata(recur=False)))
+    properties = draw(st.dictionaries(name_strat, _json_schemata(recur=False)))
     disjoint = REGEX_PATTERNS.filter(
         lambda r: all(re.search(r, string=name) is None for name in properties)
     )
