@@ -54,6 +54,10 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.5.0 - 2019-02-22
+- Works with `jsonschema` 3.0 pre-release
+- Initial support for draft06 and draft07
+
 #### 0.4.2 - 2019-02-14
 - Dropped dependency on `canonicaljson`
 - Less warnings on Python 3.7
