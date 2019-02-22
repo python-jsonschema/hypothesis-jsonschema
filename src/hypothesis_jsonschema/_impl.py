@@ -270,6 +270,14 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     return st.lists(from_schema(items), min_size=min_size, max_size=max_size)
 
 
+def is_valid(instance: JSONType, schema: JSONType) -> bool:
+    try:
+        jsonschema.validate(instance, schema)
+        return True
+    except jsonschema.ValidationError:
+        return False
+
+
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
     hard_keywords = "dependencies if then else allOf anyOf oneOf not".split()
@@ -283,6 +291,12 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     properties = schema.get("properties", {})  # exact name: value schema
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
+
+    all_names_strategy = st.one_of(
+        from_schema(names),
+        st.sampled_from(sorted(properties)),
+        st.one_of([st.from_regex(p) for p in sorted(patterns)]),
+    ).filter(lambda instance: is_valid(instance, names))
 
     @st.composite
     def from_object_schema(draw: Any) -> Any:
@@ -308,13 +322,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                     key = name
                     break
             else:
-                key = draw(
-                    (
-                        from_schema(names)
-                        | st.sampled_from(sorted(properties))
-                        | st.one_of(*map(st.from_regex, sorted(patterns)))
-                    ).filter(lambda s: s not in out)
-                )
+                key = draw(all_names_strategy.filter(lambda s: s not in out))
             if key in properties:
                 out[key] = draw(from_schema(properties[key]))
             else:
