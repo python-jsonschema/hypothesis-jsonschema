@@ -52,6 +52,10 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.6.0 - 2019-02-23
+- Support for conditional subschemata, i.e. the `if`, `then`, `else` keywords,
+  and the `anyOf`, `allOf`, `oneOf`, and `not` keywords.
+
 #### 0.5.0 - 2019-02-22
 - Works with `jsonschema` 3.0 pre-release
 - Initial support for draft06 and draft07
