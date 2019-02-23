@@ -396,9 +396,6 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
-    unique_list = st.lists(
-        JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
-    )
     options = [
         st.builds(dict),
         st.just({"type": "null"}),
@@ -406,8 +403,8 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         gen_number("integer"),
         gen_number("number"),
         gen_string(),
-        st.fixed_dictionaries(dict(const=JSON_STRATEGY)),
-        st.fixed_dictionaries(dict(enum=unique_list)),
+        st.builds(dict, const=JSON_STRATEGY),
+        gen_enum(),
     ]
     if recur:
         options += [
@@ -422,6 +419,16 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         ]
 
     return draw(st.one_of(options))
+
+
+@st.composite
+def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
+    """Draw an enum schema."""
+    elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
+    # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
+    for i, val in enumerate(elems):
+        assume(not any(val == v for v in elems[i + 1 :]))  # noqa
+    return dict(enum=elems)
 
 
 @st.composite
@@ -446,22 +453,22 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     # Generate the latest draft supported by jsonschema.
     # We skip coverage for version branches because it's a pain to combine.
     boolean_bounds = not hasattr(jsonschema, "Draft7Validator")
-    if lower is not None:  # pragma: no cover
+    if lower is not None:
         out["minimum"] = lower
-        if boolean_bounds:
-            if draw(st.booleans()):
+        if draw(st.booleans(), label="exclusiveMinimum"):
+            if boolean_bounds:  # pragma: no cover
                 out["exclusiveMinimum"] = True
-                lower -= 1
-        elif draw(st.booleans()):
-            out["exclusiveMinimum"] = lower - 1
-    if upper is not None:  # pragma: no cover
+                out["minimum"] = lower - 1
+            else:
+                out["exclusiveMinimum"] = lower - 1
+    if upper is not None:
         out["maximum"] = upper
-        if boolean_bounds:
-            if draw(st.booleans()):
+        if draw(st.booleans(), label="exclusiveMaximum"):
+            if boolean_bounds:  # pragma: no cover
                 out["exclusiveMaximum"] = True
-                upper += 1
-        elif draw(st.booleans()):
-            out["exclusiveMaximum"] = upper + 1
+                out["maximum"] = upper + 1
+            else:
+                out["exclusiveMaximum"] = upper + 1
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
