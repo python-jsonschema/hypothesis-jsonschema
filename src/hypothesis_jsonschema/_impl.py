@@ -72,7 +72,22 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Now we handle as many validation keywords as we can...
     if schema == {}:
         return JSON_STRATEGY
-
+    # Applying subschemata with boolean logic
+    if "not" in schema:
+        return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
+    if "anyOf" in schema:
+        return st.one_of([from_schema(s) for s in schema["anyOf"]])
+    if "allOf" in schema:
+        return st.one_of([from_schema(s) for s in schema["allOf"]]).filter(
+            lambda inst: all(is_valid(inst, s) for s in schema["allOf"])
+        )
+    if "oneOf" in schema:
+        return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
+            lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
+        )
+    # Conditional application of subschemata
+    ...
+    # Simple special cases
     if "enum" in schema:
         return st.sampled_from(schema["enum"])
     if "const" in schema:
@@ -387,8 +402,17 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         st.fixed_dictionaries(dict(enum=unique_list)),
     ]
     if recur:
-        options.extend([gen_array(), gen_object()])
-    return draw(draw(st.sampled_from(options)))
+        options += [
+            gen_array(),
+            gen_object(),
+            # Conditional subschemata
+            json_schemata().map(lambda v: assume(v and v is not True) and {"not": v}),
+            st.builds(dict, anyOf=st.lists(json_schemata(), min_size=1)),
+            st.builds(dict, oneOf=st.lists(json_schemata(), min_size=1, max_size=2)),
+            st.builds(dict, allOf=st.lists(json_schemata(), min_size=1, max_size=2)),
+        ]
+
+    return draw(st.one_of(options))
 
 
 @st.composite
