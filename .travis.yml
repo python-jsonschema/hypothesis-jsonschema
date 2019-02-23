@@ -15,11 +15,8 @@ install:
 script:
   - source check.sh
   - git diff --exit-code
-deploy:
-  provider: script
-  script: python setup.py sdist && twine upload --skip-existing dist/*
-  on:
-    branch: master
-branches:
-  only:
-  - master
+jobs:
+  include:
+    - stage: publish
+      if: branch = master AND repo = Zac-HD/hypothesis-jsonschema
+      script: python setup.py sdist && twine upload --skip-existing dist/*

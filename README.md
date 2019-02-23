@@ -52,6 +52,9 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.6.1 - 2019-02-23
+- Fix continuous delivery configuration (*before* the latent bug manifested)
+
 #### 0.6.0 - 2019-02-23
 - Support for conditional subschemata, i.e. the `if`, `then`, `else` keywords,
   and the `anyOf`, `allOf`, `oneOf`, and `not` keywords.
