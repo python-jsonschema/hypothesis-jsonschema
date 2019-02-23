@@ -85,6 +85,16 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
             lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
         )
+    # Conditional application of subschemata
+    if "if" in schema:
+        if_ = schema["if"]
+        then = schema.get("then", {})
+        else_ = schema.get("else", {})
+        return st.one_of(
+            from_schema(then).filter(lambda v: is_valid(v, if_)),
+            from_schema(else_).filter(lambda v: not is_valid(v, if_)),
+            from_schema(if_).filter(lambda v: is_valid(v, then) or is_valid(v, else_)),
+        )
     # Simple special cases
     if "enum" in schema:
         return st.sampled_from(schema["enum"])
@@ -404,6 +414,7 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
             gen_array(),
             gen_object(),
             # Conditional subschemata
+            gen_if_then_else(),
             json_schemata().map(lambda v: assume(v and v is not True) and {"not": v}),
             st.builds(dict, anyOf=st.lists(json_schemata(), min_size=1)),
             st.builds(dict, oneOf=st.lists(json_schemata(), min_size=1, max_size=2)),
@@ -411,6 +422,14 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         ]
 
     return draw(st.one_of(options))
+
+
+@st.composite
+def gen_if_then_else(draw: Any) -> Dict[str, JSONType]:
+    """Draw a conditional schema."""
+    # Cheat by using identical if and then schemata, else accepting anything.
+    if_schema = draw(json_schemata().filter(lambda v: bool(v and v is not True)))
+    return {"if": if_schema, "then": if_schema, "else": {}}
 
 
 @st.composite

@@ -15,7 +15,6 @@ This strategy supports almost all of the schema elements described in the
 draft RFC as of February 2019 (draft07), with the following exceptions:
 
 - For objects, the "dependencies" keyword is not supported.
-- Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
 - Schema reuse with "definitions" is not supported.
 - string-encoding of non-JSON data is not supported.
 - schema annotations, i.e. "title", "description", "default",
