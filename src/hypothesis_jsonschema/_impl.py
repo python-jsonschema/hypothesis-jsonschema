@@ -396,9 +396,6 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
-    unique_list = st.lists(
-        JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
-    )
     options = [
         st.builds(dict),
         st.just({"type": "null"}),
@@ -406,8 +403,8 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         gen_number("integer"),
         gen_number("number"),
         gen_string(),
-        st.fixed_dictionaries(dict(const=JSON_STRATEGY)),
-        st.fixed_dictionaries(dict(enum=unique_list)),
+        st.builds(dict, const=JSON_STRATEGY),
+        gen_enum(),
     ]
     if recur:
         options += [
@@ -422,6 +419,16 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         ]
 
     return draw(st.one_of(options))
+
+
+@st.composite
+def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
+    """Draw an enum schema."""
+    elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
+    # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
+    for i, val in enumerate(elems):
+        assume(not any(val == v for v in elems[i + 1 :]))  # noqa
+    return dict(enum=elems)
 
 
 @st.composite
