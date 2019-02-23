@@ -1,6 +1,4 @@
 """A Hypothesis extension for JSON schemata."""
-# pylint: disable=no-value-for-parameter,too-many-return-statements,bad-continuation
-
 
 import json
 import re

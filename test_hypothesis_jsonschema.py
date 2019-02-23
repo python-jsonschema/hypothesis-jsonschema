@@ -1,5 +1,4 @@
 """Tests for the hypothesis-jsonschema library."""
-# pylint: disable=no-value-for-parameter,wrong-import-order
 
 import json
 
