@@ -85,8 +85,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
             lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
         )
-    # Conditional application of subschemata
-    ...
     # Simple special cases
     if "enum" in schema:
         return st.sampled_from(schema["enum"])
