@@ -48,13 +48,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     draft RFC as of November 2018 (draft 7), with the following exceptions:
 
     - For objects, the "dependencies" keyword is not supported.
-    - Subschemata are not supported, i.e. the "if", "then", and "else" keywords,
-      and the "allOf, "anyOf", "oneOf", and "not" keywords.
-    - Schema reuse with "definitions" is not supported.
-    - string-encoding of non-JSON data is not supported.
-    - schema annotations, i.e. "title", "description", "default",
-    "readOnly", "writeOnly", and "examples" are not supported.
-    - JSON pointers are not supported.
+    - Schema reuse with "definitions" and "$ref" is not supported.
     """
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema is False:
@@ -74,14 +68,23 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         return JSON_STRATEGY
     # Applying subschemata with boolean logic
     if "not" in schema:
+        if schema["not"] is True or schema["not"] == {}:
+            return st.nothing()
+        if schema["not"] is False:
+            return JSON_STRATEGY
         return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
     if "anyOf" in schema:
         return st.one_of([from_schema(s) for s in schema["anyOf"]])
     if "allOf" in schema:
-        return st.one_of([from_schema(s) for s in schema["allOf"]]).filter(
+        subs = [from_schema(s) for s in schema["allOf"]]
+        if any(s.is_empty for s in subs):
+            return st.nothing()
+        return st.one_of(subs).filter(
             lambda inst: all(is_valid(inst, s) for s in schema["allOf"])
         )
     if "oneOf" in schema:
+        if sum(s is True or s == {} for s in schema["oneOf"]) > 1:
+            return st.nothing()
         return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
             lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
         )
@@ -97,22 +100,24 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         )
     # Simple special cases
     if "enum" in schema:
-        return st.sampled_from(schema["enum"])
+        return st.sampled_from(schema["enum"]) if schema["enum"] else st.nothing()
     if "const" in schema:
         return st.just(schema["const"])
-    # Schema must have a type then, so:
-    if schema["type"] == "null":
-        return st.none()
-    if schema["type"] == "boolean":
-        return st.booleans()
-    if schema["type"] in ("number", "integer"):
-        return numeric_schema(schema)
-    if schema["type"] == "string":
-        return string_schema(schema)
-    if schema["type"] == "array":
-        return array_schema(schema)
-    assert schema["type"] == "object"
-    return object_schema(schema)
+    # Finally, resolve schema by type - defaulting to "object"
+    type_ = schema.get("type", "object")
+    if not isinstance(type_, list):
+        assert isinstance(type_, str), schema
+        type_ = [type_]
+    map_ = dict(
+        null=lambda _: st.none(),
+        boolean=lambda _: st.booleans(),
+        number=numeric_schema,
+        integer=numeric_schema,
+        string=string_schema,
+        array=array_schema,
+        object=object_schema,
+    )
+    return st.one_of([map_[t](schema) for t in type_])  # type: ignore
 
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
@@ -120,7 +125,7 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     multiple_of = schema.get("multipleOf")
     lower = schema.get("minimum")
     upper = schema.get("maximum")
-    if multiple_of is not None or schema["type"] == "integer":
+    if multiple_of is not None or "integer" in schema["type"]:
         if lower is not None and schema.get("exclusiveMinimum") is True:
             lower += 1  # pragma: no cover
         if upper is not None and schema.get("exclusiveMaximum") is True:
@@ -301,11 +306,16 @@ def is_valid(instance: JSONType, schema: JSONType) -> bool:
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
-    hard_keywords = "dependencies if then else allOf anyOf oneOf not".split()
-    assert not any(kw in schema for kw in hard_keywords)
+    assert "dependencies" not in schema
 
     required = schema.get("required", [])  # required keys
-    names = schema.get("propertyNames", {"type": "string"})  # schema for optional keys
+    names = schema.get("propertyNames", {})  # schema for optional keys
+    if isinstance(names, dict) and "type" not in names:
+        names["type"] = "string"
+    elif names is True:
+        names = {"type": "string"}
+    elif names is False:
+        return st.builds(dict)
     min_size = max(len(required), schema.get("minProperties", 0))
     max_size = schema.get("maxProperties", float("inf"))
 
@@ -315,7 +325,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
     all_names_strategy = st.one_of(
         from_schema(names),
-        st.sampled_from(sorted(properties)),
+        st.sampled_from(sorted(properties)) if properties else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
     ).filter(lambda instance: is_valid(instance, names))
 

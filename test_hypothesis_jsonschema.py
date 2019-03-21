@@ -67,3 +67,48 @@ def test_invalid_schemas_raise(schema):
     """Trigger all the validation exceptions for full coverage."""
     with pytest.raises(Exception):
         from_schema(schema).example()
+
+
+with open("corpus-suite-schemas.json") as f:
+    suite = json.load(f)
+# Some tricky schema and interactions just aren't handled yet.
+# Along with refs and dependencies, this is the main TODO list!
+unhandled = [
+    "allOf",
+    "allOf with base schema",
+    "oneOf with base schema",
+    "anyOf with base schema",
+    "additionalProperties should not look in applicators",
+    "multiple simultaneous patternProperties are validated",
+    "properties, patternProperties, additionalProperties interaction",
+]
+
+
+@pytest.mark.parametrize("name", sorted(suite))
+@settings(deadline=None, max_examples=20)
+@given(data=st.data())
+def test_can_generate_for_test_suite_schema(data, name):
+    dumped = json.dumps(suite[name])
+    if name in unhandled or '"$ref"' in dumped or '"dependencies"' in dumped:
+        pytest.skip()
+
+    strat = from_schema(suite[name])
+    # TODO: store always-invalid schemas in separate corpus, and test that
+    # the resulting strategy is always empty.  Detect from every test for
+    # the schema having "valid": false.
+    if not strat.is_empty:
+        value = data.draw(strat)
+        jsonschema.validate(value, suite[name])
+
+
+with open("corpus-schemastore-catalog.json") as f:
+    catalog = json.load(f)
+
+
+@pytest.mark.skip(reason="defintions and references not yet implemented")
+@pytest.mark.parametrize("name", sorted(catalog))
+@settings(deadline=None, max_examples=10)
+@given(data=st.data())
+def test_can_generate_for_real_large_schema(data, name):
+    value = data.draw(from_schema(catalog[name]))
+    jsonschema.validate(value, catalog[name])
