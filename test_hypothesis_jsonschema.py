@@ -67,3 +67,16 @@ def test_invalid_schemas_raise(schema):
     """Trigger all the validation exceptions for full coverage."""
     with pytest.raises(Exception):
         from_schema(schema).example()
+
+
+with open("corpus-schemastore-catalog.json") as f:
+    catalog = json.load(f)
+
+
+@pytest.mark.skip(reason="defintions and references not yet implemented")
+@pytest.mark.parametrize("name", sorted(catalog))
+@settings(deadline=None, max_examples=10)
+@given(data=st.data())
+def test_can_generate_for_real_large_schema(data, name):
+    value = data.draw(from_schema(catalog[name]))
+    jsonschema.validate(value, catalog[name])
