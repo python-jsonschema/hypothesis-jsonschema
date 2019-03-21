@@ -7,8 +7,10 @@ that - as the official test suite - should cover each feature in the spec.
 """
 
 import concurrent.futures
+import io
 import json
 import urllib.request
+import zipfile
 from typing import Any
 
 
@@ -40,3 +42,22 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
 # Dump them all back to the catalog file.
 with open("corpus-schemastore-catalog.json", mode="w") as f:
     json.dump(schemata, f, indent=4, sort_keys=True)
+
+
+# Part two: fetch the official jsonschema compatibility test suite
+suite: dict = {}
+
+with urllib.request.urlopen(
+    "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/master.zip"
+) as handle:
+    start = "JSON-Schema-Test-Suite-master/tests/draft7/"
+    with zipfile.ZipFile(io.BytesIO(handle.read())) as zf:
+        for path in zf.namelist():
+            if not (path.startswith(start) and path.endswith(".json")):
+                continue
+            suite.update(
+                (v["description"], v["schema"]) for v in json.load(zf.open(path))
+            )
+
+with open("corpus-suite-schemas.json", mode="w") as f:
+    json.dump(suite, f, indent=4, sort_keys=True)

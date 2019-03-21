@@ -1,0 +1,1023 @@
+{
+    "$ref to boolean schema false": {
+        "$ref": "#/definitions/bool",
+        "definitions": {
+            "bool": false
+        }
+    },
+    "$ref to boolean schema true": {
+        "$ref": "#/definitions/bool",
+        "definitions": {
+            "bool": true
+        }
+    },
+    "ECMA 262 regex non-compliance": {
+        "format": "regex"
+    },
+    "Recursive references between schemas": {
+        "$id": "http://localhost:1234/tree",
+        "definitions": {
+            "node": {
+                "$id": "http://localhost:1234/node",
+                "description": "node",
+                "properties": {
+                    "subtree": {
+                        "$ref": "tree"
+                    },
+                    "value": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "value"
+                ],
+                "type": "object"
+            }
+        },
+        "description": "tree of nodes",
+        "properties": {
+            "meta": {
+                "type": "string"
+            },
+            "nodes": {
+                "items": {
+                    "$ref": "node"
+                },
+                "type": "array"
+            }
+        },
+        "required": [
+            "meta",
+            "nodes"
+        ],
+        "type": "object"
+    },
+    "a schema given for items": {
+        "items": {
+            "type": "integer"
+        }
+    },
+    "additionalItems are allowed by default": {
+        "items": [
+            {
+                "type": "integer"
+            }
+        ]
+    },
+    "additionalItems as false without items": {
+        "additionalItems": false
+    },
+    "additionalItems as schema": {
+        "additionalItems": {
+            "type": "integer"
+        },
+        "items": [
+            {}
+        ]
+    },
+    "additionalProperties allows a schema which should validate": {
+        "additionalProperties": {
+            "type": "boolean"
+        },
+        "properties": {
+            "bar": {},
+            "foo": {}
+        }
+    },
+    "additionalProperties are allowed by default": {
+        "properties": {
+            "bar": {},
+            "foo": {}
+        }
+    },
+    "additionalProperties being false does not allow other properties": {
+        "additionalProperties": false,
+        "patternProperties": {
+            "^v": {}
+        },
+        "properties": {
+            "bar": {},
+            "foo": {}
+        }
+    },
+    "additionalProperties can exist by itself": {
+        "additionalProperties": {
+            "type": "boolean"
+        }
+    },
+    "additionalProperties should not look in applicators": {
+        "additionalProperties": {
+            "type": "boolean"
+        },
+        "allOf": [
+            {
+                "properties": {
+                    "foo": {}
+                }
+            }
+        ]
+    },
+    "allOf": {
+        "allOf": [
+            {
+                "properties": {
+                    "bar": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "bar"
+                ]
+            },
+            {
+                "properties": {
+                    "foo": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "foo"
+                ]
+            }
+        ]
+    },
+    "allOf simple types": {
+        "allOf": [
+            {
+                "maximum": 30
+            },
+            {
+                "minimum": 20
+            }
+        ]
+    },
+    "allOf with base schema": {
+        "allOf": [
+            {
+                "properties": {
+                    "foo": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "foo"
+                ]
+            },
+            {
+                "properties": {
+                    "baz": {
+                        "type": "null"
+                    }
+                },
+                "required": [
+                    "baz"
+                ]
+            }
+        ],
+        "properties": {
+            "bar": {
+                "type": "integer"
+            }
+        },
+        "required": [
+            "bar"
+        ]
+    },
+    "allOf with boolean schemas, all false": {
+        "allOf": [
+            false,
+            false
+        ]
+    },
+    "allOf with boolean schemas, all true": {
+        "allOf": [
+            true,
+            true
+        ]
+    },
+    "allOf with boolean schemas, some false": {
+        "allOf": [
+            true,
+            false
+        ]
+    },
+    "an array of schemas for items": {
+        "items": [
+            {
+                "type": "integer"
+            },
+            {
+                "type": "string"
+            }
+        ]
+    },
+    "anyOf": {
+        "anyOf": [
+            {
+                "type": "integer"
+            },
+            {
+                "minimum": 2
+            }
+        ]
+    },
+    "anyOf complex types": {
+        "anyOf": [
+            {
+                "properties": {
+                    "bar": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "bar"
+                ]
+            },
+            {
+                "properties": {
+                    "foo": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "foo"
+                ]
+            }
+        ]
+    },
+    "anyOf with base schema": {
+        "anyOf": [
+            {
+                "maxLength": 2
+            },
+            {
+                "minLength": 4
+            }
+        ],
+        "type": "string"
+    },
+    "anyOf with boolean schemas, all false": {
+        "anyOf": [
+            false,
+            false
+        ]
+    },
+    "anyOf with boolean schemas, all true": {
+        "anyOf": [
+            true,
+            true
+        ]
+    },
+    "anyOf with boolean schemas, some true": {
+        "anyOf": [
+            true,
+            false
+        ]
+    },
+    "array of items with no additionalItems": {
+        "additionalItems": false,
+        "items": [
+            {},
+            {},
+            {}
+        ]
+    },
+    "array type matches arrays": {
+        "type": "array"
+    },
+    "base URI change": {
+        "$id": "http://localhost:1234/",
+        "items": {
+            "$id": "folder/",
+            "items": {
+                "$ref": "folderInteger.json"
+            }
+        }
+    },
+    "base URI change - change folder": {
+        "$id": "http://localhost:1234/scope_change_defs1.json",
+        "definitions": {
+            "baz": {
+                "$id": "folder/",
+                "items": {
+                    "$ref": "folderInteger.json"
+                },
+                "type": "array"
+            }
+        },
+        "properties": {
+            "list": {
+                "$ref": "#/definitions/baz"
+            }
+        },
+        "type": "object"
+    },
+    "base URI change - change folder in subschema": {
+        "$id": "http://localhost:1234/scope_change_defs2.json",
+        "definitions": {
+            "baz": {
+                "$id": "folder/",
+                "definitions": {
+                    "bar": {
+                        "items": {
+                            "$ref": "folderInteger.json"
+                        },
+                        "type": "array"
+                    }
+                }
+            }
+        },
+        "properties": {
+            "list": {
+                "$ref": "#/definitions/baz/definitions/bar"
+            }
+        },
+        "type": "object"
+    },
+    "boolean schema 'false'": false,
+    "boolean schema 'true'": true,
+    "boolean type matches booleans": {
+        "type": "boolean"
+    },
+    "by int": {
+        "multipleOf": 2
+    },
+    "by number": {
+        "multipleOf": 1.5
+    },
+    "by small number": {
+        "multipleOf": 0.0001
+    },
+    "const validation": {
+        "const": 2
+    },
+    "const with array": {
+        "const": [
+            {
+                "foo": "bar"
+            }
+        ]
+    },
+    "const with null": {
+        "const": null
+    },
+    "const with object": {
+        "const": {
+            "baz": "bax",
+            "foo": "bar"
+        }
+    },
+    "contains keyword validation": {
+        "contains": {
+            "minimum": 5
+        }
+    },
+    "contains keyword with boolean schema false": {
+        "contains": false
+    },
+    "contains keyword with boolean schema true": {
+        "contains": true
+    },
+    "contains keyword with const keyword": {
+        "contains": {
+            "const": 5
+        }
+    },
+    "dependencies": {
+        "dependencies": {
+            "bar": [
+                "foo"
+            ]
+        }
+    },
+    "dependencies with boolean subschemas": {
+        "dependencies": {
+            "bar": false,
+            "foo": true
+        }
+    },
+    "dependencies with empty array": {
+        "dependencies": {
+            "bar": []
+        }
+    },
+    "enums in properties": {
+        "properties": {
+            "bar": {
+                "enum": [
+                    "bar"
+                ]
+            },
+            "foo": {
+                "enum": [
+                    "foo"
+                ]
+            }
+        },
+        "required": [
+            "bar"
+        ],
+        "type": "object"
+    },
+    "escaped pointer ref": {
+        "percent%field": {
+            "type": "integer"
+        },
+        "properties": {
+            "percent": {
+                "$ref": "#/percent%25field"
+            },
+            "slash": {
+                "$ref": "#/slash~1field"
+            },
+            "tilda": {
+                "$ref": "#/tilda~0field"
+            }
+        },
+        "slash/field": {
+            "type": "integer"
+        },
+        "tilda~field": {
+            "type": "integer"
+        }
+    },
+    "exclusiveMaximum validation": {
+        "exclusiveMaximum": 3.0
+    },
+    "exclusiveMinimum validation": {
+        "exclusiveMinimum": 1.1
+    },
+    "float comparison with high precision": {
+        "exclusiveMaximum": 9.727837981879871e+26
+    },
+    "float comparison with high precision on negative numbers": {
+        "exclusiveMinimum": -9.727837981879871e+26
+    },
+    "forbidden property": {
+        "properties": {
+            "foo": {
+                "not": {}
+            }
+        }
+    },
+    "format: uri-template": {
+        "format": "uri-template"
+    },
+    "fragment within remote ref": {
+        "$ref": "http://localhost:1234/subSchemas.json#/integer"
+    },
+    "heterogeneous enum validation": {
+        "enum": [
+            6,
+            "foo",
+            [],
+            true,
+            {
+                "foo": 12
+            }
+        ]
+    },
+    "if and else without then": {
+        "else": {
+            "multipleOf": 2
+        },
+        "if": {
+            "exclusiveMaximum": 0
+        }
+    },
+    "if and then without else": {
+        "if": {
+            "exclusiveMaximum": 0
+        },
+        "then": {
+            "minimum": -10
+        }
+    },
+    "ignore else without if": {
+        "else": {
+            "const": 0
+        }
+    },
+    "ignore if without then or else": {
+        "if": {
+            "const": 0
+        }
+    },
+    "ignore then without if": {
+        "then": {
+            "const": 0
+        }
+    },
+    "integer": {
+        "type": "integer"
+    },
+    "integer comparison": {
+        "minimum": -18446744073709551615
+    },
+    "integer type matches integers": {
+        "type": "integer"
+    },
+    "invalid definition": {
+        "$ref": "http://json-schema.org/draft-07/schema#"
+    },
+    "invalid string value for default": {
+        "properties": {
+            "bar": {
+                "default": "bad",
+                "minLength": 4,
+                "type": "string"
+            }
+        }
+    },
+    "invalid type for default": {
+        "properties": {
+            "foo": {
+                "default": [],
+                "type": "integer"
+            }
+        }
+    },
+    "items is schema, no additionalItems": {
+        "additionalItems": false,
+        "items": {}
+    },
+    "items with boolean schema (false)": {
+        "items": false
+    },
+    "items with boolean schema (true)": {
+        "items": true
+    },
+    "items with boolean schemas": {
+        "items": [
+            true,
+            false
+        ]
+    },
+    "maxItems validation": {
+        "maxItems": 2
+    },
+    "maxLength validation": {
+        "maxLength": 2
+    },
+    "maxProperties validation": {
+        "maxProperties": 2
+    },
+    "maximum validation": {
+        "maximum": 3.0
+    },
+    "minItems validation": {
+        "minItems": 1
+    },
+    "minLength validation": {
+        "minLength": 2
+    },
+    "minProperties validation": {
+        "minProperties": 1
+    },
+    "minimum validation": {
+        "minimum": 1.1
+    },
+    "multiple dependencies": {
+        "dependencies": {
+            "quux": [
+                "foo",
+                "bar"
+            ]
+        }
+    },
+    "multiple dependencies subschema": {
+        "dependencies": {
+            "bar": {
+                "properties": {
+                    "bar": {
+                        "type": "integer"
+                    },
+                    "foo": {
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+    },
+    "multiple simultaneous patternProperties are validated": {
+        "patternProperties": {
+            "a*": {
+                "type": "integer"
+            },
+            "aaa*": {
+                "maximum": 20
+            }
+        }
+    },
+    "multiple types can be specified in an array": {
+        "type": [
+            "integer",
+            "string"
+        ]
+    },
+    "nested refs": {
+        "$ref": "#/definitions/c",
+        "definitions": {
+            "a": {
+                "type": "integer"
+            },
+            "b": {
+                "$ref": "#/definitions/a"
+            },
+            "c": {
+                "$ref": "#/definitions/b"
+            }
+        }
+    },
+    "non-ASCII pattern with additionalProperties": {
+        "additionalProperties": false,
+        "patternProperties": {
+            "^\u00e1": {}
+        }
+    },
+    "non-interference across combined schemas": {
+        "allOf": [
+            {
+                "if": {
+                    "exclusiveMaximum": 0
+                }
+            },
+            {
+                "then": {
+                    "minimum": -10
+                }
+            },
+            {
+                "else": {
+                    "multipleOf": 2
+                }
+            }
+        ]
+    },
+    "not": {
+        "not": {
+            "type": "integer"
+        }
+    },
+    "not more complex schema": {
+        "not": {
+            "properties": {
+                "foo": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "not multiple types": {
+        "not": {
+            "type": [
+                "integer",
+                "boolean"
+            ]
+        }
+    },
+    "not with boolean schema false": {
+        "not": false
+    },
+    "not with boolean schema true": {
+        "not": true
+    },
+    "null type matches only the null object": {
+        "type": "null"
+    },
+    "number": {
+        "type": "number"
+    },
+    "number type matches numbers": {
+        "type": "number"
+    },
+    "object properties validation": {
+        "properties": {
+            "bar": {
+                "type": "string"
+            },
+            "foo": {
+                "type": "integer"
+            }
+        }
+    },
+    "object type matches objects": {
+        "type": "object"
+    },
+    "oneOf": {
+        "oneOf": [
+            {
+                "type": "integer"
+            },
+            {
+                "minimum": 2
+            }
+        ]
+    },
+    "oneOf complex types": {
+        "oneOf": [
+            {
+                "properties": {
+                    "bar": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "bar"
+                ]
+            },
+            {
+                "properties": {
+                    "foo": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "foo"
+                ]
+            }
+        ]
+    },
+    "oneOf with base schema": {
+        "oneOf": [
+            {
+                "minLength": 2
+            },
+            {
+                "maxLength": 4
+            }
+        ],
+        "type": "string"
+    },
+    "oneOf with boolean schemas, all false": {
+        "oneOf": [
+            false,
+            false,
+            false
+        ]
+    },
+    "oneOf with boolean schemas, all true": {
+        "oneOf": [
+            true,
+            true,
+            true
+        ]
+    },
+    "oneOf with boolean schemas, more than one true": {
+        "oneOf": [
+            true,
+            true,
+            false
+        ]
+    },
+    "oneOf with boolean schemas, one true": {
+        "oneOf": [
+            true,
+            false,
+            false
+        ]
+    },
+    "pattern is not anchored": {
+        "pattern": "a+"
+    },
+    "pattern validation": {
+        "pattern": "^a*$"
+    },
+    "patternProperties validates properties matching a regex": {
+        "patternProperties": {
+            "f.*o": {
+                "type": "integer"
+            }
+        }
+    },
+    "patternProperties with boolean schemas": {
+        "patternProperties": {
+            "b.*": false,
+            "f.*": true
+        }
+    },
+    "properties with boolean schema": {
+        "properties": {
+            "bar": false,
+            "foo": true
+        }
+    },
+    "properties, patternProperties, additionalProperties interaction": {
+        "additionalProperties": {
+            "type": "integer"
+        },
+        "patternProperties": {
+            "f.o": {
+                "minItems": 2
+            }
+        },
+        "properties": {
+            "bar": {
+                "type": "array"
+            },
+            "foo": {
+                "maxItems": 3,
+                "type": "array"
+            }
+        }
+    },
+    "property named $ref that is not a reference": {
+        "properties": {
+            "$ref": {
+                "type": "string"
+            }
+        }
+    },
+    "propertyNames validation": {
+        "propertyNames": {
+            "maxLength": 3
+        }
+    },
+    "propertyNames with boolean schema false": {
+        "propertyNames": false
+    },
+    "propertyNames with boolean schema true": {
+        "propertyNames": true
+    },
+    "ref overrides any sibling keywords": {
+        "definitions": {
+            "reffed": {
+                "type": "array"
+            }
+        },
+        "properties": {
+            "foo": {
+                "$ref": "#/definitions/reffed",
+                "maxItems": 2
+            }
+        }
+    },
+    "ref within remote ref": {
+        "$ref": "http://localhost:1234/subSchemas.json#/refToInteger"
+    },
+    "regexes are not anchored by default and are case sensitive": {
+        "patternProperties": {
+            "X_": {
+                "type": "string"
+            },
+            "[0-9]{2,}": {
+                "type": "boolean"
+            }
+        }
+    },
+    "relative pointer ref to array": {
+        "items": [
+            {
+                "type": "integer"
+            },
+            {
+                "$ref": "#/items/0"
+            }
+        ]
+    },
+    "relative pointer ref to object": {
+        "properties": {
+            "bar": {
+                "$ref": "#/properties/foo"
+            },
+            "foo": {
+                "type": "integer"
+            }
+        }
+    },
+    "remote ref": {
+        "$ref": "http://localhost:1234/integer.json"
+    },
+    "remote ref, containing refs itself": {
+        "$ref": "http://json-schema.org/draft-07/schema#"
+    },
+    "required default validation": {
+        "properties": {
+            "foo": {}
+        }
+    },
+    "required validation": {
+        "properties": {
+            "bar": {},
+            "foo": {}
+        },
+        "required": [
+            "foo"
+        ]
+    },
+    "required with empty array": {
+        "properties": {
+            "foo": {}
+        },
+        "required": []
+    },
+    "root pointer ref": {
+        "additionalProperties": false,
+        "properties": {
+            "foo": {
+                "$ref": "#"
+            }
+        }
+    },
+    "root ref in remote ref": {
+        "$id": "http://localhost:1234/object",
+        "properties": {
+            "name": {
+                "$ref": "name.json#/definitions/orNull"
+            }
+        },
+        "type": "object"
+    },
+    "simple enum validation": {
+        "enum": [
+            1,
+            2,
+            3
+        ]
+    },
+    "some languages do not distinguish between different types of numeric value": {
+        "type": "integer"
+    },
+    "string": {
+        "type": "string"
+    },
+    "string type matches strings": {
+        "type": "string"
+    },
+    "uniqueItems validation": {
+        "uniqueItems": true
+    },
+    "valid definition": {
+        "$ref": "http://json-schema.org/draft-07/schema#"
+    },
+    "validate against correct branch, then vs else": {
+        "else": {
+            "multipleOf": 2
+        },
+        "if": {
+            "exclusiveMaximum": 0
+        },
+        "then": {
+            "minimum": -10
+        }
+    },
+    "validation of IP addresses": {
+        "format": "ipv4"
+    },
+    "validation of IPv6 addresses": {
+        "format": "ipv6"
+    },
+    "validation of IRI References": {
+        "format": "iri-reference"
+    },
+    "validation of IRIs": {
+        "format": "iri"
+    },
+    "validation of JSON-pointers (JSON String Representation)": {
+        "format": "json-pointer"
+    },
+    "validation of Relative JSON Pointers (RJP)": {
+        "format": "relative-json-pointer"
+    },
+    "validation of URI References": {
+        "format": "uri-reference"
+    },
+    "validation of URIs": {
+        "format": "uri"
+    },
+    "validation of an internationalized e-mail addresses": {
+        "format": "idn-email"
+    },
+    "validation of binary string-encoding": {
+        "contentEncoding": "base64"
+    },
+    "validation of binary-encoded media type documents": {
+        "contentEncoding": "base64",
+        "contentMediaType": "application/json"
+    },
+    "validation of date strings": {
+        "format": "date"
+    },
+    "validation of date-time strings": {
+        "format": "date-time"
+    },
+    "validation of e-mail addresses": {
+        "format": "email"
+    },
+    "validation of host names": {
+        "format": "hostname"
+    },
+    "validation of internationalized host names": {
+        "format": "idn-hostname"
+    },
+    "validation of regular expressions": {
+        "format": "regex"
+    },
+    "validation of string-encoded content based on media type": {
+        "contentMediaType": "application/json"
+    },
+    "validation of time strings": {
+        "format": "time"
+    }
+}
