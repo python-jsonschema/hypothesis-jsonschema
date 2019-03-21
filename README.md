@@ -15,11 +15,7 @@ This strategy supports almost all of the schema elements described in the
 draft RFC as of February 2019 (draft07), with the following exceptions:
 
 - For objects, the "dependencies" keyword is not supported.
-- Schema reuse with "definitions" is not supported.
-- string-encoding of non-JSON data is not supported.
-- schema annotations, i.e. "title", "description", "default",
-  "readOnly", "writeOnly", and "examples" are not supported.
-- JSON pointers are not supported.
+- Schema reuse with "definitions" and "$ref" is not supported.
 
 Draft07 support depends on having a compatible version of `jsonschema`,
 which at time of writing is limited to the pre-release 3.0.0x versions.
@@ -51,6 +47,9 @@ of generating values that don't quite match.
 
 
 ### Changelog:
+
+#### 0.7.0 - 2019-03-21
+- Now requires `jsonschema` >= 3.0
 
 #### 0.6.1 - 2019-02-23
 - Fix continuous delivery configuration (*before* the latent bug manifested)

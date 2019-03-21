@@ -4,13 +4,9 @@ dist: xenial
 python:
   - "3.6"
   - "3.7"
-env:
-  - draft07=false
-  - draft07=true
 install:
   - pip install --upgrade pip setuptools twine
   - pip install -r requirements.txt
-  - test $draft07 && pip install --upgrade --pre jsonschema
   - pip install .
 script:
   - source check.sh

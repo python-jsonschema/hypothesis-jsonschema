@@ -23,7 +23,7 @@ setuptools.setup(
     name="hypothesis-jsonschema",
     version=__version__,
     author="Zac Hatfield-Dodds",
-    author_email="zac.hatfield.dodds@gmail.com",
+    author_email="zac@hypothesis.works",
     packages=setuptools.find_packages(SOURCE),
     package_dir={"": SOURCE},
     package_data={"": ["py.typed"]},
@@ -31,7 +31,7 @@ setuptools.setup(
     license="MPL 2.0",
     description="Generate test data from JSON schemata with Hypothesis",
     zip_safe=False,
-    install_requires=["hypothesis>=4.0.0", "jsonschema>=2.6.0"],
+    install_requires=["hypothesis>=4.0.0", "jsonschema>=3.0.0"],
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 3 - Alpha",
