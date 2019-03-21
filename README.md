@@ -50,6 +50,9 @@ of generating values that don't quite match.
 
 #### 0.7.0 - 2019-03-21
 - Now requires `jsonschema` >= 3.0
+- Improved support for `allOf`, `oneOf`, and `propertyNames`
+- Supports schemata with `"type": [an array of types]`
+- Warning-free on Hypothesis 4.11
 
 #### 0.6.1 - 2019-02-23
 - Fix continuous delivery configuration (*before* the latent bug manifested)
