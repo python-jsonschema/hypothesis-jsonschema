@@ -85,12 +85,20 @@ unhandled = [
 ]
 
 
-@pytest.mark.parametrize("name", sorted(suite))
+@pytest.mark.parametrize(
+    "name",
+    [
+        n
+        if n not in unhandled
+        else pytest.param(n, marks=pytest.mark.xfail(strict=True))
+        for n in sorted(suite)
+    ],
+)
 @settings(deadline=None, max_examples=20)
 @given(data=st.data())
 def test_can_generate_for_test_suite_schema(data, name):
     dumped = json.dumps(suite[name])
-    if name in unhandled or '"$ref"' in dumped or '"dependencies"' in dumped:
+    if '"$ref"' in dumped or '"dependencies"' in dumped:
         pytest.skip()
 
     value = data.draw(from_schema(suite[name]))
@@ -108,10 +116,12 @@ with open("corpus-schemastore-catalog.json") as f:
     catalog = json.load(f)
 
 
-@pytest.mark.skip(reason="defintions and references not yet implemented")
 @pytest.mark.parametrize("name", sorted(catalog))
-@settings(deadline=None, max_examples=10)
+@settings(deadline=None, max_examples=10, suppress_health_check=HealthCheck.all())
 @given(data=st.data())
 def test_can_generate_for_real_large_schema(data, name):
+    dumped = json.dumps(catalog[name])
+    if '"$ref"' in dumped or '"$id"' in dumped or '"dependencies"' in dumped:
+        pytest.skip()
     value = data.draw(from_schema(catalog[name]))
     jsonschema.validate(value, catalog[name])
