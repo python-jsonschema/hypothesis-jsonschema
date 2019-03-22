@@ -46,6 +46,7 @@ with open("corpus-schemastore-catalog.json", mode="w") as f:
 
 # Part two: fetch the official jsonschema compatibility test suite
 suite: dict = {}
+invalid_suite: dict = {}
 
 with urllib.request.urlopen(
     "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/master.zip"
@@ -53,11 +54,15 @@ with urllib.request.urlopen(
     start = "JSON-Schema-Test-Suite-master/tests/draft7/"
     with zipfile.ZipFile(io.BytesIO(handle.read())) as zf:
         for path in zf.namelist():
-            if not (path.startswith(start) and path.endswith(".json")):
+            if "/optional/" in path or not (
+                path.startswith(start) and path.endswith(".json")
+            ):
                 continue
-            suite.update(
-                (v["description"], v["schema"]) for v in json.load(zf.open(path))
-            )
+            for v in json.load(zf.open(path)):
+                if any(t["valid"] for t in v["tests"]):
+                    suite[v["description"]] = v["schema"]
+                else:
+                    invalid_suite[v["description"]] = v["schema"]
 
 with open("corpus-suite-schemas.json", mode="w") as f:
-    json.dump(suite, f, indent=4, sort_keys=True)
+    json.dump([suite, invalid_suite], f, indent=4, sort_keys=True)

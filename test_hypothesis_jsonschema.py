@@ -6,6 +6,7 @@ import hypothesis.strategies as st
 import jsonschema
 import pytest
 from hypothesis import HealthCheck, given, settings
+from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema, json_schemata
 from hypothesis_jsonschema._impl import (
@@ -70,7 +71,7 @@ def test_invalid_schemas_raise(schema):
 
 
 with open("corpus-suite-schemas.json") as f:
-    suite = json.load(f)
+    suite, invalid_suite = json.load(f)
 # Some tricky schema and interactions just aren't handled yet.
 # Along with refs and dependencies, this is the main TODO list!
 unhandled = [
@@ -92,13 +93,15 @@ def test_can_generate_for_test_suite_schema(data, name):
     if name in unhandled or '"$ref"' in dumped or '"dependencies"' in dumped:
         pytest.skip()
 
-    strat = from_schema(suite[name])
-    # TODO: store always-invalid schemas in separate corpus, and test that
-    # the resulting strategy is always empty.  Detect from every test for
-    # the schema having "valid": false.
-    if not strat.is_empty:
-        value = data.draw(strat)
-        jsonschema.validate(value, suite[name])
+    value = data.draw(from_schema(suite[name]))
+    jsonschema.validate(value, suite[name])
+
+
+@pytest.mark.parametrize("name", sorted(invalid_suite))
+def test_cannot_generate_for_empty_test_suite_schema(name):
+    strat = from_schema(invalid_suite[name])
+    with pytest.raises(Exception):
+        strat.example()
 
 
 with open("corpus-schemastore-catalog.json") as f:
