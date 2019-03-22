@@ -375,6 +375,14 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 for rgx, matching_schema in patterns.items():
                     if re.search(rgx, string=key) is not None:
                         out[key] = draw(from_schema(matching_schema))
+                        # Check for overlapping conflicting schemata
+                        for rgx, matching_schema in patterns.items():
+                            if re.search(rgx, string=key) is not None and not is_valid(
+                                out[key], matching_schema
+                            ):
+                                out.pop(key)
+                                elements.reject()
+                                break
                         break
                 else:
                     out[key] = draw(from_schema(additional))
