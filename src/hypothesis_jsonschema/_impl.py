@@ -29,17 +29,7 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
 
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    if isinstance(value, (type(None), bool, str, int, float)):
-        return json.dumps(value)
-    if isinstance(value, list):
-        return "[" + ",".join(map(encode_canonical_json, value)) + "]"
-    assert isinstance(value, dict)
-    assert all(isinstance(k, str) for k in value)
-    elems = sorted(
-        f"{encode_canonical_json(k)}:{encode_canonical_json(v)}"
-        for k, v in value.items()
-    )
-    return "{" + ",".join(elems) + "}"
+    return json.dumps(value, sort_keys=True)
 
 
 def canonicalish(schema: JSONType) -> Dict:
