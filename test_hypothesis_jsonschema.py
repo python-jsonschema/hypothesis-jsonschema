@@ -7,7 +7,7 @@ import jsonschema
 import pytest
 from hypothesis import HealthCheck, given, settings
 
-from hypothesis_jsonschema import from_schema, json_schemata
+from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._impl import (
     JSON_STRATEGY,
     encode_canonical_json,
@@ -16,6 +16,7 @@ from hypothesis_jsonschema._impl import (
     gen_number,
     gen_object,
     gen_string,
+    json_schemata,
 )
 
 

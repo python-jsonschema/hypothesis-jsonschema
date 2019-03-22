@@ -22,13 +22,6 @@ which at time of writing is limited to the pre-release 3.0.0x versions.
 Draft04 remains fully supported with the same exceptions.
 
 
-### hypothesis_jsonschema.json_schemata
-A Hypothesis strategy for arbitrary JSON schemata.
-
-This strategy may generate anything that can be handled by `from_schema`,
-and is used to provide full branch coverage when testing this package.
-
-
 ## Supported versions
 
 `hypothesis-jsonschema` does not support Python 2, because
