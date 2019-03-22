@@ -34,7 +34,7 @@ setuptools.setup(
     install_requires=["hypothesis>=4.0.0", "jsonschema>=3.0.0"],
     python_requires=">=3.6",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Framework :: Hypothesis",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",

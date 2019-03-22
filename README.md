@@ -2,7 +2,7 @@
 
 A [Hypothesis](https://hypothesis.readthedocs.io) strategy for generating data
 that matches some [JSON schema](https://json-schema.org/).
-It is currently in early alpha, but you can use it if you want.
+It is currently in beta, but you can use it if you want.
 [Here's the PyPI page.](https://pypi.org/project/hypothesis-jsonschema/)
 
 The public API consists of a just two functions:
@@ -12,22 +12,9 @@ The public API consists of a just two functions:
 Takes a JSON schema and return a strategy for allowed JSON objects.
 
 This strategy supports almost all of the schema elements described in the
-draft RFC as of February 2019 (draft07), with the following exceptions:
+draft RFC as of February 2019 (draft07), with the following exception:
 
-- For objects, the "dependencies" keyword is not supported.
 - Schema reuse with "definitions" and "$ref" is not supported.
-
-Draft07 support depends on having a compatible version of `jsonschema`,
-which at time of writing is limited to the pre-release 3.0.0x versions.
-Draft04 remains fully supported with the same exceptions.
-
-
-### hypothesis_jsonschema.json_schemata
-A Hypothesis strategy for arbitrary JSON schemata.
-
-This strategy may generate anything that can be handled by `from_schema`,
-and is used to provide full branch coverage when testing this package.
-
 
 ## Supported versions
 
@@ -47,6 +34,11 @@ of generating values that don't quite match.
 
 
 ### Changelog:
+
+#### 0.8.0 - 2019-03-23
+- Further improved support for `allOf`, `oneOf`, and `anyOf` with base schemata
+- Added support for `dependencies`
+- Handles overlapping `patternProperties`
 
 #### 0.7.0 - 2019-03-21
 - Now requires `jsonschema` >= 3.0

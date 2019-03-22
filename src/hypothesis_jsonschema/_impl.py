@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any, Dict, List, Union
 
+import hypothesis.internal.conjecture.utils as cu
 import hypothesis.provisional as prov
 import hypothesis.strategies as st
 import jsonschema
@@ -28,17 +29,17 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
 
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    if isinstance(value, (type(None), bool, str, int, float)):
-        return json.dumps(value)
-    if isinstance(value, list):
-        return "[" + ",".join(map(encode_canonical_json, value)) + "]"
-    assert isinstance(value, dict)
-    assert all(isinstance(k, str) for k in value)
-    elems = sorted(
-        f"{encode_canonical_json(k)}:{encode_canonical_json(v)}"
-        for k, v in value.items()
-    )
-    return "{" + ",".join(elems) + "}"
+    return json.dumps(value, sort_keys=True)
+
+
+def canonicalish(schema: JSONType) -> Dict:
+    """Turn booleans into dict-based schemata."""
+    if schema is True:
+        return {}
+    elif schema is False:
+        return {"not": {}}
+    assert isinstance(schema, dict)
+    return schema
 
 
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
@@ -51,9 +52,9 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     - Schema reuse with "definitions" and "$ref" is not supported.
     """
     # Boolean objects are special schemata; False rejects all and True accepts all.
-    if schema is False:
+    if schema is False or schema == {"not": {}}:
         return st.nothing()
-    if schema is True:
+    if schema is True or schema == {}:
         return JSON_STRATEGY
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
@@ -64,8 +65,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
     # Now we handle as many validation keywords as we can...
-    if schema == {}:
-        return JSON_STRATEGY
     # Applying subschemata with boolean logic
     if "not" in schema:
         if schema["not"] is True or schema["not"] == {}:
@@ -74,19 +73,26 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
             return JSON_STRATEGY
         return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
     if "anyOf" in schema:
-        return st.one_of([from_schema(s) for s in schema["anyOf"]])
+        tmp = schema.copy()
+        return st.one_of(
+            [from_schema({**tmp, **canonicalish(s)}) for s in tmp.pop("anyOf")]
+        )
     if "allOf" in schema:
-        subs = [from_schema(s) for s in schema["allOf"]]
-        if any(s.is_empty for s in subs):
+        tmp = schema.copy()
+        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("allOf")]
+        if any(s == canonicalish(False) for s in schemas):
             return st.nothing()
-        return st.one_of(subs).filter(
-            lambda inst: all(is_valid(inst, s) for s in schema["allOf"])
+        return st.one_of([from_schema(s) for s in schemas]).filter(
+            lambda inst: all(is_valid(inst, s) for s in schemas)
         )
     if "oneOf" in schema:
-        if sum(s is True or s == {} for s in schema["oneOf"]) > 1:
+        tmp = schema.copy()
+        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
+        schemas = [s for s in schemas if s != canonicalish(False)]
+        if len(schemas) > len(set(encode_canonical_json(s) for s in schemas)):
             return st.nothing()
-        return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
-            lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
+        return st.one_of([from_schema(s) for s in schemas]).filter(
+            lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)
         )
     # Conditional application of subschemata
     if "if" in schema:
@@ -306,8 +312,6 @@ def is_valid(instance: JSONType, schema: JSONType) -> bool:
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
-    assert "dependencies" not in schema
-
     required = schema.get("required", [])  # required keys
     names = schema.get("propertyNames", {})  # schema for optional keys
     if isinstance(names, dict) and "type" not in names:
@@ -323,7 +327,15 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
 
+    dependencies = schema.get("dependencies", {})
+    dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
+    dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
+    del dependencies
+
     all_names_strategy = st.one_of(
+        st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
+        if (dep_names or dep_schemas)
+        else st.nothing(),
         from_schema(names),
         st.sampled_from(sorted(properties)) if properties else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
@@ -338,8 +350,6 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
         If any Hypothesis maintainers are reading this... I'm so, so sorry.
         """
-        import hypothesis.internal.conjecture.utils as cu
-
         elements = cu.many(  # type: ignore
             draw(st.data()).conjecture_data,
             min_size=min_size,
@@ -348,21 +358,42 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         )
         out: dict = {}
         while elements.more():
-            for name in required:
-                if name not in out:
-                    key = name
+            for key in required:
+                if key not in out:
                     break
             else:
-                key = draw(all_names_strategy.filter(lambda s: s not in out))
+                for k in dep_names:
+                    if k in out:
+                        key = next((n for n in dep_names[k] if n not in out), None)
+                        if key is not None:
+                            break
+                else:
+                    key = draw(all_names_strategy.filter(lambda s: s not in out))
             if key in properties:
                 out[key] = draw(from_schema(properties[key]))
             else:
                 for rgx, matching_schema in patterns.items():
                     if re.search(rgx, string=key) is not None:
                         out[key] = draw(from_schema(matching_schema))
+                        # Check for overlapping conflicting schemata
+                        for rgx, matching_schema in patterns.items():
+                            if re.search(rgx, string=key) is not None and not is_valid(
+                                out[key], matching_schema
+                            ):
+                                out.pop(key)
+                                elements.reject()
+                                break
                         break
                 else:
                     out[key] = draw(from_schema(additional))
+            for k, v in dep_schemas.items():
+                if k in out and not is_valid(out, v):
+                    out.pop(key)
+                    elements.reject()
+
+        for k in dep_names:
+            if k in out:
+                assume(all(n in out for n in dep_names[k]))
         return out
 
     return from_object_schema()

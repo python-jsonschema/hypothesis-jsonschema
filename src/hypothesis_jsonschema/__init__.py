@@ -1,10 +1,9 @@
 """A Hypothesis extension for JSON schemata.
 
-The public API contains only two functions: `from_schema` and `json_schemata`.
-Check their docstrings for details.
+The only public API is `from_schema`; check the docstring for details.
 """
 
-__version__ = "0.7.0"
-__all__ = ["from_schema", "json_schemata"]
+__version__ = "0.8.0"
+__all__ = ["from_schema"]
 
-from ._impl import from_schema, json_schemata
+from ._impl import from_schema
