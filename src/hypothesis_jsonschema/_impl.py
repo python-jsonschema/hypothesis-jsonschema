@@ -42,6 +42,16 @@ def encode_canonical_json(value: JSONType) -> str:
     return "{" + ",".join(elems) + "}"
 
 
+def canonicalish(schema: JSONType) -> Dict:
+    """Turn booleans into dict-based schemata."""
+    if schema is True:
+        return {}
+    elif schema is False:
+        return {"not": {}}
+    assert isinstance(schema, dict)
+    return schema
+
+
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
@@ -73,19 +83,26 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
             return JSON_STRATEGY
         return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
     if "anyOf" in schema:
-        return st.one_of([from_schema(s) for s in schema["anyOf"]])
+        tmp = schema.copy()
+        return st.one_of(
+            [from_schema({**tmp, **canonicalish(s)}) for s in tmp.pop("anyOf")]
+        )
     if "allOf" in schema:
-        subs = [from_schema(s) for s in schema["allOf"]]
-        if any(s.is_empty for s in subs):
+        tmp = schema.copy()
+        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("allOf")]
+        if any(s == canonicalish(False) for s in schemas):
             return st.nothing()
-        return st.one_of(subs).filter(
-            lambda inst: all(is_valid(inst, s) for s in schema["allOf"])
+        return st.one_of([from_schema(s) for s in schemas]).filter(
+            lambda inst: all(is_valid(inst, s) for s in schemas)
         )
     if "oneOf" in schema:
-        if sum(s is True or s == {} for s in schema["oneOf"]) > 1:
+        tmp = schema.copy()
+        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
+        schemas = [s for s in schemas if s != canonicalish(False)]
+        if len(schemas) > len(set(encode_canonical_json(s) for s in schemas)):
             return st.nothing()
-        return st.one_of([from_schema(s) for s in schema["oneOf"]]).filter(
-            lambda inst: 1 == sum(is_valid(inst, s) for s in schema["oneOf"])
+        return st.one_of([from_schema(s) for s in schemas]).filter(
+            lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)
         )
     # Conditional application of subschemata
     if "if" in schema:

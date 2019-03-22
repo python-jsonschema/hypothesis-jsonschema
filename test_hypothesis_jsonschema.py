@@ -76,8 +76,6 @@ with open("corpus-suite-schemas.json") as f:
 unhandled = [
     "allOf",
     "allOf with base schema",
-    "oneOf with base schema",
-    "anyOf with base schema",
     "multiple simultaneous patternProperties are validated",
     "properties, patternProperties, additionalProperties interaction",
 ]
