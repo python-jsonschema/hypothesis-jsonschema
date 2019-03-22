@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any, Dict, List, Union
 
+import hypothesis.internal.conjecture.utils as cu
 import hypothesis.provisional as prov
 import hypothesis.strategies as st
 import jsonschema
@@ -51,9 +52,9 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     - Schema reuse with "definitions" and "$ref" is not supported.
     """
     # Boolean objects are special schemata; False rejects all and True accepts all.
-    if schema is False:
+    if schema is False or schema == {"not": {}}:
         return st.nothing()
-    if schema is True:
+    if schema is True or schema == {}:
         return JSON_STRATEGY
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
@@ -64,8 +65,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
     # Now we handle as many validation keywords as we can...
-    if schema == {}:
-        return JSON_STRATEGY
     # Applying subschemata with boolean logic
     if "not" in schema:
         if schema["not"] is True or schema["not"] == {}:
@@ -338,8 +337,6 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
         If any Hypothesis maintainers are reading this... I'm so, so sorry.
         """
-        import hypothesis.internal.conjecture.utils as cu
-
         elements = cu.many(  # type: ignore
             draw(st.data()).conjecture_data,
             min_size=min_size,

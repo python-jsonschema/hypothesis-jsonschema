@@ -6,7 +6,6 @@ import hypothesis.strategies as st
 import jsonschema
 import pytest
 from hypothesis import HealthCheck, given, settings
-from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema, json_schemata
 from hypothesis_jsonschema._impl import (
@@ -29,7 +28,7 @@ def test_canonical_json_encoding(v):
     assert encode_canonical_json(v2) == encoded
 
 
-@settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(data=st.data())
 @pytest.mark.parametrize(
     "schema_strategy",
@@ -79,7 +78,6 @@ unhandled = [
     "allOf with base schema",
     "oneOf with base schema",
     "anyOf with base schema",
-    "additionalProperties should not look in applicators",
     "multiple simultaneous patternProperties are validated",
     "properties, patternProperties, additionalProperties interaction",
 ]
