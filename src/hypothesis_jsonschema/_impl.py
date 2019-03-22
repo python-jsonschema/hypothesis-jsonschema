@@ -312,8 +312,6 @@ def is_valid(instance: JSONType, schema: JSONType) -> bool:
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
-    assert "dependencies" not in schema
-
     required = schema.get("required", [])  # required keys
     names = schema.get("propertyNames", {})  # schema for optional keys
     if isinstance(names, dict) and "type" not in names:
@@ -329,7 +327,15 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     additional = schema.get("additionalProperties", {})  # schema for other values
 
+    dependencies = schema.get("dependencies", {})
+    dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
+    dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
+    del dependencies
+
     all_names_strategy = st.one_of(
+        st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
+        if (dep_names or dep_schemas)
+        else st.nothing(),
         from_schema(names),
         st.sampled_from(sorted(properties)) if properties else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
@@ -352,12 +358,17 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         )
         out: dict = {}
         while elements.more():
-            for name in required:
-                if name not in out:
-                    key = name
+            for key in required:
+                if key not in out:
                     break
             else:
-                key = draw(all_names_strategy.filter(lambda s: s not in out))
+                for k in dep_names:
+                    if k in out:
+                        key = next((n for n in dep_names[k] if n not in out), None)
+                        if key is not None:
+                            break
+                else:
+                    key = draw(all_names_strategy.filter(lambda s: s not in out))
             if key in properties:
                 out[key] = draw(from_schema(properties[key]))
             else:
@@ -367,6 +378,14 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                         break
                 else:
                     out[key] = draw(from_schema(additional))
+            for k, v in dep_schemas.items():
+                if k in out and not is_valid(out, v):
+                    out.pop(key)
+                    elements.reject()
+
+        for k in dep_names:
+            if k in out:
+                assume(all(n in out for n in dep_names[k]))
         return out
 
     return from_object_schema()

@@ -35,6 +35,10 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.8.0 - 2019-03-23
+- Further improved support for `allOf`, `oneOf`, and `anyOf` with base schemata
+- Added support for `dependencies`
+
 #### 0.7.0 - 2019-03-21
 - Now requires `jsonschema` >= 3.0
 - Improved support for `allOf`, `oneOf`, and `propertyNames`
