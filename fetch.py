@@ -35,6 +35,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
     ):
         try:
             name, value = future.result()
+            assert value is not None
             schemata[name] = value
         except Exception:
             print(f"Could not retrieve schema: {name}")
