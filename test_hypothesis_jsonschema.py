@@ -70,26 +70,9 @@ def test_invalid_schemas_raise(schema):
         from_schema(schema).example()
 
 
-with open("corpus-schemastore-catalog.json") as f:
-    catalog = json.load(f)
-
-
-@pytest.mark.parametrize("name", sorted(catalog))
-@settings(deadline=None, max_examples=10, suppress_health_check=HealthCheck.all())
-@given(data=st.data())
-def test_can_generate_for_real_large_schema(data, name):
-    dumped = json.dumps(catalog[name])
-    if '"$ref"' in dumped or '"$id"' in dumped:
-        pytest.skip()
-    value = data.draw(from_schema(catalog[name]))
-    jsonschema.validate(value, catalog[name])
-
-
-with open("corpus-suite-schemas.json") as f:
-    suite, invalid_suite = json.load(f)
 # Some tricky schema and interactions just aren't handled yet.
 # Along with refs and dependencies, this is the main TODO list!
-unhandled = {
+EXPECTED_FAILURES = {
     # Not yet implemented
     "draft4/allOf",
     "draft7/allOf",
@@ -103,23 +86,34 @@ unhandled = {
     "draft4/minimum validation (explicit false exclusivity)",
     "draft4/maximum validation (explicit false exclusivity)",
 }
+with open("corpus-schemastore-catalog.json") as f:
+    catalog = json.load(f)
+with open("corpus-suite-schemas.json") as f:
+    suite, invalid_suite = json.load(f)
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        n
-        if n not in unhandled
-        else pytest.param(n, marks=pytest.mark.xfail(strict=True))
-        for n in sorted(suite)
-    ],
-)
+def to_name_params(corpus):
+    for n in sorted(corpus):
+        if n in EXPECTED_FAILURES:
+            yield pytest.param(n, marks=pytest.mark.xfail(strict=True))
+        elif '"$ref"' in json.dumps(corpus[n]):
+            yield pytest.param(n, marks=pytest.mark.skip)
+        else:
+            yield n
+
+
+@pytest.mark.parametrize("name", to_name_params(catalog))
+@settings(deadline=None, max_examples=5, suppress_health_check=HealthCheck.all())
+@given(data=st.data())
+def test_can_generate_for_real_large_schema(data, name):
+    value = data.draw(from_schema(catalog[name]))
+    jsonschema.validate(value, catalog[name])
+
+
+@pytest.mark.parametrize("name", to_name_params(suite))
 @settings(deadline=None, max_examples=20)
 @given(data=st.data())
 def test_can_generate_for_test_suite_schema(data, name):
-    if '"$ref"' in json.dumps(suite[name]):
-        pytest.skip()
-
     value = data.draw(from_schema(suite[name]))
     jsonschema.validate(value, suite[name])
 
