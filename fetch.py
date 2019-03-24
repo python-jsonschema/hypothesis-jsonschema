@@ -35,10 +35,13 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
     ):
         try:
             name, value = future.result()
-            assert value is not None
-            schemata[name] = value
         except Exception:
             print(f"Could not retrieve schema: {name}")
+        else:
+            assert value is not None
+            # quick-and-dirty workaround for description collision with full schema.
+            if value.get("$id") != "http://json.schemastore.org/cryproj.dev.schema":
+                schemata[name] = value
 
 # Dump them all back to the catalog file.
 with open("corpus-schemastore-catalog.json", mode="w") as f:
@@ -60,7 +63,7 @@ with urllib.request.urlopen(
                     for v in json.load(zf.open(path)):
                         if any(t["valid"] for t in v["tests"]):
                             suite[draft + v["description"]] = v["schema"]
-                        else:
+                        elif "/optional/" not in path:
                             invalid_suite[draft + v["description"]] = v["schema"]
 
 with open("corpus-suite-schemas.json", mode="w") as f:

@@ -103,13 +103,6 @@ unhandled = {
     "draft4/minimum validation (explicit false exclusivity)",
     "draft4/maximum validation (explicit false exclusivity)",
 }
-# These upstream tests should specify some valid example, but don't.
-for n in [
-    "draft4/string",
-    "draft7/string",
-    "draft4/some languages do not distinguish between different types of numeric value",
-]:
-    suite[n] = invalid_suite.pop(n)
 
 
 @pytest.mark.parametrize(

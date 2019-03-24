@@ -1670,9 +1670,6 @@
         }
     },
     {
-        "draft4/ECMA 262 regex non-compliance": {
-            "format": "regex"
-        },
         "draft4/additionalProperties should not look in applicators": {
             "additionalProperties": {
                 "type": "boolean"
@@ -1685,31 +1682,14 @@
                 }
             ]
         },
-        "draft4/float comparison with high precision": {
-            "exclusiveMaximum": true,
-            "maximum": 9.727837981879871e+26
-        },
-        "draft4/float comparison with high precision on negative numbers": {
-            "exclusiveMinimum": true,
-            "minimum": -9.727837981879871e+26
-        },
         "draft4/invalid definition": {
             "$ref": "http://json-schema.org/draft-04/schema#"
-        },
-        "draft4/some languages do not distinguish between different types of numeric value": {
-            "type": "integer"
-        },
-        "draft4/string": {
-            "type": "string"
         },
         "draft7/$ref to boolean schema false": {
             "$ref": "#/definitions/bool",
             "definitions": {
                 "bool": false
             }
-        },
-        "draft7/ECMA 262 regex non-compliance": {
-            "format": "regex"
         },
         "draft7/additionalProperties should not look in applicators": {
             "additionalProperties": {
@@ -1745,12 +1725,6 @@
         "draft7/contains keyword with boolean schema false": {
             "contains": false
         },
-        "draft7/float comparison with high precision": {
-            "exclusiveMaximum": 9.727837981879871e+26
-        },
-        "draft7/float comparison with high precision on negative numbers": {
-            "exclusiveMinimum": -9.727837981879871e+26
-        },
         "draft7/invalid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
@@ -1777,9 +1751,6 @@
                 true,
                 false
             ]
-        },
-        "draft7/string": {
-            "type": "string"
         }
     }
 ]
