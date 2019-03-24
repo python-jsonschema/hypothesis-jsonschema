@@ -62,7 +62,9 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
             f"Got schema={schema} of type {type(schema).__name__}, "
             "but expected a dict."
         )
-    jsonschema.validators.validator_for(schema).check_schema(schema)
+    # Only check if declared, lest we error on inner non-latest-draft schemata.
+    if "$schema" in schema:
+        jsonschema.validators.validator_for(schema).check_schema(schema)
 
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic

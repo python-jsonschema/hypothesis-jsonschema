@@ -52,18 +52,16 @@ invalid_suite: dict = {}
 with urllib.request.urlopen(
     "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/master.zip"
 ) as handle:
-    start = "JSON-Schema-Test-Suite-master/tests/draft7/"
+    start = "JSON-Schema-Test-Suite-master/tests/"
     with zipfile.ZipFile(io.BytesIO(handle.read())) as zf:
         for path in zf.namelist():
-            if "/optional/" in path or not (
-                path.startswith(start) and path.endswith(".json")
-            ):
-                continue
-            for v in json.load(zf.open(path)):
-                if any(t["valid"] for t in v["tests"]):
-                    suite[v["description"]] = v["schema"]
-                else:
-                    invalid_suite[v["description"]] = v["schema"]
+            for draft in ("draft4/", "draft7/"):
+                if path.startswith(start + draft) and path.endswith(".json"):
+                    for v in json.load(zf.open(path)):
+                        if any(t["valid"] for t in v["tests"]):
+                            suite[draft + v["description"]] = v["schema"]
+                        else:
+                            invalid_suite[draft + v["description"]] = v["schema"]
 
 with open("corpus-suite-schemas.json", mode="w") as f:
     json.dump([suite, invalid_suite], f, indent=4, sort_keys=True)

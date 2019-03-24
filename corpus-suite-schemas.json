@@ -1,12 +1,738 @@
 [
     {
-        "$ref to boolean schema true": {
+        "draft4/Recursive references between schemas": {
+            "definitions": {
+                "node": {
+                    "description": "node",
+                    "id": "http://localhost:1234/node",
+                    "properties": {
+                        "subtree": {
+                            "$ref": "tree"
+                        },
+                        "value": {
+                            "type": "number"
+                        }
+                    },
+                    "required": [
+                        "value"
+                    ],
+                    "type": "object"
+                }
+            },
+            "description": "tree of nodes",
+            "id": "http://localhost:1234/tree",
+            "properties": {
+                "meta": {
+                    "type": "string"
+                },
+                "nodes": {
+                    "items": {
+                        "$ref": "node"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "meta",
+                "nodes"
+            ],
+            "type": "object"
+        },
+        "draft4/a schema given for items": {
+            "items": {
+                "type": "integer"
+            }
+        },
+        "draft4/additionalItems are allowed by default": {
+            "items": [
+                {
+                    "type": "integer"
+                }
+            ]
+        },
+        "draft4/additionalItems as false without items": {
+            "additionalItems": false
+        },
+        "draft4/additionalItems as schema": {
+            "additionalItems": {
+                "type": "integer"
+            },
+            "items": [
+                {}
+            ]
+        },
+        "draft4/additionalProperties allows a schema which should validate": {
+            "additionalProperties": {
+                "type": "boolean"
+            },
+            "properties": {
+                "bar": {},
+                "foo": {}
+            }
+        },
+        "draft4/additionalProperties are allowed by default": {
+            "properties": {
+                "bar": {},
+                "foo": {}
+            }
+        },
+        "draft4/additionalProperties being false does not allow other properties": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^v": {}
+            },
+            "properties": {
+                "bar": {},
+                "foo": {}
+            }
+        },
+        "draft4/additionalProperties can exist by itself": {
+            "additionalProperties": {
+                "type": "boolean"
+            }
+        },
+        "draft4/allOf": {
+            "allOf": [
+                {
+                    "properties": {
+                        "bar": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "bar"
+                    ]
+                },
+                {
+                    "properties": {
+                        "foo": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                }
+            ]
+        },
+        "draft4/allOf simple types": {
+            "allOf": [
+                {
+                    "maximum": 30
+                },
+                {
+                    "minimum": 20
+                }
+            ]
+        },
+        "draft4/allOf with base schema": {
+            "allOf": [
+                {
+                    "properties": {
+                        "foo": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                },
+                {
+                    "properties": {
+                        "baz": {
+                            "type": "null"
+                        }
+                    },
+                    "required": [
+                        "baz"
+                    ]
+                }
+            ],
+            "properties": {
+                "bar": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "bar"
+            ]
+        },
+        "draft4/an array of schemas for items": {
+            "items": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "string"
+                }
+            ]
+        },
+        "draft4/anyOf": {
+            "anyOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "minimum": 2
+                }
+            ]
+        },
+        "draft4/anyOf complex types": {
+            "anyOf": [
+                {
+                    "properties": {
+                        "bar": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "bar"
+                    ]
+                },
+                {
+                    "properties": {
+                        "foo": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                }
+            ]
+        },
+        "draft4/anyOf with base schema": {
+            "anyOf": [
+                {
+                    "maxLength": 2
+                },
+                {
+                    "minLength": 4
+                }
+            ],
+            "type": "string"
+        },
+        "draft4/array of items with no additionalItems": {
+            "additionalItems": false,
+            "items": [
+                {},
+                {},
+                {}
+            ]
+        },
+        "draft4/array type matches arrays": {
+            "type": "array"
+        },
+        "draft4/base URI change": {
+            "id": "http://localhost:1234/",
+            "items": {
+                "id": "folder/",
+                "items": {
+                    "$ref": "folderInteger.json"
+                }
+            }
+        },
+        "draft4/base URI change - change folder": {
+            "definitions": {
+                "baz": {
+                    "id": "folder/",
+                    "items": {
+                        "$ref": "folderInteger.json"
+                    },
+                    "type": "array"
+                }
+            },
+            "id": "http://localhost:1234/scope_change_defs1.json",
+            "properties": {
+                "list": {
+                    "$ref": "#/definitions/baz"
+                }
+            },
+            "type": "object"
+        },
+        "draft4/base URI change - change folder in subschema": {
+            "definitions": {
+                "baz": {
+                    "definitions": {
+                        "bar": {
+                            "items": {
+                                "$ref": "folderInteger.json"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "id": "folder/"
+                }
+            },
+            "id": "http://localhost:1234/scope_change_defs2.json",
+            "properties": {
+                "list": {
+                    "$ref": "#/definitions/baz/definitions/bar"
+                }
+            },
+            "type": "object"
+        },
+        "draft4/boolean type matches booleans": {
+            "type": "boolean"
+        },
+        "draft4/by int": {
+            "multipleOf": 2
+        },
+        "draft4/by number": {
+            "multipleOf": 1.5
+        },
+        "draft4/by small number": {
+            "multipleOf": 0.0001
+        },
+        "draft4/dependencies": {
+            "dependencies": {
+                "bar": [
+                    "foo"
+                ]
+            }
+        },
+        "draft4/enums in properties": {
+            "properties": {
+                "bar": {
+                    "enum": [
+                        "bar"
+                    ]
+                },
+                "foo": {
+                    "enum": [
+                        "foo"
+                    ]
+                }
+            },
+            "required": [
+                "bar"
+            ],
+            "type": "object"
+        },
+        "draft4/escaped pointer ref": {
+            "percent%field": {
+                "type": "integer"
+            },
+            "properties": {
+                "percent": {
+                    "$ref": "#/percent%25field"
+                },
+                "slash": {
+                    "$ref": "#/slash~1field"
+                },
+                "tilda": {
+                    "$ref": "#/tilda~0field"
+                }
+            },
+            "slash/field": {
+                "type": "integer"
+            },
+            "tilda~field": {
+                "type": "integer"
+            }
+        },
+        "draft4/exclusiveMaximum validation": {
+            "exclusiveMaximum": true,
+            "maximum": 3.0
+        },
+        "draft4/exclusiveMinimum validation": {
+            "exclusiveMinimum": true,
+            "minimum": 1.1
+        },
+        "draft4/forbidden property": {
+            "properties": {
+                "foo": {
+                    "not": {}
+                }
+            }
+        },
+        "draft4/fragment within remote ref": {
+            "$ref": "http://localhost:1234/subSchemas.json#/integer"
+        },
+        "draft4/heterogeneous enum validation": {
+            "enum": [
+                6,
+                "foo",
+                [],
+                true,
+                {
+                    "foo": 12
+                }
+            ]
+        },
+        "draft4/integer": {
+            "type": "integer"
+        },
+        "draft4/integer comparison": {
+            "minimum": -18446744073709551615
+        },
+        "draft4/integer type matches integers": {
+            "type": "integer"
+        },
+        "draft4/invalid string value for default": {
+            "properties": {
+                "bar": {
+                    "default": "bad",
+                    "minLength": 4,
+                    "type": "string"
+                }
+            }
+        },
+        "draft4/invalid type for default": {
+            "properties": {
+                "foo": {
+                    "default": [],
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/items is schema, no additionalItems": {
+            "additionalItems": false,
+            "items": {}
+        },
+        "draft4/maxItems validation": {
+            "maxItems": 2
+        },
+        "draft4/maxLength validation": {
+            "maxLength": 2
+        },
+        "draft4/maxProperties validation": {
+            "maxProperties": 2
+        },
+        "draft4/maximum validation": {
+            "maximum": 3.0
+        },
+        "draft4/maximum validation (explicit false exclusivity)": {
+            "exclusiveMaximum": false,
+            "maximum": 3.0
+        },
+        "draft4/minItems validation": {
+            "minItems": 1
+        },
+        "draft4/minLength validation": {
+            "minLength": 2
+        },
+        "draft4/minProperties validation": {
+            "minProperties": 1
+        },
+        "draft4/minimum validation": {
+            "minimum": 1.1
+        },
+        "draft4/minimum validation (explicit false exclusivity)": {
+            "exclusiveMinimum": false,
+            "minimum": 1.1
+        },
+        "draft4/multiple dependencies": {
+            "dependencies": {
+                "quux": [
+                    "foo",
+                    "bar"
+                ]
+            }
+        },
+        "draft4/multiple dependencies subschema": {
+            "dependencies": {
+                "bar": {
+                    "properties": {
+                        "bar": {
+                            "type": "integer"
+                        },
+                        "foo": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "draft4/multiple simultaneous patternProperties are validated": {
+            "patternProperties": {
+                "a*": {
+                    "type": "integer"
+                },
+                "aaa*": {
+                    "maximum": 20
+                }
+            }
+        },
+        "draft4/multiple types can be specified in an array": {
+            "type": [
+                "integer",
+                "string"
+            ]
+        },
+        "draft4/nested refs": {
+            "$ref": "#/definitions/c",
+            "definitions": {
+                "a": {
+                    "type": "integer"
+                },
+                "b": {
+                    "$ref": "#/definitions/a"
+                },
+                "c": {
+                    "$ref": "#/definitions/b"
+                }
+            }
+        },
+        "draft4/non-ASCII pattern with additionalProperties": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^\u00e1": {}
+            }
+        },
+        "draft4/not": {
+            "not": {
+                "type": "integer"
+            }
+        },
+        "draft4/not more complex schema": {
+            "not": {
+                "properties": {
+                    "foo": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "draft4/not multiple types": {
+            "not": {
+                "type": [
+                    "integer",
+                    "boolean"
+                ]
+            }
+        },
+        "draft4/null type matches only the null object": {
+            "type": "null"
+        },
+        "draft4/number": {
+            "type": "number"
+        },
+        "draft4/number type matches numbers": {
+            "type": "number"
+        },
+        "draft4/object properties validation": {
+            "properties": {
+                "bar": {
+                    "type": "string"
+                },
+                "foo": {
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/object type matches objects": {
+            "type": "object"
+        },
+        "draft4/oneOf": {
+            "oneOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "minimum": 2
+                }
+            ]
+        },
+        "draft4/oneOf complex types": {
+            "oneOf": [
+                {
+                    "properties": {
+                        "bar": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "bar"
+                    ]
+                },
+                {
+                    "properties": {
+                        "foo": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                }
+            ]
+        },
+        "draft4/oneOf with base schema": {
+            "oneOf": [
+                {
+                    "minLength": 2
+                },
+                {
+                    "maxLength": 4
+                }
+            ],
+            "type": "string"
+        },
+        "draft4/pattern is not anchored": {
+            "pattern": "a+"
+        },
+        "draft4/pattern validation": {
+            "pattern": "^a*$"
+        },
+        "draft4/patternProperties validates properties matching a regex": {
+            "patternProperties": {
+                "f.*o": {
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/properties, patternProperties, additionalProperties interaction": {
+            "additionalProperties": {
+                "type": "integer"
+            },
+            "patternProperties": {
+                "f.o": {
+                    "minItems": 2
+                }
+            },
+            "properties": {
+                "bar": {
+                    "type": "array"
+                },
+                "foo": {
+                    "maxItems": 3,
+                    "type": "array"
+                }
+            }
+        },
+        "draft4/property named $ref that is not a reference": {
+            "properties": {
+                "$ref": {
+                    "type": "string"
+                }
+            }
+        },
+        "draft4/ref overrides any sibling keywords": {
+            "definitions": {
+                "reffed": {
+                    "type": "array"
+                }
+            },
+            "properties": {
+                "foo": {
+                    "$ref": "#/definitions/reffed",
+                    "maxItems": 2
+                }
+            }
+        },
+        "draft4/ref within remote ref": {
+            "$ref": "http://localhost:1234/subSchemas.json#/refToInteger"
+        },
+        "draft4/regexes are not anchored by default and are case sensitive": {
+            "patternProperties": {
+                "X_": {
+                    "type": "string"
+                },
+                "[0-9]{2,}": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "draft4/relative pointer ref to array": {
+            "items": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "$ref": "#/items/0"
+                }
+            ]
+        },
+        "draft4/relative pointer ref to object": {
+            "properties": {
+                "bar": {
+                    "$ref": "#/properties/foo"
+                },
+                "foo": {
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/remote ref": {
+            "$ref": "http://localhost:1234/integer.json"
+        },
+        "draft4/remote ref, containing refs itself": {
+            "$ref": "http://json-schema.org/draft-04/schema#"
+        },
+        "draft4/required default validation": {
+            "properties": {
+                "foo": {}
+            }
+        },
+        "draft4/required validation": {
+            "properties": {
+                "bar": {},
+                "foo": {}
+            },
+            "required": [
+                "foo"
+            ]
+        },
+        "draft4/root pointer ref": {
+            "additionalProperties": false,
+            "properties": {
+                "foo": {
+                    "$ref": "#"
+                }
+            }
+        },
+        "draft4/root ref in remote ref": {
+            "id": "http://localhost:1234/object",
+            "properties": {
+                "name": {
+                    "$ref": "name.json#/definitions/orNull"
+                }
+            },
+            "type": "object"
+        },
+        "draft4/simple enum validation": {
+            "enum": [
+                1,
+                2,
+                3
+            ]
+        },
+        "draft4/string type matches strings": {
+            "type": "string"
+        },
+        "draft4/uniqueItems validation": {
+            "uniqueItems": true
+        },
+        "draft4/valid definition": {
+            "$ref": "http://json-schema.org/draft-04/schema#"
+        },
+        "draft4/validation of IP addresses": {
+            "format": "ipv4"
+        },
+        "draft4/validation of IPv6 addresses": {
+            "format": "ipv6"
+        },
+        "draft4/validation of URIs": {
+            "format": "uri"
+        },
+        "draft4/validation of date-time strings": {
+            "format": "date-time"
+        },
+        "draft4/validation of e-mail addresses": {
+            "format": "email"
+        },
+        "draft4/validation of host names": {
+            "format": "hostname"
+        },
+        "draft7/$ref to boolean schema true": {
             "$ref": "#/definitions/bool",
             "definitions": {
                 "bool": true
             }
         },
-        "Recursive references between schemas": {
+        "draft7/Recursive references between schemas": {
             "$id": "http://localhost:1234/tree",
             "definitions": {
                 "node": {
@@ -44,22 +770,22 @@
             ],
             "type": "object"
         },
-        "a schema given for items": {
+        "draft7/a schema given for items": {
             "items": {
                 "type": "integer"
             }
         },
-        "additionalItems are allowed by default": {
+        "draft7/additionalItems are allowed by default": {
             "items": [
                 {
                     "type": "integer"
                 }
             ]
         },
-        "additionalItems as false without items": {
+        "draft7/additionalItems as false without items": {
             "additionalItems": false
         },
-        "additionalItems as schema": {
+        "draft7/additionalItems as schema": {
             "additionalItems": {
                 "type": "integer"
             },
@@ -67,7 +793,7 @@
                 {}
             ]
         },
-        "additionalProperties allows a schema which should validate": {
+        "draft7/additionalProperties allows a schema which should validate": {
             "additionalProperties": {
                 "type": "boolean"
             },
@@ -76,13 +802,13 @@
                 "foo": {}
             }
         },
-        "additionalProperties are allowed by default": {
+        "draft7/additionalProperties are allowed by default": {
             "properties": {
                 "bar": {},
                 "foo": {}
             }
         },
-        "additionalProperties being false does not allow other properties": {
+        "draft7/additionalProperties being false does not allow other properties": {
             "additionalProperties": false,
             "patternProperties": {
                 "^v": {}
@@ -92,12 +818,12 @@
                 "foo": {}
             }
         },
-        "additionalProperties can exist by itself": {
+        "draft7/additionalProperties can exist by itself": {
             "additionalProperties": {
                 "type": "boolean"
             }
         },
-        "allOf": {
+        "draft7/allOf": {
             "allOf": [
                 {
                     "properties": {
@@ -121,7 +847,7 @@
                 }
             ]
         },
-        "allOf simple types": {
+        "draft7/allOf simple types": {
             "allOf": [
                 {
                     "maximum": 30
@@ -131,7 +857,7 @@
                 }
             ]
         },
-        "allOf with base schema": {
+        "draft7/allOf with base schema": {
             "allOf": [
                 {
                     "properties": {
@@ -163,13 +889,13 @@
                 "bar"
             ]
         },
-        "allOf with boolean schemas, all true": {
+        "draft7/allOf with boolean schemas, all true": {
             "allOf": [
                 true,
                 true
             ]
         },
-        "an array of schemas for items": {
+        "draft7/an array of schemas for items": {
             "items": [
                 {
                     "type": "integer"
@@ -179,7 +905,7 @@
                 }
             ]
         },
-        "anyOf": {
+        "draft7/anyOf": {
             "anyOf": [
                 {
                     "type": "integer"
@@ -189,7 +915,7 @@
                 }
             ]
         },
-        "anyOf complex types": {
+        "draft7/anyOf complex types": {
             "anyOf": [
                 {
                     "properties": {
@@ -213,7 +939,7 @@
                 }
             ]
         },
-        "anyOf with base schema": {
+        "draft7/anyOf with base schema": {
             "anyOf": [
                 {
                     "maxLength": 2
@@ -224,19 +950,19 @@
             ],
             "type": "string"
         },
-        "anyOf with boolean schemas, all true": {
+        "draft7/anyOf with boolean schemas, all true": {
             "anyOf": [
                 true,
                 true
             ]
         },
-        "anyOf with boolean schemas, some true": {
+        "draft7/anyOf with boolean schemas, some true": {
             "anyOf": [
                 true,
                 false
             ]
         },
-        "array of items with no additionalItems": {
+        "draft7/array of items with no additionalItems": {
             "additionalItems": false,
             "items": [
                 {},
@@ -244,10 +970,10 @@
                 {}
             ]
         },
-        "array type matches arrays": {
+        "draft7/array type matches arrays": {
             "type": "array"
         },
-        "base URI change": {
+        "draft7/base URI change": {
             "$id": "http://localhost:1234/",
             "items": {
                 "$id": "folder/",
@@ -256,7 +982,7 @@
                 }
             }
         },
-        "base URI change - change folder": {
+        "draft7/base URI change - change folder": {
             "$id": "http://localhost:1234/scope_change_defs1.json",
             "definitions": {
                 "baz": {
@@ -274,7 +1000,7 @@
             },
             "type": "object"
         },
-        "base URI change - change folder in subschema": {
+        "draft7/base URI change - change folder in subschema": {
             "$id": "http://localhost:1234/scope_change_defs2.json",
             "definitions": {
                 "baz": {
@@ -296,70 +1022,70 @@
             },
             "type": "object"
         },
-        "boolean schema 'true'": true,
-        "boolean type matches booleans": {
+        "draft7/boolean schema 'true'": true,
+        "draft7/boolean type matches booleans": {
             "type": "boolean"
         },
-        "by int": {
+        "draft7/by int": {
             "multipleOf": 2
         },
-        "by number": {
+        "draft7/by number": {
             "multipleOf": 1.5
         },
-        "by small number": {
+        "draft7/by small number": {
             "multipleOf": 0.0001
         },
-        "const validation": {
+        "draft7/const validation": {
             "const": 2
         },
-        "const with array": {
+        "draft7/const with array": {
             "const": [
                 {
                     "foo": "bar"
                 }
             ]
         },
-        "const with null": {
+        "draft7/const with null": {
             "const": null
         },
-        "const with object": {
+        "draft7/const with object": {
             "const": {
                 "baz": "bax",
                 "foo": "bar"
             }
         },
-        "contains keyword validation": {
+        "draft7/contains keyword validation": {
             "contains": {
                 "minimum": 5
             }
         },
-        "contains keyword with boolean schema true": {
+        "draft7/contains keyword with boolean schema true": {
             "contains": true
         },
-        "contains keyword with const keyword": {
+        "draft7/contains keyword with const keyword": {
             "contains": {
                 "const": 5
             }
         },
-        "dependencies": {
+        "draft7/dependencies": {
             "dependencies": {
                 "bar": [
                     "foo"
                 ]
             }
         },
-        "dependencies with boolean subschemas": {
+        "draft7/dependencies with boolean subschemas": {
             "dependencies": {
                 "bar": false,
                 "foo": true
             }
         },
-        "dependencies with empty array": {
+        "draft7/dependencies with empty array": {
             "dependencies": {
                 "bar": []
             }
         },
-        "enums in properties": {
+        "draft7/enums in properties": {
             "properties": {
                 "bar": {
                     "enum": [
@@ -377,7 +1103,7 @@
             ],
             "type": "object"
         },
-        "escaped pointer ref": {
+        "draft7/escaped pointer ref": {
             "percent%field": {
                 "type": "integer"
             },
@@ -399,23 +1125,26 @@
                 "type": "integer"
             }
         },
-        "exclusiveMaximum validation": {
+        "draft7/exclusiveMaximum validation": {
             "exclusiveMaximum": 3.0
         },
-        "exclusiveMinimum validation": {
+        "draft7/exclusiveMinimum validation": {
             "exclusiveMinimum": 1.1
         },
-        "forbidden property": {
+        "draft7/forbidden property": {
             "properties": {
                 "foo": {
                     "not": {}
                 }
             }
         },
-        "fragment within remote ref": {
+        "draft7/format: uri-template": {
+            "format": "uri-template"
+        },
+        "draft7/fragment within remote ref": {
             "$ref": "http://localhost:1234/subSchemas.json#/integer"
         },
-        "heterogeneous enum validation": {
+        "draft7/heterogeneous enum validation": {
             "enum": [
                 6,
                 "foo",
@@ -426,7 +1155,7 @@
                 }
             ]
         },
-        "if and else without then": {
+        "draft7/if and else without then": {
             "else": {
                 "multipleOf": 2
             },
@@ -434,7 +1163,7 @@
                 "exclusiveMaximum": 0
             }
         },
-        "if and then without else": {
+        "draft7/if and then without else": {
             "if": {
                 "exclusiveMaximum": 0
             },
@@ -442,25 +1171,31 @@
                 "minimum": -10
             }
         },
-        "ignore else without if": {
+        "draft7/ignore else without if": {
             "else": {
                 "const": 0
             }
         },
-        "ignore if without then or else": {
+        "draft7/ignore if without then or else": {
             "if": {
                 "const": 0
             }
         },
-        "ignore then without if": {
+        "draft7/ignore then without if": {
             "then": {
                 "const": 0
             }
         },
-        "integer type matches integers": {
+        "draft7/integer": {
             "type": "integer"
         },
-        "invalid string value for default": {
+        "draft7/integer comparison": {
+            "minimum": -18446744073709551615
+        },
+        "draft7/integer type matches integers": {
+            "type": "integer"
+        },
+        "draft7/invalid string value for default": {
             "properties": {
                 "bar": {
                     "default": "bad",
@@ -469,7 +1204,7 @@
                 }
             }
         },
-        "invalid type for default": {
+        "draft7/invalid type for default": {
             "properties": {
                 "foo": {
                     "default": [],
@@ -477,47 +1212,47 @@
                 }
             }
         },
-        "items is schema, no additionalItems": {
+        "draft7/items is schema, no additionalItems": {
             "additionalItems": false,
             "items": {}
         },
-        "items with boolean schema (false)": {
+        "draft7/items with boolean schema (false)": {
             "items": false
         },
-        "items with boolean schema (true)": {
+        "draft7/items with boolean schema (true)": {
             "items": true
         },
-        "items with boolean schemas": {
+        "draft7/items with boolean schemas": {
             "items": [
                 true,
                 false
             ]
         },
-        "maxItems validation": {
+        "draft7/maxItems validation": {
             "maxItems": 2
         },
-        "maxLength validation": {
+        "draft7/maxLength validation": {
             "maxLength": 2
         },
-        "maxProperties validation": {
+        "draft7/maxProperties validation": {
             "maxProperties": 2
         },
-        "maximum validation": {
+        "draft7/maximum validation": {
             "maximum": 3.0
         },
-        "minItems validation": {
+        "draft7/minItems validation": {
             "minItems": 1
         },
-        "minLength validation": {
+        "draft7/minLength validation": {
             "minLength": 2
         },
-        "minProperties validation": {
+        "draft7/minProperties validation": {
             "minProperties": 1
         },
-        "minimum validation": {
+        "draft7/minimum validation": {
             "minimum": 1.1
         },
-        "multiple dependencies": {
+        "draft7/multiple dependencies": {
             "dependencies": {
                 "quux": [
                     "foo",
@@ -525,7 +1260,7 @@
                 ]
             }
         },
-        "multiple dependencies subschema": {
+        "draft7/multiple dependencies subschema": {
             "dependencies": {
                 "bar": {
                     "properties": {
@@ -539,7 +1274,7 @@
                 }
             }
         },
-        "multiple simultaneous patternProperties are validated": {
+        "draft7/multiple simultaneous patternProperties are validated": {
             "patternProperties": {
                 "a*": {
                     "type": "integer"
@@ -549,13 +1284,13 @@
                 }
             }
         },
-        "multiple types can be specified in an array": {
+        "draft7/multiple types can be specified in an array": {
             "type": [
                 "integer",
                 "string"
             ]
         },
-        "nested refs": {
+        "draft7/nested refs": {
             "$ref": "#/definitions/c",
             "definitions": {
                 "a": {
@@ -569,13 +1304,13 @@
                 }
             }
         },
-        "non-ASCII pattern with additionalProperties": {
+        "draft7/non-ASCII pattern with additionalProperties": {
             "additionalProperties": false,
             "patternProperties": {
                 "^\u00e1": {}
             }
         },
-        "non-interference across combined schemas": {
+        "draft7/non-interference across combined schemas": {
             "allOf": [
                 {
                     "if": {
@@ -594,12 +1329,12 @@
                 }
             ]
         },
-        "not": {
+        "draft7/not": {
             "not": {
                 "type": "integer"
             }
         },
-        "not more complex schema": {
+        "draft7/not more complex schema": {
             "not": {
                 "properties": {
                     "foo": {
@@ -609,7 +1344,7 @@
                 "type": "object"
             }
         },
-        "not multiple types": {
+        "draft7/not multiple types": {
             "not": {
                 "type": [
                     "integer",
@@ -617,16 +1352,19 @@
                 ]
             }
         },
-        "not with boolean schema false": {
+        "draft7/not with boolean schema false": {
             "not": false
         },
-        "null type matches only the null object": {
+        "draft7/null type matches only the null object": {
             "type": "null"
         },
-        "number type matches numbers": {
+        "draft7/number": {
             "type": "number"
         },
-        "object properties validation": {
+        "draft7/number type matches numbers": {
+            "type": "number"
+        },
+        "draft7/object properties validation": {
             "properties": {
                 "bar": {
                     "type": "string"
@@ -636,10 +1374,10 @@
                 }
             }
         },
-        "object type matches objects": {
+        "draft7/object type matches objects": {
             "type": "object"
         },
-        "oneOf": {
+        "draft7/oneOf": {
             "oneOf": [
                 {
                     "type": "integer"
@@ -649,7 +1387,7 @@
                 }
             ]
         },
-        "oneOf complex types": {
+        "draft7/oneOf complex types": {
             "oneOf": [
                 {
                     "properties": {
@@ -673,7 +1411,7 @@
                 }
             ]
         },
-        "oneOf with base schema": {
+        "draft7/oneOf with base schema": {
             "oneOf": [
                 {
                     "minLength": 2
@@ -684,39 +1422,39 @@
             ],
             "type": "string"
         },
-        "oneOf with boolean schemas, one true": {
+        "draft7/oneOf with boolean schemas, one true": {
             "oneOf": [
                 true,
                 false,
                 false
             ]
         },
-        "pattern is not anchored": {
+        "draft7/pattern is not anchored": {
             "pattern": "a+"
         },
-        "pattern validation": {
+        "draft7/pattern validation": {
             "pattern": "^a*$"
         },
-        "patternProperties validates properties matching a regex": {
+        "draft7/patternProperties validates properties matching a regex": {
             "patternProperties": {
                 "f.*o": {
                     "type": "integer"
                 }
             }
         },
-        "patternProperties with boolean schemas": {
+        "draft7/patternProperties with boolean schemas": {
             "patternProperties": {
                 "b.*": false,
                 "f.*": true
             }
         },
-        "properties with boolean schema": {
+        "draft7/properties with boolean schema": {
             "properties": {
                 "bar": false,
                 "foo": true
             }
         },
-        "properties, patternProperties, additionalProperties interaction": {
+        "draft7/properties, patternProperties, additionalProperties interaction": {
             "additionalProperties": {
                 "type": "integer"
             },
@@ -735,25 +1473,25 @@
                 }
             }
         },
-        "property named $ref that is not a reference": {
+        "draft7/property named $ref that is not a reference": {
             "properties": {
                 "$ref": {
                     "type": "string"
                 }
             }
         },
-        "propertyNames validation": {
+        "draft7/propertyNames validation": {
             "propertyNames": {
                 "maxLength": 3
             }
         },
-        "propertyNames with boolean schema false": {
+        "draft7/propertyNames with boolean schema false": {
             "propertyNames": false
         },
-        "propertyNames with boolean schema true": {
+        "draft7/propertyNames with boolean schema true": {
             "propertyNames": true
         },
-        "ref overrides any sibling keywords": {
+        "draft7/ref overrides any sibling keywords": {
             "definitions": {
                 "reffed": {
                     "type": "array"
@@ -766,10 +1504,10 @@
                 }
             }
         },
-        "ref within remote ref": {
+        "draft7/ref within remote ref": {
             "$ref": "http://localhost:1234/subSchemas.json#/refToInteger"
         },
-        "regexes are not anchored by default and are case sensitive": {
+        "draft7/regexes are not anchored by default and are case sensitive": {
             "patternProperties": {
                 "X_": {
                     "type": "string"
@@ -779,7 +1517,7 @@
                 }
             }
         },
-        "relative pointer ref to array": {
+        "draft7/relative pointer ref to array": {
             "items": [
                 {
                     "type": "integer"
@@ -789,7 +1527,7 @@
                 }
             ]
         },
-        "relative pointer ref to object": {
+        "draft7/relative pointer ref to object": {
             "properties": {
                 "bar": {
                     "$ref": "#/properties/foo"
@@ -799,18 +1537,18 @@
                 }
             }
         },
-        "remote ref": {
+        "draft7/remote ref": {
             "$ref": "http://localhost:1234/integer.json"
         },
-        "remote ref, containing refs itself": {
+        "draft7/remote ref, containing refs itself": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
-        "required default validation": {
+        "draft7/required default validation": {
             "properties": {
                 "foo": {}
             }
         },
-        "required validation": {
+        "draft7/required validation": {
             "properties": {
                 "bar": {},
                 "foo": {}
@@ -819,13 +1557,13 @@
                 "foo"
             ]
         },
-        "required with empty array": {
+        "draft7/required with empty array": {
             "properties": {
                 "foo": {}
             },
             "required": []
         },
-        "root pointer ref": {
+        "draft7/root pointer ref": {
             "additionalProperties": false,
             "properties": {
                 "foo": {
@@ -833,7 +1571,7 @@
                 }
             }
         },
-        "root ref in remote ref": {
+        "draft7/root ref in remote ref": {
             "$id": "http://localhost:1234/object",
             "properties": {
                 "name": {
@@ -842,23 +1580,26 @@
             },
             "type": "object"
         },
-        "simple enum validation": {
+        "draft7/simple enum validation": {
             "enum": [
                 1,
                 2,
                 3
             ]
         },
-        "string type matches strings": {
+        "draft7/some languages do not distinguish between different types of numeric value": {
+            "type": "integer"
+        },
+        "draft7/string type matches strings": {
             "type": "string"
         },
-        "uniqueItems validation": {
+        "draft7/uniqueItems validation": {
             "uniqueItems": true
         },
-        "valid definition": {
+        "draft7/valid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
-        "validate against correct branch, then vs else": {
+        "draft7/validate against correct branch, then vs else": {
             "else": {
                 "multipleOf": 2
             },
@@ -868,16 +1609,71 @@
             "then": {
                 "minimum": -10
             }
+        },
+        "draft7/validation of IP addresses": {
+            "format": "ipv4"
+        },
+        "draft7/validation of IPv6 addresses": {
+            "format": "ipv6"
+        },
+        "draft7/validation of IRI References": {
+            "format": "iri-reference"
+        },
+        "draft7/validation of IRIs": {
+            "format": "iri"
+        },
+        "draft7/validation of JSON-pointers (JSON String Representation)": {
+            "format": "json-pointer"
+        },
+        "draft7/validation of Relative JSON Pointers (RJP)": {
+            "format": "relative-json-pointer"
+        },
+        "draft7/validation of URI References": {
+            "format": "uri-reference"
+        },
+        "draft7/validation of URIs": {
+            "format": "uri"
+        },
+        "draft7/validation of an internationalized e-mail addresses": {
+            "format": "idn-email"
+        },
+        "draft7/validation of binary string-encoding": {
+            "contentEncoding": "base64"
+        },
+        "draft7/validation of binary-encoded media type documents": {
+            "contentEncoding": "base64",
+            "contentMediaType": "application/json"
+        },
+        "draft7/validation of date strings": {
+            "format": "date"
+        },
+        "draft7/validation of date-time strings": {
+            "format": "date-time"
+        },
+        "draft7/validation of e-mail addresses": {
+            "format": "email"
+        },
+        "draft7/validation of host names": {
+            "format": "hostname"
+        },
+        "draft7/validation of internationalized host names": {
+            "format": "idn-hostname"
+        },
+        "draft7/validation of regular expressions": {
+            "format": "regex"
+        },
+        "draft7/validation of string-encoded content based on media type": {
+            "contentMediaType": "application/json"
+        },
+        "draft7/validation of time strings": {
+            "format": "time"
         }
     },
     {
-        "$ref to boolean schema false": {
-            "$ref": "#/definitions/bool",
-            "definitions": {
-                "bool": false
-            }
+        "draft4/ECMA 262 regex non-compliance": {
+            "format": "regex"
         },
-        "additionalProperties should not look in applicators": {
+        "draft4/additionalProperties should not look in applicators": {
             "additionalProperties": {
                 "type": "boolean"
             },
@@ -889,54 +1685,101 @@
                 }
             ]
         },
-        "allOf with boolean schemas, all false": {
+        "draft4/float comparison with high precision": {
+            "exclusiveMaximum": true,
+            "maximum": 9.727837981879871e+26
+        },
+        "draft4/float comparison with high precision on negative numbers": {
+            "exclusiveMinimum": true,
+            "minimum": -9.727837981879871e+26
+        },
+        "draft4/invalid definition": {
+            "$ref": "http://json-schema.org/draft-04/schema#"
+        },
+        "draft4/some languages do not distinguish between different types of numeric value": {
+            "type": "integer"
+        },
+        "draft4/string": {
+            "type": "string"
+        },
+        "draft7/$ref to boolean schema false": {
+            "$ref": "#/definitions/bool",
+            "definitions": {
+                "bool": false
+            }
+        },
+        "draft7/ECMA 262 regex non-compliance": {
+            "format": "regex"
+        },
+        "draft7/additionalProperties should not look in applicators": {
+            "additionalProperties": {
+                "type": "boolean"
+            },
+            "allOf": [
+                {
+                    "properties": {
+                        "foo": {}
+                    }
+                }
+            ]
+        },
+        "draft7/allOf with boolean schemas, all false": {
             "allOf": [
                 false,
                 false
             ]
         },
-        "allOf with boolean schemas, some false": {
+        "draft7/allOf with boolean schemas, some false": {
             "allOf": [
                 true,
                 false
             ]
         },
-        "anyOf with boolean schemas, all false": {
+        "draft7/anyOf with boolean schemas, all false": {
             "anyOf": [
                 false,
                 false
             ]
         },
-        "boolean schema 'false'": false,
-        "contains keyword with boolean schema false": {
+        "draft7/boolean schema 'false'": false,
+        "draft7/contains keyword with boolean schema false": {
             "contains": false
         },
-        "invalid definition": {
+        "draft7/float comparison with high precision": {
+            "exclusiveMaximum": 9.727837981879871e+26
+        },
+        "draft7/float comparison with high precision on negative numbers": {
+            "exclusiveMinimum": -9.727837981879871e+26
+        },
+        "draft7/invalid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
-        "not with boolean schema true": {
+        "draft7/not with boolean schema true": {
             "not": true
         },
-        "oneOf with boolean schemas, all false": {
+        "draft7/oneOf with boolean schemas, all false": {
             "oneOf": [
                 false,
                 false,
                 false
             ]
         },
-        "oneOf with boolean schemas, all true": {
+        "draft7/oneOf with boolean schemas, all true": {
             "oneOf": [
                 true,
                 true,
                 true
             ]
         },
-        "oneOf with boolean schemas, more than one true": {
+        "draft7/oneOf with boolean schemas, more than one true": {
             "oneOf": [
                 true,
                 true,
                 false
             ]
+        },
+        "draft7/string": {
+            "type": "string"
         }
     }
 ]
