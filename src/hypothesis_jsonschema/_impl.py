@@ -45,11 +45,8 @@ def canonicalish(schema: JSONType) -> Dict:
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
-    This strategy supports almost all of the schema elements described in the
-    draft RFC as of November 2018 (draft 7), with the following exceptions:
-
-    - For objects, the "dependencies" keyword is not supported.
-    - Schema reuse with "definitions" and "$ref" is not supported.
+    Schema reuse with "definitions" and "$ref" is not yet supported, but
+    everything else in drafts 04, 05, and 07 is fully tested and working.
     """
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema is False or schema == {"not": {}}:

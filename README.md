@@ -2,19 +2,20 @@
 
 A [Hypothesis](https://hypothesis.readthedocs.io) strategy for generating data
 that matches some [JSON schema](https://json-schema.org/).
-It is currently in beta, but you can use it if you want.
+
 [Here's the PyPI page.](https://pypi.org/project/hypothesis-jsonschema/)
 
-The public API consists of a just two functions:
+## API
 
+The public API consists of just one function: `hypothesis_jsonschema.from_schema`,
+which takes a JSON schema and returns a strategy for allowed JSON objects.
 
-### hypothesis_jsonschema.from_schema
-Takes a JSON schema and return a strategy for allowed JSON objects.
+Schema reuse with "definitions" and "$ref" is not yet supported, but everything
+else in drafts 04, 05, and 07 is fully tested and working.
 
-This strategy supports almost all of the schema elements described in the
-draft RFC as of February 2019 (draft07), with the following exception:
+For details on how to use this strategy in your tests,
+[see the Hypothesis docs](https://hypothesis.readthedocs.io/).
 
-- Schema reuse with "definitions" and "$ref" is not supported.
 
 ## Supported versions
 
