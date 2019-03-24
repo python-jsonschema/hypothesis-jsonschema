@@ -35,6 +35,9 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.8.1 - 2019-03-24
+- Supports draft-04 schemata with the latest version of ``jsonschema``
+
 #### 0.8.0 - 2019-03-23
 - Further improved support for `allOf`, `oneOf`, and `anyOf` with base schemata
 - Added support for `dependencies`
