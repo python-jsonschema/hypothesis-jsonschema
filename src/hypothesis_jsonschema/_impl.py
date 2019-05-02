@@ -384,7 +384,8 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                                 break
                         break
                 else:
-                    out[key] = draw(from_schema(additional))
+                    if additional is not False:
+                        out[key] = draw(from_schema(additional))
             for k, v in dep_schemas.items():
                 if k in out and not is_valid(out, v):
                     out.pop(key)
