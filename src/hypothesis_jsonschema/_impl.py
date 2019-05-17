@@ -13,7 +13,7 @@ from hypothesis.errors import InvalidArgument
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
-JSONType = Union[None, bool, float, str, list, dict]
+JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
     lambda: st.one_of(
@@ -88,7 +88,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         tmp = schema.copy()
         schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
         schemas = [s for s in schemas if s != canonicalish(False)]
-        if len(schemas) > len(set(encode_canonical_json(s) for s in schemas)):
+        if len(schemas) > len({encode_canonical_json(s) for s in schemas}):
             return st.nothing()
         return st.one_of([from_schema(s) for s in schemas]).filter(
             lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)

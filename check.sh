@@ -1,4 +1,7 @@
+autoflake --recursive --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables .
+pyupgrade --py36-plus $(find . -name '*.py')
+isort --recursive --apply .
 black .
-isort -rc -y .
 flake8
+mypy .
 pytest
