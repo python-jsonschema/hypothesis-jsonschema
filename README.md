@@ -36,8 +36,12 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.8.2 - 2019-05-21
+- Improve performance for object schemas where the min and max size can be
+  further constrained from `properties` and `propertyNames` attributes.
+
 #### 0.8.1 - 2019-03-24
-- Supports draft-04 schemata with the latest version of ``jsonschema``
+- Supports draft-04 schemata with the latest version of `jsonschema`
 
 #### 0.8.0 - 2019-03-23
 - Further improved support for `allOf`, `oneOf`, and `anyOf` with base schemata
