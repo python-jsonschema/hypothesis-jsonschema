@@ -17,6 +17,7 @@ from hypothesis_jsonschema._impl import (
     gen_object,
     gen_string,
     json_schemata,
+    merged,
 )
 
 
@@ -56,6 +57,17 @@ def test_boolean_true_is_valid_schema_and_resolvable():
 
 
 @pytest.mark.parametrize(
+    "group,result",
+    [
+        ([{"type": "null"}, {"type": "boolean"}], None),
+        ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
+    ],
+)
+def test_merged(group, result):
+    assert merged(group) == result
+
+
+@pytest.mark.parametrize(
     "schema",
     [
         None,
@@ -78,8 +90,6 @@ EXPECTED_FAILURES = {
     "draft7/allOf",
     "draft4/allOf with base schema",
     "draft7/allOf with base schema",
-    "draft4/properties, patternProperties, additionalProperties interaction",
-    "draft7/properties, patternProperties, additionalProperties interaction",
     # Draft-04 tests which do not specify a type
     "draft4/exclusiveMinimum validation",
     "draft4/exclusiveMaximum validation",
@@ -127,3 +137,23 @@ def test_cannot_generate_for_empty_test_suite_schema(name):
     strat = from_schema(invalid_suite[name])
     with pytest.raises(Exception):
         strat.example()
+
+
+# This schema has overlapping patternProperties - this is OK, so long as they're
+# merged or otherwise handled correctly, with the exception of the key "ab" which
+# would have to be both an integer and a string (and is thus disallowed).
+OVERLAPPING_PATTERNS_SCHEMA = dict(
+    patternProperties={
+        r"\A[ab]{1,2}\Z": {},
+        r"\Aa[ab]\Z": {"type": "integer"},
+        r"\A[ab]b\Z": {"type": "string"},
+    },
+    additionalProperties=False,
+    minimumProperties=1,
+)
+
+
+@given(from_schema(OVERLAPPING_PATTERNS_SCHEMA))
+def test_handles_overlapping_patternProperties(value):
+    jsonschema.validate(value, OVERLAPPING_PATTERNS_SCHEMA)
+    assert "ab" not in value

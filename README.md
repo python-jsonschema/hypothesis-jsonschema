@@ -36,6 +36,10 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.9.0 - 2019-05-21
+- Supports merging schemas for overlapping `patternProperties`,
+  a significant performance improvement in most cases.
+
 #### 0.8.2 - 2019-05-21
 - Improve performance for object schemas where the min and max size can be
   further constrained from `properties` and `propertyNames` attributes.

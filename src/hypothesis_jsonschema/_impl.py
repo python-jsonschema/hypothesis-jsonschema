@@ -1,5 +1,6 @@
 """A Hypothesis extension for JSON schemata."""
 
+import itertools
 import json
 import re
 from typing import Any, Dict, List, Union
@@ -38,8 +39,51 @@ def canonicalish(schema: JSONType) -> Dict:
         return {}
     elif schema is False:
         return {"not": {}}
-    assert isinstance(schema, dict)
+    assert isinstance(schema, dict), schema
     return schema
+
+
+def merged(schemas):
+    """Merge *n* schemas into a single schema, or None if result is invalid.
+    Takes the logical intersection, so any object that validates against the returned
+    schema must also validate against all of the input schemas.
+    """
+    assert schemas, "internal error: must pass at least one schema to merge"
+    assert all(s == canonicalish(s) for s in schemas)
+
+    out = dict(schemas[0])
+    for s in schemas[1:]:
+        if set(s) & set(out):
+            # Overlapping keys.
+            # TODO: convert types to list, not with allOf, etc.
+            return None
+        out.update(s)
+    # hopefully this catches empty things like allOf different types?
+    jsonschema.validators.validator_for(out).check_schema(out)
+    return out
+
+
+def merged_as_strategies(schemas):
+    assert schemas, "internal error: must pass at least one schema to merge"
+    assert all(s == canonicalish(s) for s in schemas)
+    if len(schemas) == 1:
+        return from_schema(schemas[0])
+    # Try to merge combinations of strategies.
+    strats = []
+    combined = set()
+    inputs = {encode_canonical_json(s): s for s in schemas}
+    for group in itertools.chain.from_iterable(
+        itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)
+    ):
+        if combined.issuperset(group):
+            continue
+        s = merged([inputs[g] for g in group])
+        if s is not None:
+            strats.append(
+                from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
+            )
+            combined.update(group)
+    return st.one_of(strats)
 
 
 def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
@@ -323,10 +367,12 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         return st.builds(dict)
 
     properties = schema.get("properties", {})  # exact name: value schema
+    properties = {k: canonicalish(v) for k, v in properties.items()}
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
+    patterns = {k: canonicalish(v) for k, v in patterns.items()}
     # schema for other values; handled specially if nothing matches
-    additional = schema.get("additionalProperties", {})
-    additional_allowed = canonicalish(additional) != canonicalish(False)
+    additional = canonicalish(schema.get("additionalProperties", {}))
+    additional_allowed = additional != canonicalish(False)
 
     # When a known set of names is allowed, we cap the max_size at that number
     max_size = min(
@@ -342,14 +388,17 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
     del dependencies
 
-    all_names_strategy = st.one_of(
+    name_strats = (
         st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
         if (dep_names or dep_schemas)
         else st.nothing(),
-        from_schema(names),
+        from_schema(names) if additional_allowed else st.nothing(),
         st.sampled_from(sorted(properties)) if properties else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
-    ).filter(lambda instance: is_valid(instance, names))
+    )
+    all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
+        lambda instance: is_valid(instance, names)
+    )
 
     @st.composite
     def from_object_schema(draw: Any) -> Any:
@@ -379,23 +428,21 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                             break
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))
+
+            pattern_schemas = [
+                patterns[rgx]
+                for rgx in sorted(patterns)
+                if re.search(rgx, string=key) is not None
+            ]
             if key in properties:
-                out[key] = draw(from_schema(properties[key]))
+                pattern_schemas.insert(0, properties[key])
+
+            if pattern_schemas:
+                out[key] = draw(merged_as_strategies(pattern_schemas))
             else:
-                for rgx, matching_schema in patterns.items():
-                    if re.search(rgx, string=key) is not None:
-                        out[key] = draw(from_schema(matching_schema))
-                        # Check for overlapping conflicting schemata
-                        for rgx, matching_schema in patterns.items():
-                            if re.search(rgx, string=key) is not None and not is_valid(
-                                out[key], matching_schema
-                            ):
-                                out.pop(key)
-                                elements.reject()
-                                break
-                        break
-                else:
-                    out[key] = draw(from_schema(additional))
+                assert additional_allowed
+                out[key] = draw(from_schema(additional))
+
             for k, v in dep_schemas.items():
                 if k in out and not is_valid(out, v):
                     out.pop(key)
