@@ -575,21 +575,23 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     # We skip coverage for version branches because it's a pain to combine.
     boolean_bounds = not hasattr(jsonschema, "Draft7Validator")
     if lower is not None:
-        out["minimum"] = lower
         if draw(st.booleans(), label="exclusiveMinimum"):
             if boolean_bounds:  # pragma: no cover
                 out["exclusiveMinimum"] = True
                 out["minimum"] = lower - 1
             else:
                 out["exclusiveMinimum"] = lower - 1
+        else:
+            out["minimum"] = lower
     if upper is not None:
-        out["maximum"] = upper
         if draw(st.booleans(), label="exclusiveMaximum"):
             if boolean_bounds:  # pragma: no cover
                 out["exclusiveMaximum"] = True
                 out["maximum"] = upper + 1
             else:
                 out["exclusiveMaximum"] = upper + 1
+        else:
+            out["maximum"] = upper
     if multiple_of is not None:
         out["multipleOf"] = multiple_of
     return out
