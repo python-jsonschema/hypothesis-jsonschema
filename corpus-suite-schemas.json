@@ -157,6 +157,33 @@
                 "bar"
             ]
         },
+        "draft4/allOf with one empty schema": {
+            "allOf": [
+                {}
+            ]
+        },
+        "draft4/allOf with the first empty schema": {
+            "allOf": [
+                {},
+                {
+                    "type": "number"
+                }
+            ]
+        },
+        "draft4/allOf with the last empty schema": {
+            "allOf": [
+                {
+                    "type": "number"
+                },
+                {}
+            ]
+        },
+        "draft4/allOf with two empty schemas": {
+            "allOf": [
+                {},
+                {}
+            ]
+        },
         "draft4/an array of schemas for items": {
             "items": [
                 {
@@ -211,6 +238,14 @@
                 }
             ],
             "type": "string"
+        },
+        "draft4/anyOf with one empty schema": {
+            "anyOf": [
+                {
+                    "type": "number"
+                },
+                {}
+            ]
         },
         "draft4/array of items with no additionalItems": {
             "additionalItems": false,
@@ -290,6 +325,30 @@
                     "foo"
                 ]
             }
+        },
+        "draft4/dependencies with escaped characters": {
+            "dependencies": {
+                "foo\tbar": {
+                    "minProperties": 4
+                },
+                "foo\nbar": [
+                    "foo\rbar"
+                ],
+                "foo\"bar": [
+                    "foo'bar"
+                ],
+                "foo'bar": {
+                    "required": [
+                        "foo\"bar"
+                    ]
+                }
+            }
+        },
+        "draft4/enum with escaped characters": {
+            "enum": [
+                "foo\nbar",
+                "foo\rbar"
+            ]
         },
         "draft4/enums in properties": {
             "properties": {
@@ -386,6 +445,41 @@
                 }
             }
         },
+        "draft4/items and subitems": {
+            "additionalItems": false,
+            "definitions": {
+                "item": {
+                    "additionalItems": false,
+                    "items": [
+                        {
+                            "$ref": "#/definitions/sub-item"
+                        },
+                        {
+                            "$ref": "#/definitions/sub-item"
+                        }
+                    ],
+                    "type": "array"
+                },
+                "sub-item": {
+                    "required": [
+                        "foo"
+                    ],
+                    "type": "object"
+                }
+            },
+            "items": [
+                {
+                    "$ref": "#/definitions/item"
+                },
+                {
+                    "$ref": "#/definitions/item"
+                },
+                {
+                    "$ref": "#/definitions/item"
+                }
+            ],
+            "type": "array"
+        },
         "draft4/items is schema, no additionalItems": {
             "additionalItems": false,
             "items": {}
@@ -421,6 +515,9 @@
         "draft4/minimum validation (explicit false exclusivity)": {
             "exclusiveMinimum": false,
             "minimum": 1.1
+        },
+        "draft4/minimum validation with signed integer": {
+            "minimum": -2
         },
         "draft4/multiple dependencies": {
             "dependencies": {
@@ -459,6 +556,21 @@
                 "integer",
                 "string"
             ]
+        },
+        "draft4/nested items": {
+            "items": {
+                "items": {
+                    "items": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array"
+                    },
+                    "type": "array"
+                },
+                "type": "array"
+            },
+            "type": "array"
         },
         "draft4/nested refs": {
             "$ref": "#/definitions/c",
@@ -570,6 +682,31 @@
             ],
             "type": "string"
         },
+        "draft4/oneOf with empty schema": {
+            "oneOf": [
+                {
+                    "type": "number"
+                },
+                {}
+            ]
+        },
+        "draft4/oneOf with required": {
+            "oneOf": [
+                {
+                    "required": [
+                        "foo",
+                        "bar"
+                    ]
+                },
+                {
+                    "required": [
+                        "foo",
+                        "baz"
+                    ]
+                }
+            ],
+            "type": "object"
+        },
         "draft4/pattern is not anchored": {
             "pattern": "a+"
         },
@@ -580,6 +717,28 @@
             "patternProperties": {
                 "f.*o": {
                     "type": "integer"
+                }
+            }
+        },
+        "draft4/properties with escaped characters": {
+            "properties": {
+                "foo\tbar": {
+                    "type": "number"
+                },
+                "foo\nbar": {
+                    "type": "number"
+                },
+                "foo\fbar": {
+                    "type": "number"
+                },
+                "foo\rbar": {
+                    "type": "number"
+                },
+                "foo\"bar": {
+                    "type": "number"
+                },
+                "foo\\bar": {
+                    "type": "number"
                 }
             }
         },
@@ -624,6 +783,18 @@
         },
         "draft4/ref within remote ref": {
             "$ref": "http://localhost:1234/subSchemas.json#/refToInteger"
+        },
+        "draft4/refs with quote": {
+            "definitions": {
+                "foo\"bar": {
+                    "type": "number"
+                }
+            },
+            "properties": {
+                "foo\"bar": {
+                    "$ref": "#/definitions/foo%22bar"
+                }
+            }
         },
         "draft4/regexes are not anchored by default and are case sensitive": {
             "patternProperties": {
@@ -675,6 +846,16 @@
                 "foo"
             ]
         },
+        "draft4/required with escaped characters": {
+            "required": [
+                "foo\nbar",
+                "foo\"bar",
+                "foo\\bar",
+                "foo\rbar",
+                "foo\tbar",
+                "foo\fbar"
+            ]
+        },
         "draft4/root pointer ref": {
             "additionalProperties": false,
             "properties": {
@@ -701,6 +882,24 @@
         },
         "draft4/string type matches strings": {
             "type": "string"
+        },
+        "draft4/type as array with one item": {
+            "type": [
+                "string"
+            ]
+        },
+        "draft4/type: array or object": {
+            "type": [
+                "array",
+                "object"
+            ]
+        },
+        "draft4/type: array, object or null": {
+            "type": [
+                "array",
+                "object",
+                "null"
+            ]
         },
         "draft4/uniqueItems validation": {
             "uniqueItems": true
@@ -895,6 +1094,33 @@
                 true
             ]
         },
+        "draft7/allOf with one empty schema": {
+            "allOf": [
+                {}
+            ]
+        },
+        "draft7/allOf with the first empty schema": {
+            "allOf": [
+                {},
+                {
+                    "type": "number"
+                }
+            ]
+        },
+        "draft7/allOf with the last empty schema": {
+            "allOf": [
+                {
+                    "type": "number"
+                },
+                {}
+            ]
+        },
+        "draft7/allOf with two empty schemas": {
+            "allOf": [
+                {},
+                {}
+            ]
+        },
         "draft7/an array of schemas for items": {
             "items": [
                 {
@@ -960,6 +1186,14 @@
             "anyOf": [
                 true,
                 false
+            ]
+        },
+        "draft7/anyOf with one empty schema": {
+            "anyOf": [
+                {
+                    "type": "number"
+                },
+                {}
             ]
         },
         "draft7/array of items with no additionalItems": {
@@ -1084,6 +1318,35 @@
             "dependencies": {
                 "bar": []
             }
+        },
+        "draft7/dependencies with escaped characters": {
+            "dependencies": {
+                "foo\tbar": {
+                    "minProperties": 4
+                },
+                "foo\nbar": [
+                    "foo\rbar"
+                ],
+                "foo\"bar": [
+                    "foo'bar"
+                ],
+                "foo'bar": {
+                    "required": [
+                        "foo\"bar"
+                    ]
+                }
+            }
+        },
+        "draft7/empty array of dependencies": {
+            "dependencies": {
+                "foo": []
+            }
+        },
+        "draft7/enum with escaped characters": {
+            "enum": [
+                "foo\nbar",
+                "foo\rbar"
+            ]
         },
         "draft7/enums in properties": {
             "properties": {
@@ -1212,6 +1475,41 @@
                 }
             }
         },
+        "draft7/items and subitems": {
+            "additionalItems": false,
+            "definitions": {
+                "item": {
+                    "additionalItems": false,
+                    "items": [
+                        {
+                            "$ref": "#/definitions/sub-item"
+                        },
+                        {
+                            "$ref": "#/definitions/sub-item"
+                        }
+                    ],
+                    "type": "array"
+                },
+                "sub-item": {
+                    "required": [
+                        "foo"
+                    ],
+                    "type": "object"
+                }
+            },
+            "items": [
+                {
+                    "$ref": "#/definitions/item"
+                },
+                {
+                    "$ref": "#/definitions/item"
+                },
+                {
+                    "$ref": "#/definitions/item"
+                }
+            ],
+            "type": "array"
+        },
         "draft7/items is schema, no additionalItems": {
             "additionalItems": false,
             "items": {}
@@ -1252,6 +1550,9 @@
         "draft7/minimum validation": {
             "minimum": 1.1
         },
+        "draft7/minimum validation with signed integer": {
+            "minimum": -2
+        },
         "draft7/multiple dependencies": {
             "dependencies": {
                 "quux": [
@@ -1289,6 +1590,21 @@
                 "integer",
                 "string"
             ]
+        },
+        "draft7/nested items": {
+            "items": {
+                "items": {
+                    "items": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array"
+                    },
+                    "type": "array"
+                },
+                "type": "array"
+            },
+            "type": "array"
         },
         "draft7/nested refs": {
             "$ref": "#/definitions/c",
@@ -1429,6 +1745,31 @@
                 false
             ]
         },
+        "draft7/oneOf with empty schema": {
+            "oneOf": [
+                {
+                    "type": "number"
+                },
+                {}
+            ]
+        },
+        "draft7/oneOf with required": {
+            "oneOf": [
+                {
+                    "required": [
+                        "foo",
+                        "bar"
+                    ]
+                },
+                {
+                    "required": [
+                        "foo",
+                        "baz"
+                    ]
+                }
+            ],
+            "type": "object"
+        },
         "draft7/pattern is not anchored": {
             "pattern": "a+"
         },
@@ -1452,6 +1793,28 @@
             "properties": {
                 "bar": false,
                 "foo": true
+            }
+        },
+        "draft7/properties with escaped characters": {
+            "properties": {
+                "foo\tbar": {
+                    "type": "number"
+                },
+                "foo\nbar": {
+                    "type": "number"
+                },
+                "foo\fbar": {
+                    "type": "number"
+                },
+                "foo\rbar": {
+                    "type": "number"
+                },
+                "foo\"bar": {
+                    "type": "number"
+                },
+                "foo\\bar": {
+                    "type": "number"
+                }
             }
         },
         "draft7/properties, patternProperties, additionalProperties interaction": {
@@ -1506,6 +1869,18 @@
         },
         "draft7/ref within remote ref": {
             "$ref": "http://localhost:1234/subSchemas.json#/refToInteger"
+        },
+        "draft7/refs with quote": {
+            "definitions": {
+                "foo\"bar": {
+                    "type": "number"
+                }
+            },
+            "properties": {
+                "foo\"bar": {
+                    "$ref": "#/definitions/foo%22bar"
+                }
+            }
         },
         "draft7/regexes are not anchored by default and are case sensitive": {
             "patternProperties": {
@@ -1563,6 +1938,16 @@
             },
             "required": []
         },
+        "draft7/required with escaped characters": {
+            "required": [
+                "foo\nbar",
+                "foo\"bar",
+                "foo\\bar",
+                "foo\rbar",
+                "foo\tbar",
+                "foo\fbar"
+            ]
+        },
         "draft7/root pointer ref": {
             "additionalProperties": false,
             "properties": {
@@ -1592,6 +1977,24 @@
         },
         "draft7/string type matches strings": {
             "type": "string"
+        },
+        "draft7/type as array with one item": {
+            "type": [
+                "string"
+            ]
+        },
+        "draft7/type: array or object": {
+            "type": [
+                "array",
+                "object"
+            ]
+        },
+        "draft7/type: array, object or null": {
+            "type": [
+                "array",
+                "object",
+                "null"
+            ]
         },
         "draft7/uniqueItems validation": {
             "uniqueItems": true
