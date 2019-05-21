@@ -95,6 +95,8 @@ EXPECTED_FAILURES = {
     "draft4/exclusiveMaximum validation",
     "draft4/minimum validation (explicit false exclusivity)",
     "draft4/maximum validation (explicit false exclusivity)",
+    # Just plain weird - regex issues etc.
+    "JSON Schema for mime type collections",
 }
 with open("corpus-schemastore-catalog.json") as f:
     catalog = json.load(f)
