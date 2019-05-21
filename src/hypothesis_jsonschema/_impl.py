@@ -151,7 +151,23 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     if "const" in schema:
         return st.just(schema["const"])
     # Finally, resolve schema by type - defaulting to "object"
-    type_ = schema.get("type", "object")
+    if "type" in schema:
+        type_ = schema["type"]
+    else:
+        type_ = []
+        for t, kw in [
+            ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
+            ("array", "items additionalItems maxItems uniqueItems contains"),
+            (
+                "object",
+                "maxProperties minProperties required properties patternProperties "
+                "additionalProperties dependencies propertyNames",
+            ),
+        ]:
+            if any(k in schema for k in kw.split()):
+                type_.append(t)
+        if not type_:
+            type_ = "object"
     if not isinstance(type_, list):
         assert isinstance(type_, str), schema
         type_ = [type_]
