@@ -122,12 +122,10 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         )
     if "allOf" in schema:
         tmp = schema.copy()
-        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("allOf")]
-        if any(s == canonicalish(False) for s in schemas):
+        ao = [canonicalish(s) for s in tmp.pop("allOf")]
+        if any(s == canonicalish(False) for s in ao):
             return st.nothing()
-        return st.one_of([from_schema(s) for s in schemas]).filter(
-            lambda inst: all(is_valid(inst, s) for s in schemas)
-        )
+        return merged_as_strategies([tmp] + ao)
     if "oneOf" in schema:
         tmp = schema.copy()
         schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
