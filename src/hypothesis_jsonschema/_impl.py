@@ -2,6 +2,7 @@
 
 import itertools
 import json
+import math
 import re
 from typing import Any, Dict, List, Union
 
@@ -156,6 +157,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     else:
         type_ = []
         for t, kw in [
+            ("number", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
+            ("integer", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
             ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
             ("array", "items additionalItems maxItems uniqueItems contains"),
             (
@@ -185,35 +188,61 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
+    type_ = schema.get("type", "integer")
     multiple_of = schema.get("multipleOf")
     lower = schema.get("minimum")
     upper = schema.get("maximum")
-    if multiple_of is not None or "integer" in schema["type"]:
-        if lower is not None and schema.get("exclusiveMinimum") is True:
-            lower += 1  # pragma: no cover
-        if upper is not None and schema.get("exclusiveMaximum") is True:
-            upper -= 1  # pragma: no cover
-        if multiple_of is not None:
-            if lower is not None:
-                lower += (multiple_of - lower) % multiple_of
-                lower //= multiple_of
-            if upper is not None:
-                upper -= upper % multiple_of
-                upper //= multiple_of
-            return st.integers(lower, upper).map(
-                lambda x: x * multiple_of  # type: ignore
-            )
-        return st.integers(lower, upper)
-    strategy = st.floats(
-        min_value=lower, max_value=upper, allow_nan=False, allow_infinity=False
-    )
-    if (
-        schema.get("exclusiveMaximum") is not None
-        or schema.get("exclusiveMinimum") is not None
-    ):
-        return strategy.filter(lambda x: x not in (lower, upper))
-    # Negative-zero does not round trip through JSON, so force it to positive
-    return strategy.map(lambda n: 0.0 if n == 0 else n)
+
+    exmin = schema.get("exclusiveMinimum")
+    if exmin is True and "integer" in type_:  # pragma: no cover
+        lower += 1
+    elif exmin is not False and exmin is not None:
+        lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
+        if lower is None:
+            lower = lo if "integer" in type_ else exmin
+        else:  # pragma: no cover
+            lower = max(lower, lo if "integer" in type_ else exmin)
+
+    exmax = schema.get("exclusiveMaximum")
+    if exmax is True and "integer" in type_:  # pragma: no cover
+        upper += 1
+    elif exmax is not False and exmax is not None:
+        hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
+        if upper is None:
+            upper = hi if "integer" in type_ else exmax
+        else:  # pragma: no cover
+            upper = min(upper, hi if "integer" in type_ else exmax)
+
+    if multiple_of is not None:
+        assert isinstance(multiple_of, (int, float))
+        if lower is not None:
+            lower += (multiple_of - lower) % multiple_of
+            lower //= multiple_of
+        if upper is not None:
+            upper -= upper % multiple_of
+            upper //= multiple_of
+        strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
+        if isinstance(multiple_of, float):
+            return strat.filter(lambda x: int(x / multiple_of) == x / multiple_of)
+        return strat
+
+    strat = st.nothing()
+    if "integer" in type_:
+        lo = lower if lower is None else math.ceil(lower)
+        hi = upper if upper is None else math.floor(upper)
+        if lo is None or hi is None or lo <= hi:
+            strat = st.integers(lo, hi)
+    if "number" in type_:
+        # Negative-zero does not round trip through JSON, so force it to positive
+        strat |= st.floats(
+            min_value=exmin if lower is None else lower,
+            max_value=exmax if upper is None else upper,
+            allow_nan=False,
+            allow_infinity=False,
+            exclude_min=exmin is not None,
+            exclude_max=exmax is not None,
+        ).map(lambda n: 0.0 if n == 0 else n)
+    return strat
 
 
 RFC3339_FORMATS = (

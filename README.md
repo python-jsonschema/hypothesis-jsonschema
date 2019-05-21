@@ -39,6 +39,9 @@ of generating values that don't quite match.
 #### 0.9.0 - 2019-05-21
 - Supports merging schemas for overlapping `patternProperties`,
   a significant performance improvement in most cases.
+- If the `"type"` key is missing, it is now inferred from other keys
+  rather than always defaulting to `"object"`.
+- Fixed handling of complicated numeric bounds.
 
 #### 0.8.2 - 2019-05-21
 - Improve performance for object schemas where the min and max size can be

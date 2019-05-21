@@ -1,4 +1,12 @@
 {
+    "impossible integer or valid number": {
+        "maximum": 1.9,
+        "minimum": 1.2,
+        "type": [
+            "integer",
+            "number"
+        ]
+    },
     "issue12-longer": {
         "additionalProperties": false,
         "properties": {
