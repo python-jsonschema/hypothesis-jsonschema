@@ -329,6 +329,15 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     unique = schema.get("uniqueItems")
     contains = schema.get("contains")
     if isinstance(items, list):
+        for i, s in enumerate(items):
+            if canonicalish(s) == canonicalish(False):
+                # No item can validate against this position,
+                # so we cut off the elements to generate here.
+                assert min_size <= i
+                assert max_size is None or max_size >= i
+                items = items[:i]
+                min_size = max_size = i
+                break
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
