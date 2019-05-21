@@ -72,3 +72,10 @@ with urllib.request.urlopen(
 
 with open("corpus-suite-schemas.json", mode="w") as f:
     json.dump([suite, invalid_suite], f, indent=4, sort_keys=True)
+
+
+# Part three: canonicalise tricky schemas reported on the issue tracker
+with open("corpus-reported.json") as f:
+    schemata = json.load(f)
+with open("corpus-reported.json", mode="w") as f:
+    json.dump(schemata, f, indent=4, sort_keys=True)

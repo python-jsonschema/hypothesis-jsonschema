@@ -90,6 +90,10 @@ with open("corpus-schemastore-catalog.json") as f:
     catalog = json.load(f)
 with open("corpus-suite-schemas.json") as f:
     suite, invalid_suite = json.load(f)
+with open("corpus-reported.json") as f:
+    reported = json.load(f)
+    assert set(reported).isdisjoint(suite)
+    suite.update(reported)
 
 
 def to_name_params(corpus):
