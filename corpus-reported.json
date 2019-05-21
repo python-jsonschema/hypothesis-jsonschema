@@ -1,0 +1,74 @@
+{
+    "issue12-longer": {
+        "additionalProperties": false,
+        "properties": {
+            "id": {
+                "pattern": "^\\d+$",
+                "type": "string"
+            },
+            "title": {
+                "enum": [
+                    "theonlyvalue"
+                ],
+                "type": "string"
+            },
+            "value": {
+                "additionalProperties": false,
+                "properties": {
+                    "flag": {
+                        "type": "boolean"
+                    },
+                    "ids": {
+                        "items": {
+                            "pattern": "^\\d+$",
+                            "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                    },
+                    "string": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "ids",
+                    "flag",
+                    "string"
+                ],
+                "type": "object"
+            }
+        },
+        "required": [
+            "title",
+            "value",
+            "id"
+        ],
+        "type": "object"
+    },
+    "issue12-simple": {
+        "additionalProperties": false,
+        "properties": {
+            "ids": {
+                "items": {
+                    "pattern": "^\\d+$",
+                    "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+            }
+        },
+        "required": [
+            "ids"
+        ],
+        "type": "object"
+    }
+}
