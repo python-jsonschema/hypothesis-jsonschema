@@ -5,7 +5,7 @@ import json
 import hypothesis.strategies as st
 import jsonschema
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, given, note, settings
 
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._impl import (
@@ -121,6 +121,7 @@ def to_name_params(corpus):
 @settings(deadline=None, max_examples=5, suppress_health_check=HealthCheck.all())
 @given(data=st.data())
 def test_can_generate_for_real_large_schema(data, name):
+    note(name)
     value = data.draw(from_schema(catalog[name]))
     jsonschema.validate(value, catalog[name])
 
@@ -129,6 +130,7 @@ def test_can_generate_for_real_large_schema(data, name):
 @settings(deadline=None, max_examples=20)
 @given(data=st.data())
 def test_can_generate_for_test_suite_schema(data, name):
+    note(suite[name])
     value = data.draw(from_schema(suite[name]))
     try:
         jsonschema.validate(value, suite[name])
