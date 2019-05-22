@@ -36,6 +36,9 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.9.1 - 2019-05-22
+- Fix the fix for numeric schemas with `multipleOf` and exclusive bounds.
+
 #### 0.9.0 - 2019-05-21
 - Supports merging schemas for overlapping `patternProperties`,
   a significant performance improvement in most cases.

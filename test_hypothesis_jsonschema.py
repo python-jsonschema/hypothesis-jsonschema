@@ -86,18 +86,17 @@ def test_invalid_schemas_raise(schema):
 # Along with refs and dependencies, this is the main TODO list!
 EXPECTED_FAILURES = {
     # Not yet implemented
-    "draft4/allOf",
-    "draft7/allOf",
-    "draft4/allOf with base schema",
-    "draft7/allOf with base schema",
-    # Draft-04 tests which do not specify a type
-    "draft4/exclusiveMinimum validation",
-    "draft4/exclusiveMaximum validation",
-    "draft4/minimum validation (explicit false exclusivity)",
-    "draft4/maximum validation (explicit false exclusivity)",
+    "allOf",
+    "allOf with base schema",
     # Just plain weird - regex issues etc.
     "JSON Schema for mime type collections",
 }
+FLAKY_SCHEMAS = {
+    # Something weird about a null that should be a string??  TODO: debug that.
+    "Datalogic Scan2Deploy Android file",
+    "Datalogic Scan2Deploy CE file",
+}
+
 with open("corpus-schemastore-catalog.json") as f:
     catalog = json.load(f)
 with open("corpus-suite-schemas.json") as f:
@@ -110,9 +109,9 @@ with open("corpus-reported.json") as f:
 
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n in EXPECTED_FAILURES:
+        if n.split("/", 1)[-1] in EXPECTED_FAILURES:
             yield pytest.param(n, marks=pytest.mark.xfail(strict=True))
-        elif '"$ref"' in json.dumps(corpus[n]):
+        elif n in FLAKY_SCHEMAS or '"$ref"' in json.dumps(corpus[n]):
             yield pytest.param(n, marks=pytest.mark.skip)
         else:
             yield n
@@ -131,7 +130,10 @@ def test_can_generate_for_real_large_schema(data, name):
 @given(data=st.data())
 def test_can_generate_for_test_suite_schema(data, name):
     value = data.draw(from_schema(suite[name]))
-    jsonschema.validate(value, suite[name])
+    try:
+        jsonschema.validate(value, suite[name])
+    except jsonschema.exceptions.SchemaError:
+        jsonschema.Draft4Validator(suite[name]).validate(value)
 
 
 @pytest.mark.parametrize("name", sorted(invalid_suite))

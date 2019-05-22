@@ -205,7 +205,7 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
 
     exmax = schema.get("exclusiveMaximum")
     if exmax is True and "integer" in type_:  # pragma: no cover
-        upper += 1
+        upper -= 1
     elif exmax is not False and exmax is not None:
         hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
         if upper is None:
@@ -216,11 +216,17 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     if multiple_of is not None:
         assert isinstance(multiple_of, (int, float))
         if lower is not None:
-            lower += (multiple_of - lower) % multiple_of
-            lower //= multiple_of
+            lo = math.ceil(lower / multiple_of)
+            if exmin is not False and exmin is not None and lo * multiple_of == lower:
+                lo += 1
+            assert lo * multiple_of >= lower, (lower, lo)
+            lower = lo
         if upper is not None:
-            upper -= upper % multiple_of
-            upper //= multiple_of
+            hi = math.floor(upper / multiple_of)
+            if exmax is not False and exmax is not None and hi * multiple_of == upper:
+                hi -= 1
+            assert hi * multiple_of <= upper, (upper, hi)
+            upper = hi
         strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
         if isinstance(multiple_of, float):
             return strat.filter(lambda x: int(x / multiple_of) == x / multiple_of)
