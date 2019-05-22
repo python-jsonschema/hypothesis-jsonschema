@@ -15,6 +15,7 @@ from hypothesis.errors import InvalidArgument
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
+
 JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
@@ -27,6 +28,11 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
         st.dictionaries(st.text(), JSON_STRATEGY, max_size=3),
     )
 )
+
+
+def from_schema(schema):
+    state = StrategyFactory(schema)
+    return state.from_schema(schema)
 
 
 def encode_canonical_json(value: JSONType) -> str:
@@ -62,193 +68,6 @@ def merged(schemas):
     # hopefully this catches empty things like allOf different types?
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
-
-
-def merged_as_strategies(schemas):
-    assert schemas, "internal error: must pass at least one schema to merge"
-    assert all(s == canonicalish(s) for s in schemas)
-    if len(schemas) == 1:
-        return from_schema(schemas[0])
-    # Try to merge combinations of strategies.
-    strats = []
-    combined = set()
-    inputs = {encode_canonical_json(s): s for s in schemas}
-    for group in itertools.chain.from_iterable(
-        itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)
-    ):
-        if combined.issuperset(group):
-            continue
-        s = merged([inputs[g] for g in group])
-        if s is not None:
-            strats.append(
-                from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
-            )
-            combined.update(group)
-    return st.one_of(strats)
-
-
-def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
-    """Take a JSON schema and return a strategy for allowed JSON objects.
-
-    Schema reuse with "definitions" and "$ref" is not yet supported, but
-    everything else in drafts 04, 05, and 07 is fully tested and working.
-    """
-    # Boolean objects are special schemata; False rejects all and True accepts all.
-    if schema is False or schema == {"not": {}}:
-        return st.nothing()
-    if schema is True or schema == {}:
-        return JSON_STRATEGY
-    # Otherwise, we're dealing with "objects", i.e. dicts.
-    if not isinstance(schema, dict):
-        raise InvalidArgument(
-            f"Got schema={schema} of type {type(schema).__name__}, "
-            "but expected a dict."
-        )
-    # Only check if declared, lest we error on inner non-latest-draft schemata.
-    if "$schema" in schema:
-        jsonschema.validators.validator_for(schema).check_schema(schema)
-
-    # Now we handle as many validation keywords as we can...
-    # Applying subschemata with boolean logic
-    if "not" in schema:
-        if schema["not"] is True or schema["not"] == {}:
-            return st.nothing()
-        if schema["not"] is False:
-            return JSON_STRATEGY
-        return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
-    if "anyOf" in schema:
-        tmp = schema.copy()
-        return st.one_of(
-            [from_schema({**tmp, **canonicalish(s)}) for s in tmp.pop("anyOf")]
-        )
-    if "allOf" in schema:
-        tmp = schema.copy()
-        ao = [canonicalish(s) for s in tmp.pop("allOf")]
-        if any(s == canonicalish(False) for s in ao):
-            return st.nothing()
-        return merged_as_strategies([tmp] + ao)
-    if "oneOf" in schema:
-        tmp = schema.copy()
-        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
-        schemas = [s for s in schemas if s != canonicalish(False)]
-        if len(schemas) > len({encode_canonical_json(s) for s in schemas}):
-            return st.nothing()
-        return st.one_of([from_schema(s) for s in schemas]).filter(
-            lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)
-        )
-    # Conditional application of subschemata
-    if "if" in schema:
-        if_ = schema["if"]
-        then = schema.get("then", {})
-        else_ = schema.get("else", {})
-        return st.one_of(
-            from_schema(then).filter(lambda v: is_valid(v, if_)),
-            from_schema(else_).filter(lambda v: not is_valid(v, if_)),
-            from_schema(if_).filter(lambda v: is_valid(v, then) or is_valid(v, else_)),
-        )
-    # Simple special cases
-    if "enum" in schema:
-        return st.sampled_from(schema["enum"]) if schema["enum"] else st.nothing()
-    if "const" in schema:
-        return st.just(schema["const"])
-    # Finally, resolve schema by type - defaulting to "object"
-    if "type" in schema:
-        type_ = schema["type"]
-    else:
-        type_ = []
-        for t, kw in [
-            ("number", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
-            ("integer", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
-            ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
-            ("array", "items additionalItems maxItems uniqueItems contains"),
-            (
-                "object",
-                "maxProperties minProperties required properties patternProperties "
-                "additionalProperties dependencies propertyNames",
-            ),
-        ]:
-            if any(k in schema for k in kw.split()):
-                type_.append(t)
-        if not type_:
-            type_ = "object"
-    if not isinstance(type_, list):
-        assert isinstance(type_, str), schema
-        type_ = [type_]
-    map_ = dict(
-        null=lambda _: st.none(),
-        boolean=lambda _: st.booleans(),
-        number=numeric_schema,
-        integer=numeric_schema,
-        string=string_schema,
-        array=array_schema,
-        object=object_schema,
-    )
-    return st.one_of([map_[t](schema) for t in type_])  # type: ignore
-
-
-def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
-    """Handle numeric schemata."""
-    type_ = schema.get("type", "integer")
-    multiple_of = schema.get("multipleOf")
-    lower = schema.get("minimum")
-    upper = schema.get("maximum")
-
-    exmin = schema.get("exclusiveMinimum")
-    if exmin is True and "integer" in type_:  # pragma: no cover
-        lower += 1
-    elif exmin is not False and exmin is not None:
-        lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
-        if lower is None:
-            lower = lo if "integer" in type_ else exmin
-        else:  # pragma: no cover
-            lower = max(lower, lo if "integer" in type_ else exmin)
-
-    exmax = schema.get("exclusiveMaximum")
-    if exmax is True and "integer" in type_:  # pragma: no cover
-        upper -= 1
-    elif exmax is not False and exmax is not None:
-        hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
-        if upper is None:
-            upper = hi if "integer" in type_ else exmax
-        else:  # pragma: no cover
-            upper = min(upper, hi if "integer" in type_ else exmax)
-
-    if multiple_of is not None:
-        assert isinstance(multiple_of, (int, float))
-        if lower is not None:
-            lo = math.ceil(lower / multiple_of)
-            if exmin is not False and exmin is not None and lo * multiple_of == lower:
-                lo += 1
-            assert lo * multiple_of >= lower, (lower, lo)
-            lower = lo
-        if upper is not None:
-            hi = math.floor(upper / multiple_of)
-            if exmax is not False and exmax is not None and hi * multiple_of == upper:
-                hi -= 1
-            assert hi * multiple_of <= upper, (upper, hi)
-            upper = hi
-        strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
-        if isinstance(multiple_of, float):
-            return strat.filter(lambda x: int(x / multiple_of) == x / multiple_of)
-        return strat
-
-    strat = st.nothing()
-    if "integer" in type_:
-        lo = lower if lower is None else math.ceil(lower)
-        hi = upper if upper is None else math.floor(upper)
-        if lo is None or hi is None or lo <= hi:
-            strat = st.integers(lo, hi)
-    if "number" in type_:
-        # Negative-zero does not round trip through JSON, so force it to positive
-        strat |= st.floats(
-            min_value=exmin if lower is None else lower,
-            max_value=exmax if upper is None else upper,
-            allow_nan=False,
-            allow_infinity=False,
-            exclude_min=exmin is not None,
-            exclude_max=exmax is not None,
-        ).map(lambda n: 0.0 if n == 0 else n)
-    return strat
 
 
 RFC3339_FORMATS = (
@@ -320,6 +139,71 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)
 
 
+def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
+    """Handle numeric schemata."""
+    type_ = schema.get("type", "integer")
+    multiple_of = schema.get("multipleOf")
+    lower = schema.get("minimum")
+    upper = schema.get("maximum")
+
+    exmin = schema.get("exclusiveMinimum")
+    if exmin is True and "integer" in type_:  # pragma: no cover
+        lower += 1
+    elif exmin is not False and exmin is not None:
+        lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
+        if lower is None:
+            lower = lo if "integer" in type_ else exmin
+        else:  # pragma: no cover
+            lower = max(lower, lo if "integer" in type_ else exmin)
+
+    exmax = schema.get("exclusiveMaximum")
+    if exmax is True and "integer" in type_:  # pragma: no cover
+        upper -= 1
+    elif exmax is not False and exmax is not None:
+        hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
+        if upper is None:
+            upper = hi if "integer" in type_ else exmax
+        else:  # pragma: no cover
+            upper = min(upper, hi if "integer" in type_ else exmax)
+
+    if multiple_of is not None:
+        assert isinstance(multiple_of, (int, float))
+        if lower is not None:
+            lo = math.ceil(lower / multiple_of)
+            if exmin is not False and exmin is not None and lo * multiple_of == lower:
+                lo += 1
+            assert lo * multiple_of >= lower, (lower, lo)
+            lower = lo
+        if upper is not None:
+            hi = math.floor(upper / multiple_of)
+            if exmax is not False and exmax is not None and hi * multiple_of == upper:
+                hi -= 1
+            assert hi * multiple_of <= upper, (upper, hi)
+            upper = hi
+        strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
+        if isinstance(multiple_of, float):
+            return strat.filter(lambda x: int(x / multiple_of) == x / multiple_of)
+        return strat
+
+    strat = st.nothing()
+    if "integer" in type_:
+        lo = lower if lower is None else math.ceil(lower)
+        hi = upper if upper is None else math.floor(upper)
+        if lo is None or hi is None or lo <= hi:
+            strat = st.integers(lo, hi)
+    if "number" in type_:
+        # Negative-zero does not round trip through JSON, so force it to positive
+        strat |= st.floats(
+            min_value=exmin if lower is None else lower,
+            max_value=exmax if upper is None else upper,
+            allow_nan=False,
+            allow_infinity=False,
+            exclude_min=exmin is not None,
+            exclude_max=exmax is not None,
+        ).map(lambda n: 0.0 if n == 0 else n)
+    return strat
+
+
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
@@ -327,7 +211,7 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     max_size = schema.get("maxLength", float("inf"))
     strategy: Any = st.text(min_size=min_size, max_size=schema.get("maxLength"))
     assert not (
-        "format" in schema and "pattern" in schema
+            "format" in schema and "pattern" in schema
     ), "format and regex constraints are supported, but not both at once."
     if "pattern" in schema:
         strategy = st.from_regex(schema["pattern"])
@@ -355,177 +239,6 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     return strategy.filter(lambda s: min_size <= len(s) <= max_size)  # type: ignore
 
 
-def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
-    """Handle schemata for arrays."""
-    items = schema.get("items", {})
-    additional_items = schema.get("additionalItems", {})
-    min_size = schema.get("minItems", 0)
-    max_size = schema.get("maxItems")
-    unique = schema.get("uniqueItems")
-    contains = schema.get("contains")
-    if isinstance(items, list):
-        for i, s in enumerate(items):
-            if canonicalish(s) == canonicalish(False):
-                # No item can validate against this position,
-                # so we cut off the elements to generate here.
-                assert min_size <= i
-                assert max_size is None or max_size >= i
-                items = items[:i]
-                min_size = max_size = i
-                break
-        min_size = max(0, min_size - len(items))
-        if max_size is not None:
-            max_size -= len(items)
-        if contains is not None:
-            assert (
-                additional_items == {}
-            ), "Cannot handle additionalItems and contains togther"
-            additional_items = contains
-            min_size = max(min_size, 1)
-        fixed_items = st.tuples(*map(from_schema, items))
-        extra_items = st.lists(
-            from_schema(additional_items), min_size=min_size, max_size=max_size
-        )
-        return st.tuples(fixed_items, extra_items).map(
-            lambda t: list(t[0]) + t[1]  # type: ignore
-        )
-    if contains is not None:
-        assert items == {}, "Cannot handle items and contains togther"
-        items = contains
-        min_size = max(min_size, 1)
-    if unique:
-        return st.lists(
-            from_schema(items),
-            min_size=min_size,
-            max_size=max_size,
-            unique_by=encode_canonical_json,
-        )
-    return st.lists(from_schema(items), min_size=min_size, max_size=max_size)
-
-
-def is_valid(instance: JSONType, schema: JSONType) -> bool:
-    try:
-        jsonschema.validate(instance, schema)
-        return True
-    except jsonschema.ValidationError:
-        return False
-
-
-def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
-    """Handle a manageable subset of possible schemata for objects."""
-    required = schema.get("required", [])  # required keys
-    min_size = max(len(required), schema.get("minProperties", 0))
-    names = schema.get("propertyNames", {})  # schema for optional keys
-    if isinstance(names, dict) and "type" not in names:
-        names["type"] = "string"
-    elif names is True:
-        names = {"type": "string"}
-    elif names is False:
-        assert min_size == 0, schema
-        return st.builds(dict)
-
-    properties = schema.get("properties", {})  # exact name: value schema
-    properties = {k: canonicalish(v) for k, v in properties.items()}
-    patterns = schema.get("patternProperties", {})  # regex for names: value schema
-    patterns = {k: canonicalish(v) for k, v in patterns.items()}
-    # schema for other values; handled specially if nothing matches
-    additional = canonicalish(schema.get("additionalProperties", {}))
-    additional_allowed = additional != canonicalish(False)
-
-    # When a known set of names is allowed, we cap the max_size at that number
-    max_size = min(
-        schema.get("maxProperties", float("inf")),
-        len(schema.get("propertyNames", [])) + len(schema.get("properties", []))
-        if ("propertyNames" in schema or "properties" in schema)
-        and not additional_allowed
-        else float("inf"),
-    )
-
-    dependencies = schema.get("dependencies", {})
-    dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
-    dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
-    del dependencies
-
-    name_strats = (
-        st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
-        if (dep_names or dep_schemas)
-        else st.nothing(),
-        from_schema(names) if additional_allowed else st.nothing(),
-        st.sampled_from(sorted(properties)) if properties else st.nothing(),
-        st.one_of([st.from_regex(p) for p in sorted(patterns)]),
-    )
-    all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
-        lambda instance: is_valid(instance, names)
-    )
-
-    @st.composite
-    def from_object_schema(draw: Any) -> Any:
-        """Here, we do some black magic with private Hypothesis internals.
-
-        It's unfortunate, but also the only way that I know of to satisfy all
-        the interacting constraints without making shrinking totally hopeless.
-
-        If any Hypothesis maintainers are reading this... I'm so, so sorry.
-        """
-        elements = cu.many(  # type: ignore
-            draw(st.data()).conjecture_data,
-            min_size=min_size,
-            max_size=max_size,
-            average_size=min(min_size + 5, (min_size + max_size) // 2),
-        )
-        out: dict = {}
-        while elements.more():
-            for key in required:
-                if key not in out:
-                    break
-            else:
-                for k in dep_names:
-                    if k in out:
-                        key = next((n for n in dep_names[k] if n not in out), None)
-                        if key is not None:
-                            break
-                else:
-                    key = draw(all_names_strategy.filter(lambda s: s not in out))
-
-            pattern_schemas = [
-                patterns[rgx]
-                for rgx in sorted(patterns)
-                if re.search(rgx, string=key) is not None
-            ]
-            if key in properties:
-                pattern_schemas.insert(0, properties[key])
-
-            if pattern_schemas:
-                out[key] = draw(merged_as_strategies(pattern_schemas))
-            else:
-                assert additional_allowed
-                out[key] = draw(from_schema(additional))
-
-            for k, v in dep_schemas.items():
-                if k in out and not is_valid(out, v):
-                    out.pop(key)
-                    elements.reject()
-
-        for k in dep_names:
-            if k in out:
-                assume(all(n in out for n in dep_names[k]))
-        return out
-
-    return from_object_schema()
-
-
-# OK, now on to the inverse: a strategy for generating schemata themselves.
-
-
-def json_schemata() -> st.SearchStrategy[Union[bool, Dict[str, JSONType]]]:
-    """A Hypothesis strategy for arbitrary JSON schemata.
-
-    This strategy may generate anything that can be handled by `from_schema`,
-    and is used to provide full branch coverage when testing this package.
-    """
-    return _json_schemata()
-
-
 @st.composite
 def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
     """A strategy for simple regular expression patterns."""
@@ -545,6 +258,313 @@ def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
 
 
 REGEX_PATTERNS = regex_patterns()
+
+
+class StrategyFactory:
+    def __init__(self, schema):
+        self.resolver = jsonschema.RefResolver.from_schema(schema)
+        self.schema = schema
+
+        cls = jsonschema.validators.validator_for(schema)
+        cls.check_schema(schema)
+        # By calling validator directly, we avoid re-validating the schema
+        self.validator = cls(schema)
+
+    def is_valid(self, instance: JSONType, schema: JSONType) -> bool:
+        try:
+            self.validator.validate(instance, schema)
+            return True
+        except jsonschema.ValidationError:
+            return False
+
+    def merged_as_strategies(self, schemas):
+        assert schemas, "internal error: must pass at least one schema to merge"
+        assert all(s == canonicalish(s) for s in schemas)
+        if len(schemas) == 1:
+            return self.from_schema(schemas[0])
+        # Try to merge combinations of strategies.
+        strats = []
+        combined = set()
+        inputs = {encode_canonical_json(s): s for s in schemas}
+        for group in itertools.chain.from_iterable(
+                itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)
+        ):
+            if combined.issuperset(group):
+                continue
+            s = merged([inputs[g] for g in group])
+            if s is not None:
+                strats.append(
+                    self.from_schema(s).filter(lambda v: all(self.is_valid(v, s) for s in schemas))
+                )
+                combined.update(group)
+        return st.one_of(strats)
+
+    def array_schema(self, schema: dict) -> st.SearchStrategy[List[JSONType]]:
+        """Handle schemata for arrays."""
+        items = schema.get("items", {})
+        additional_items = schema.get("additionalItems", {})
+        min_size = schema.get("minItems", 0)
+        max_size = schema.get("maxItems")
+        unique = schema.get("uniqueItems")
+        contains = schema.get("contains")
+        if isinstance(items, list):
+            for i, s in enumerate(items):
+                if canonicalish(s) == canonicalish(False):
+                    # No item can validate against this position,
+                    # so we cut off the elements to generate here.
+                    assert min_size <= i
+                    assert max_size is None or max_size >= i
+                    items = items[:i]
+                    min_size = max_size = i
+                    break
+            min_size = max(0, min_size - len(items))
+            if max_size is not None:
+                max_size -= len(items)
+            if contains is not None:
+                assert (
+                        additional_items == {}
+                ), "Cannot handle additionalItems and contains togther"
+                additional_items = contains
+                min_size = max(min_size, 1)
+            fixed_items = st.tuples(*map(self.from_schema, items))
+            extra_items = st.lists(
+                self.from_schema(additional_items), min_size=min_size, max_size=max_size
+            )
+            return st.tuples(fixed_items, extra_items).map(
+                lambda t: list(t[0]) + t[1]  # type: ignore
+            )
+        if contains is not None:
+            assert items == {}, "Cannot handle items and contains togther"
+            items = contains
+            min_size = max(min_size, 1)
+        if unique:
+            return st.lists(
+                self.from_schema(items),
+                min_size=min_size,
+                max_size=max_size,
+                unique_by=encode_canonical_json,
+            )
+        return st.lists(self.from_schema(items), min_size=min_size, max_size=max_size)
+
+    def object_schema(self, schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
+        """Handle a manageable subset of possible schemata for objects."""
+        required = schema.get("required", [])  # required keys
+        min_size = max(len(required), schema.get("minProperties", 0))
+        names = schema.get("propertyNames", {})  # schema for optional keys
+        if isinstance(names, dict) and "type" not in names:
+            names["type"] = "string"
+        elif names is True:
+            names = {"type": "string"}
+        elif names is False:
+            assert min_size == 0, schema
+            return st.builds(dict)
+
+        properties = schema.get("properties", {})  # exact name: value schema
+        properties = {k: canonicalish(v) for k, v in properties.items()}
+        patterns = schema.get("patternProperties", {})  # regex for names: value schema
+        patterns = {k: canonicalish(v) for k, v in patterns.items()}
+        # schema for other values; handled specially if nothing matches
+        additional = canonicalish(schema.get("additionalProperties", {}))
+        additional_allowed = additional != canonicalish(False)
+
+        # When a known set of names is allowed, we cap the max_size at that number
+        max_size = min(
+            schema.get("maxProperties", float("inf")),
+            len(schema.get("propertyNames", [])) + len(schema.get("properties", []))
+            if ("propertyNames" in schema or "properties" in schema)
+               and not additional_allowed
+            else float("inf"),
+        )
+
+        dependencies = schema.get("dependencies", {})
+        dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
+        dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
+        del dependencies
+
+        name_strats = (
+            st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
+            if (dep_names or dep_schemas)
+            else st.nothing(),
+            self.from_schema(names) if additional_allowed else st.nothing(),
+            st.sampled_from(sorted(properties)) if properties else st.nothing(),
+            st.one_of([st.from_regex(p) for p in sorted(patterns)]),
+        )
+        all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
+            lambda instance: self.is_valid(instance, names)
+        )
+
+        @st.composite
+        def from_object_schema(draw: Any) -> Any:
+            """Here, we do some black magic with private Hypothesis internals.
+
+            It's unfortunate, but also the only way that I know of to satisfy all
+            the interacting constraints without making shrinking totally hopeless.
+
+            If any Hypothesis maintainers are reading this... I'm so, so sorry.
+            """
+            elements = cu.many(  # type: ignore
+                draw(st.data()).conjecture_data,
+                min_size=min_size,
+                max_size=max_size,
+                average_size=min(min_size + 5, (min_size + max_size) // 2),
+            )
+            out: dict = {}
+            while elements.more():
+                for key in required:
+                    if key not in out:
+                        break
+                else:
+                    for k in dep_names:
+                        if k in out:
+                            key = next((n for n in dep_names[k] if n not in out), None)
+                            if key is not None:
+                                break
+                    else:
+                        key = draw(all_names_strategy.filter(lambda s: s not in out))
+
+                pattern_schemas = [
+                    patterns[rgx]
+                    for rgx in sorted(patterns)
+                    if re.search(rgx, string=key) is not None
+                ]
+                if key in properties:
+                    pattern_schemas.insert(0, properties[key])
+
+                if pattern_schemas:
+                    out[key] = draw(self.merged_as_strategies(pattern_schemas))
+                else:
+                    assert additional_allowed
+                    out[key] = draw(self.from_schema(additional))
+
+                for k, v in dep_schemas.items():
+                    if k in out and not self.is_valid(out, v):
+                        out.pop(key)
+                        elements.reject()
+
+            for k in dep_names:
+                if k in out:
+                    assume(all(n in out for n in dep_names[k]))
+            return out
+
+        return from_object_schema()
+
+    def from_schema(self, schema: dict) -> st.SearchStrategy[JSONType]:
+        """Take a JSON schema and return a strategy for allowed JSON objects.
+        Schema reuse with "definitions" and "$ref" is not yet supported, but
+        everything else in drafts 04, 05, and 07 is fully tested and working.
+        """
+        if '$ref' in schema:
+            # raise ValueError(self.resolver, self.resolved, schema['$ref'])
+            try:
+                resolved_schema = self.resolver.resolve(schema['$ref'])
+            except Exception:
+                raise ValueError(schema)
+
+            schema = resolved_schema[1]
+
+        # Boolean objects are special schemata; False rejects all and True accepts all.
+        if schema is False or schema == {"not": {}}:
+            return st.nothing()
+        if schema is True or schema == {}:
+            return JSON_STRATEGY
+        # Otherwise, we're dealing with "objects", i.e. dicts.
+        if not isinstance(schema, dict):
+            raise InvalidArgument(
+                f"Got schema={schema} of type {type(schema).__name__}, "
+                "but expected a dict."
+            )
+        # Only check if declared, lest we error on inner non-latest-draft schemata.
+        if "$schema" in schema:
+            jsonschema.validators.validator_for(schema).check_schema(schema)
+
+        # Now we handle as many validation keywords as we can...
+        # Applying subschemata with boolean logic
+        if "not" in schema:
+            if schema["not"] is True or schema["not"] == {}:
+                return st.nothing()
+            if schema["not"] is False:
+                return JSON_STRATEGY
+            return JSON_STRATEGY.filter(lambda inst: not self.is_valid(inst, schema["not"]))
+        if "anyOf" in schema:
+            tmp = schema.copy()
+            return st.one_of(
+                [self.from_schema({**tmp, **canonicalish(s)}) for s in tmp.pop("anyOf")]
+            )
+        if "allOf" in schema:
+            tmp = schema.copy()
+            ao = [canonicalish(s) for s in tmp.pop("allOf")]
+            if any(s == canonicalish(False) for s in ao):
+                return st.nothing()
+            return self.merged_as_strategies([tmp] + ao)
+        if "oneOf" in schema:
+            tmp = schema.copy()
+            schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
+            schemas = [s for s in schemas if s != canonicalish(False)]
+            if len(schemas) > len({encode_canonical_json(s) for s in schemas}):
+                return st.nothing()
+            return st.one_of([self.from_schema(s) for s in schemas]).filter(
+                lambda inst: 1 == sum(self.is_valid(inst, s) for s in schemas)
+            )
+        # Conditional application of subschemata
+        if "if" in schema:
+            if_ = schema["if"]
+            then = schema.get("then", {})
+            else_ = schema.get("else", {})
+            return st.one_of(
+                self.from_schema(then).filter(lambda v: self.is_valid(v, if_)),
+                self.from_schema(else_).filter(lambda v: not self.is_valid(v, if_)),
+                self.from_schema(if_).filter(lambda v: self.is_valid(v, then) or self.is_valid(v, else_)),
+            )
+        # Simple special cases
+        if "enum" in schema:
+            return st.sampled_from(schema["enum"]) if schema["enum"] else st.nothing()
+        if "const" in schema:
+            return st.just(schema["const"])
+        # Finally, resolve schema by type - defaulting to "object"
+        if "type" in schema:
+            type_ = schema["type"]
+        else:
+            type_ = []
+            for t, kw in [
+                ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+                ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+                ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
+                ("array", "items additionalItems maxItems uniqueItems contains"),
+                (
+                        "object",
+                        "maxProperties minProperties required properties patternProperties "
+                        "additionalProperties dependencies propertyNames",
+                ),
+            ]:
+                if any(k in schema for k in kw.split()):
+                    type_.append(t)
+            if not type_:
+                type_ = "object"
+        if not isinstance(type_, list):
+            assert isinstance(type_, str), schema
+            type_ = [type_]
+        map_ = dict(
+            null=lambda _: st.none(),
+            boolean=lambda _: st.booleans(),
+            number=numeric_schema,
+            integer=numeric_schema,
+            string=string_schema,
+            array=self.array_schema,
+            object=self.object_schema,
+        )
+        return st.one_of([map_[t](schema) for t in type_])  # type: ignore
+
+
+# OK, now on to the inverse: a strategy for generating schemata themselves.
+
+
+def json_schemata() -> st.SearchStrategy[Union[bool, Dict[str, JSONType]]]:
+    """A Hypothesis strategy for arbitrary JSON schemata.
+
+    This strategy may generate anything that can be handled by `from_schema`,
+    and is used to provide full branch coverage when testing this package.
+    """
+    return _json_schemata()
 
 
 @st.composite
@@ -583,7 +603,7 @@ def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
     elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
     # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
     for i, val in enumerate(elems):
-        assume(not any(val == v for v in elems[i + 1 :]))  # noqa
+        assume(not any(val == v for v in elems[i + 1:]))  # noqa
     return dict(enum=elems)
 
 
