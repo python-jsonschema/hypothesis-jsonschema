@@ -12,6 +12,7 @@ import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
 from hypothesis.errors import InvalidArgument
+from hypothesis.internal.floats import next_down, next_up
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
@@ -332,15 +333,27 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
         if lo is None or hi is None or lo <= hi:
             strat = st.integers(lo, hi)
     if "number" in schema["type"]:
-        # Negative-zero does not round trip through JSON, so force it to positive
+        # Filter out negative-zero as it does not exist in JSON
+        lo = exmin if lower is None else lower
+        if lo is not None:
+            lower = float(lo)
+            if lower < lo:
+                lower = next_up(lower)
+            assert lower >= lo
+        hi = exmax if upper is None else upper
+        if hi is not None:
+            upper = float(hi)
+            if upper > hi:
+                upper = next_down(upper)
+            assert upper <= hi
         strat |= st.floats(
-            min_value=exmin if lower is None else lower,
-            max_value=exmax if upper is None else upper,
+            min_value=lower,
+            max_value=upper,
             allow_nan=False,
             allow_infinity=False,
             exclude_min=exmin is not None,
             exclude_max=exmax is not None,
-        ).map(lambda n: 0.0 if n == 0 else n)
+        ).filter(lambda n: n != 0 or math.copysign(1, n) == 1)
     return strat
 
 

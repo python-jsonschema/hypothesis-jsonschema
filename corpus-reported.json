@@ -78,5 +78,9 @@
             "ids"
         ],
         "type": "object"
+    },
+    "float bounds that are not floats": {
+        "maximum": 18014398509481983,
+        "minimum": -18014398509481983
     }
 }

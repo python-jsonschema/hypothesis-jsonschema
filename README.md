@@ -39,6 +39,8 @@ of generating values that don't quite match.
 #### 0.9.2 - 2019-05-23
 - Better internal canonicalization, which makes current and future
   optimisations more widely applicable.
+- Yet another fix, this time for negative zero and numeric bouds as floats
+  with sub-integer precision.  IEEE 754 is *tricky*, even with Hypothesis!
 
 #### 0.9.1 - 2019-05-22
 - Fix the fix for numeric schemas with `multipleOf` and exclusive bounds.
