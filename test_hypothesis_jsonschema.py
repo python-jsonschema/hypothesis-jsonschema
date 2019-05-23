@@ -92,6 +92,9 @@ EXPECTED_FAILURES = {
     "JSON Schema for mime type collections",
 }
 FLAKY_SCHEMAS = {
+    # Yep, lists of lists of lists of lists of lists of integers are HealthCheck-slow
+    "draft4/nested items",
+    "draft7/nested items",
     # Something weird about a null that should be a string??  TODO: debug that.
     "Datalogic Scan2Deploy Android file",
     "Datalogic Scan2Deploy CE file",
