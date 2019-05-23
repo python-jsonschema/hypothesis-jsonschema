@@ -28,6 +28,9 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
     )
 )
 
+# Canonical type strings, in order.
+TYPE_STRINGS = ("null", "boolean", "integer", "number", "string", "array", "object")
+
 
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
@@ -35,13 +38,117 @@ def encode_canonical_json(value: JSONType) -> str:
 
 
 def canonicalish(schema: JSONType) -> Dict:
-    """Turn booleans into dict-based schemata."""
+    """Convert a schema into a more-canonical form.
+
+    This is obviously incomplete, but improves best-effort recognition of
+    equivalent schemas and makes conversion logic simpler.
+    """
     if schema is True:
         return {}
     elif schema is False:
         return {"not": {}}
-    assert isinstance(schema, dict), schema
+    # Otherwise, we're dealing with "objects", i.e. dicts.
+    if not isinstance(schema, dict):
+        raise InvalidArgument(
+            f"Got schema={schema} of type {type(schema).__name__}, "
+            "but expected a dict."
+        )
+    # Make a copy, so we don't mutate the existing schema in place.
+    schema = dict(schema)
+    if "const" in schema:
+        if not is_valid(schema["const"], schema):
+            return FALSEY
+        return {"const": schema["const"]}
+    # If the "type" is not specified, add the relevant key or keys based on
+    # type-specific validation keywords.
+    # TODO: move this logic to a "get type" helper, because adding a type key
+    # changes semantics - without one the type-specific keys constrain that
+    # type but allow others to be passed.  We do want to guess, but can't add
+    # the key as it affects other intersection/union canonicalisation logic
+    # which we would like to add.
+    if "type" not in schema:
+        type_ = []
+        for t, kw in [
+            ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+            ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+            ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
+            ("array", "items additionalItems maxItems uniqueItems contains"),
+            (
+                "object",
+                "maxProperties minProperties required properties patternProperties "
+                "additionalProperties dependencies propertyNames",
+            ),
+        ]:
+            if any(k in schema for k in kw.split()):
+                type_.append(t)
+        if type_:
+            schema["type"] = type_
+    # Canonicalise the "type" key to a sorted list of type strings.
+    if "type" in schema:
+        if isinstance(schema["type"], str):
+            schema["type"] = [schema["type"]]
+        assert set(schema["type"]).issubset(TYPE_STRINGS)
+        schema["type"] = [t for t in TYPE_STRINGS if t in schema["type"]]
+    # Canonicalise "not" subschemas
+    if "not" in schema:
+        not_ = canonicalish(schema.pop("not"))
+        if not_ == TRUTHY or not_ == schema:
+            # If everything is rejected, discard all other (irrelevant) keys
+            # TODO: more sensitive detection of cases where the not-clause
+            # excludes everything in the schema.
+            return FALSEY
+        if not_ != FALSEY:
+            # If the "not" key rejects nothing, discard it
+            schema["not"] = not_
+    # Canonicalise "xxxOf" lists; in each case canonicalising and sorting the
+    # sub-schemas then handling any key-specific logic.
+    if "anyOf" in schema:
+        schema["anyOf"] = sorted(
+            [canonicalish(s) for s in schema["anyOf"]], key=encode_canonical_json
+        )
+        schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
+        if not schema["anyOf"]:
+            return FALSEY
+        if len(schema) == len(schema["anyOf"]) == 1:
+            return schema["anyOf"][0]
+    if "allOf" in schema:
+        schema["allOf"] = sorted(
+            [canonicalish(s) for s in schema["allOf"]], key=encode_canonical_json
+        )
+        if any(s == FALSEY for s in schema["allOf"]):
+            return FALSEY
+        if all(s == TRUTHY for s in schema["allOf"]):
+            schema.pop("allOf")
+        elif len(schema) == len(schema["allOf"]) == 1:
+            return schema["allOf"][0]
+        else:
+            tmp = schema.copy()
+            ao = tmp.pop("allOf")
+            tmp = merged([tmp] + ao)
+            if tmp is not None:  # pragma: no branch
+                schema = tmp
+    if "oneOf" in schema:
+        schema["oneOf"] = sorted(
+            [canonicalish(s) for s in schema["oneOf"]], key=encode_canonical_json
+        )
+        schema["oneOf"] = [s for s in schema["oneOf"] if s != FALSEY]
+        if len(schema) == len(schema["oneOf"]) == 1:
+            return schema["oneOf"][0]
+        if (not schema["oneOf"]) or len(schema["oneOf"]) > len(
+            {encode_canonical_json(s) for s in schema["oneOf"]}
+        ):
+            return FALSEY
+    # Canonicalise "required" schemas to remove redundancy
+    if "required" in schema:
+        schema["required"] = sorted(set(schema["required"]))
+        if not schema["required"]:
+            schema.pop("required")
+
     return schema
+
+
+TRUTHY = canonicalish(True)
+FALSEY = canonicalish(False)
 
 
 def merged(schemas):
@@ -50,23 +157,41 @@ def merged(schemas):
     schema must also validate against all of the input schemas.
     """
     assert schemas, "internal error: must pass at least one schema to merge"
-    assert all(s == canonicalish(s) for s in schemas)
-
-    out = dict(schemas[0])
+    out = canonicalish(schemas[0])
     for s in schemas[1:]:
+        s = canonicalish(s)
+        if "type" in out and "type" in s:
+            tt = s.pop("type")
+            out["type"] = [t for t in out["type"] if t in tt]
+            if not out["type"]:
+                return FALSEY
+        if "properties" in out and "properties" in s:
+            op = out["properties"]
+            sp = s.pop("properties")
+            for k, v in sp.items():
+                if v != op.get(k, v):
+                    v = merged([op[k], v])
+                    if v is None:  # pragma: no cover
+                        # This is no-cover because I aim to handle
+                        # every well-formed case I can think of.
+                        # TODO: remove branches with coverage pragmas
+                        return None
+                op[k] = v
+        if "required" in out and "required" in s:
+            out["required"] = sorted(set(out["required"] + s.pop("required")))
         if set(s) & set(out):
-            # Overlapping keys.
-            # TODO: convert types to list, not with allOf, etc.
+            # TODO: Handle all mergable overlapping keys above,
+            # then return FALSEY for anything else.
             return None
         out.update(s)
     # hopefully this catches empty things like allOf different types?
+    out = canonicalish(out)
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
 
 
 def merged_as_strategies(schemas):
     assert schemas, "internal error: must pass at least one schema to merge"
-    assert all(s == canonicalish(s) for s in schemas)
     if len(schemas) == 1:
         return from_schema(schemas[0])
     # Try to merge combinations of strategies.
@@ -79,7 +204,7 @@ def merged_as_strategies(schemas):
         if combined.issuperset(group):
             continue
         s = merged([inputs[g] for g in group])
-        if s is not None:
+        if s is not None:  # pragma: no branch
             strats.append(
                 from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
             )
@@ -93,17 +218,12 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     Schema reuse with "definitions" and "$ref" is not yet supported, but
     everything else in drafts 04, 05, and 07 is fully tested and working.
     """
+    schema = canonicalish(schema)
     # Boolean objects are special schemata; False rejects all and True accepts all.
-    if schema is False or schema == {"not": {}}:
+    if schema == FALSEY:
         return st.nothing()
-    if schema is True or schema == {}:
+    if schema == TRUTHY:
         return JSON_STRATEGY
-    # Otherwise, we're dealing with "objects", i.e. dicts.
-    if not isinstance(schema, dict):
-        raise InvalidArgument(
-            f"Got schema={schema} of type {type(schema).__name__}, "
-            "but expected a dict."
-        )
     # Only check if declared, lest we error on inner non-latest-draft schemata.
     if "$schema" in schema:
         jsonschema.validators.validator_for(schema).check_schema(schema)
@@ -111,28 +231,22 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic
     if "not" in schema:
-        if schema["not"] is True or schema["not"] == {}:
-            return st.nothing()
-        if schema["not"] is False:
-            return JSON_STRATEGY
-        return JSON_STRATEGY.filter(lambda inst: not is_valid(inst, schema["not"]))
+        return JSON_STRATEGY.filter(lambda inst: is_valid(inst, schema))
     if "anyOf" in schema:
         tmp = schema.copy()
-        return st.one_of(
-            [from_schema({**tmp, **canonicalish(s)}) for s in tmp.pop("anyOf")]
-        )
-    if "allOf" in schema:
+        ao = tmp.pop("anyOf")
+        return st.one_of([merged_as_strategies([tmp, s]) for s in ao])
+    if "allOf" in schema:  # pragma: no cover
+        # This is no-cover because `canonicalish` merges these into the base
+        # schema in every known or generated test case, but we keep this
+        # fallback logic to use partial merging for any remaining cases.
         tmp = schema.copy()
-        ao = [canonicalish(s) for s in tmp.pop("allOf")]
-        if any(s == canonicalish(False) for s in ao):
-            return st.nothing()
+        ao = tmp.pop("allOf")
         return merged_as_strategies([tmp] + ao)
     if "oneOf" in schema:
         tmp = schema.copy()
-        schemas = [{**tmp, **canonicalish(s)} for s in tmp.pop("oneOf")]
-        schemas = [s for s in schemas if s != canonicalish(False)]
-        if len(schemas) > len({encode_canonical_json(s) for s in schemas}):
-            return st.nothing()
+        oo = tmp.pop("oneOf")
+        schemas = [merged([tmp, s]) for s in oo]
         return st.one_of([from_schema(s) for s in schemas]).filter(
             lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)
         )
@@ -152,28 +266,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     if "const" in schema:
         return st.just(schema["const"])
     # Finally, resolve schema by type - defaulting to "object"
-    if "type" in schema:
-        type_ = schema["type"]
-    else:
-        type_ = []
-        for t, kw in [
-            ("number", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
-            ("integer", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
-            ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
-            ("array", "items additionalItems maxItems uniqueItems contains"),
-            (
-                "object",
-                "maxProperties minProperties required properties patternProperties "
-                "additionalProperties dependencies propertyNames",
-            ),
-        ]:
-            if any(k in schema for k in kw.split()):
-                type_.append(t)
-        if not type_:
-            type_ = "object"
-    if not isinstance(type_, list):
-        assert isinstance(type_, str), schema
-        type_ = [type_]
     map_ = dict(
         null=lambda _: st.none(),
         boolean=lambda _: st.booleans(),
@@ -183,35 +275,36 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         array=array_schema,
         object=object_schema,
     )
-    return st.one_of([map_[t](schema) for t in type_])  # type: ignore
+    return st.one_of(
+        [map_[t](schema) for t in schema.get("type", ["object"])]  # type: ignore
+    )
 
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
-    type_ = schema.get("type", "integer")
     multiple_of = schema.get("multipleOf")
     lower = schema.get("minimum")
     upper = schema.get("maximum")
 
     exmin = schema.get("exclusiveMinimum")
-    if exmin is True and "integer" in type_:  # pragma: no cover
+    if exmin is True and "integer" in schema["type"]:  # pragma: no cover
         lower += 1
     elif exmin is not False and exmin is not None:
         lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
         if lower is None:
-            lower = lo if "integer" in type_ else exmin
+            lower = lo if "integer" in schema["type"] else exmin
         else:  # pragma: no cover
-            lower = max(lower, lo if "integer" in type_ else exmin)
+            lower = max(lower, lo if "integer" in schema["type"] else exmin)
 
     exmax = schema.get("exclusiveMaximum")
-    if exmax is True and "integer" in type_:  # pragma: no cover
+    if exmax is True and "integer" in schema["type"]:  # pragma: no cover
         upper -= 1
     elif exmax is not False and exmax is not None:
         hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
         if upper is None:
-            upper = hi if "integer" in type_ else exmax
+            upper = hi if "integer" in schema["type"] else exmax
         else:  # pragma: no cover
-            upper = min(upper, hi if "integer" in type_ else exmax)
+            upper = min(upper, hi if "integer" in schema["type"] else exmax)
 
     if multiple_of is not None:
         assert isinstance(multiple_of, (int, float))
@@ -233,12 +326,12 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
         return strat
 
     strat = st.nothing()
-    if "integer" in type_:
+    if "integer" in schema["type"]:
         lo = lower if lower is None else math.ceil(lower)
         hi = upper if upper is None else math.floor(upper)
         if lo is None or hi is None or lo <= hi:
             strat = st.integers(lo, hi)
-    if "number" in type_:
+    if "number" in schema["type"]:
         # Negative-zero does not round trip through JSON, so force it to positive
         strat |= st.floats(
             min_value=exmin if lower is None else lower,
@@ -365,7 +458,7 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     contains = schema.get("contains")
     if isinstance(items, list):
         for i, s in enumerate(items):
-            if canonicalish(s) == canonicalish(False):
+            if canonicalish(s) == FALSEY:
                 # No item can validate against this position,
                 # so we cut off the elements to generate here.
                 assert min_size <= i
@@ -430,7 +523,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     patterns = {k: canonicalish(v) for k, v in patterns.items()}
     # schema for other values; handled specially if nothing matches
     additional = canonicalish(schema.get("additionalProperties", {}))
-    additional_allowed = additional != canonicalish(False)
+    additional_allowed = additional != FALSEY
 
     # When a known set of names is allowed, we cap the max_size at that number
     max_size = min(

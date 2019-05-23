@@ -36,6 +36,10 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.9.2 - 2019-05-23
+- Better internal canonicalization, which makes current and future
+  optimisations more widely applicable.
+
 #### 0.9.1 - 2019-05-22
 - Fix the fix for numeric schemas with `multipleOf` and exclusive bounds.
 

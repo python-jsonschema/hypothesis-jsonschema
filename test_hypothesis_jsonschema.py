@@ -10,6 +10,7 @@ from hypothesis import HealthCheck, given, note, settings
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._impl import (
     JSON_STRATEGY,
+    canonicalish,
     encode_canonical_json,
     gen_array,
     gen_enum,
@@ -30,9 +31,7 @@ def test_canonical_json_encoding(v):
     assert encode_canonical_json(v2) == encoded
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
-@given(data=st.data())
-@pytest.mark.parametrize(
+schema_strategy = pytest.mark.parametrize(
     "schema_strategy",
     [
         gen_number("integer"),
@@ -44,11 +43,26 @@ def test_canonical_json_encoding(v):
         json_schemata(),
     ],
 )
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@given(data=st.data())
+@schema_strategy
 def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy)
     value = data.draw(from_schema(schema), "value from schema")
     jsonschema.validate(value, schema)
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@given(data=st.data())
+@schema_strategy
+def test_canonicalises_to_fixpoint(schema_strategy, data):
+    """Check that an object drawn from an arbitrary schema is valid."""
+    schema = data.draw(schema_strategy)
+    cc = canonicalish(schema)
+    assert cc == canonicalish(cc)
 
 
 def test_boolean_true_is_valid_schema_and_resolvable():
@@ -59,8 +73,27 @@ def test_boolean_true_is_valid_schema_and_resolvable():
 @pytest.mark.parametrize(
     "group,result",
     [
-        ([{"type": "null"}, {"type": "boolean"}], None),
-        ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
+        ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
+        ([{"type": "integer"}, {"maximum": 20}], {"type": ["integer"], "maximum": 20}),
+        (
+            [
+                {"properties": {"foo": {"maximum": 20}}},
+                {"properties": {"foo": {"minimum": 10}}},
+            ],
+            {
+                "type": ["object"],
+                "properties": {
+                    "foo": {"type": ["integer", "number"], "maximum": 20, "minimum": 10}
+                },
+            },
+        ),
+        (
+            [
+                {"$schema": "http://json-schema.org/draft-04/schema#"},
+                {"$schema": "http://json-schema.org/draft-07/schema#"},
+            ],
+            None,
+        ),
     ],
 )
 def test_merged(group, result):
@@ -74,6 +107,7 @@ def test_merged(group, result):
         False,
         {"type": "an unknown type"},
         {"type": "string", "format": "not a real format"},
+        {"allOf": [{"type": "boolean"}, {"const": None}]},
     ],
 )
 def test_invalid_schemas_raise(schema):
@@ -85,11 +119,8 @@ def test_invalid_schemas_raise(schema):
 # Some tricky schema and interactions just aren't handled yet.
 # Along with refs and dependencies, this is the main TODO list!
 EXPECTED_FAILURES = {
-    # Not yet implemented
-    "allOf",
-    "allOf with base schema",
     # Just plain weird - regex issues etc.
-    "JSON Schema for mime type collections",
+    "JSON Schema for mime type collections"
 }
 FLAKY_SCHEMAS = {
     # Yep, lists of lists of lists of lists of lists of integers are HealthCheck-slow
