@@ -526,8 +526,8 @@ class StrategyFactory:
         else:
             type_ = []
             for t, kw in [
-                ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
-                ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+                ("number", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
+                ("integer", "multipleOf maximum exclusiveMaximim minimum exclusiveMinimum"),
                 ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
                 ("array", "items additionalItems maxItems uniqueItems contains"),
                 (
