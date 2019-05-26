@@ -257,13 +257,12 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         )
     # Conditional application of subschemata
     if "if" in schema:
-        if_ = schema["if"]
-        then = schema.get("then", {})
-        else_ = schema.get("else", {})
-        return st.one_of(
-            from_schema(then).filter(lambda v: is_valid(v, if_)),
-            from_schema(else_).filter(lambda v: not is_valid(v, if_)),
-            from_schema(if_).filter(lambda v: is_valid(v, then) or is_valid(v, else_)),
+        tmp = schema.copy()
+        if_ = tmp.pop("if")
+        then = tmp.pop("then", {})
+        else_ = tmp.pop("else", {})
+        return st.one_of([from_schema(s) for s in (then, else_, if_, tmp)]).filter(
+            lambda v: is_valid(v, schema)
         )
     # Simple special cases
     if "enum" in schema:

@@ -79,6 +79,22 @@
         ],
         "type": "object"
     },
+    "allOf with if-then-else": {
+        "allOf": [
+            {
+                "type": "null"
+            },
+            {
+                "if": {
+                    "type": "boolean"
+                },
+                "then": {
+                    "type": "boolean"
+                },
+                "else": {}
+            }
+        ]
+    },
     "float bounds that are not floats": {
         "maximum": 18014398509481983,
         "minimum": -18014398509481983
