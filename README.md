@@ -41,6 +41,9 @@ of generating values that don't quite match.
   optimisations more widely applicable.
 - Yet another fix, this time for negative zero and numeric bouds as floats
   with sub-integer precision.  IEEE 754 is *tricky*, even with Hypothesis!
+- Fixes handling of `enum` with elements disallowed by base schema,
+  handling of `if-then-else` with a base schema, and handling of regex
+  patterns that are invalid in Python.
 
 #### 0.9.1 - 2019-05-22
 - Fix the fix for numeric schemas with `multipleOf` and exclusive bounds.
