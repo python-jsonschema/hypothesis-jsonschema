@@ -116,12 +116,6 @@ def test_invalid_schemas_raise(schema):
         from_schema(schema).example()
 
 
-# Some tricky schema and interactions just aren't handled yet.
-# Along with refs and dependencies, this is the main TODO list!
-EXPECTED_FAILURES = {
-    # Just plain weird - regex issues etc.
-    "JSON Schema for mime type collections"
-}
 FLAKY_SCHEMAS = {
     # Yep, lists of lists of lists of lists of lists of integers are HealthCheck-slow
     "draft4/nested items",
@@ -143,9 +137,7 @@ with open("corpus-reported.json") as f:
 
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n.split("/", 1)[-1] in EXPECTED_FAILURES:
-            yield pytest.param(n, marks=pytest.mark.xfail(strict=True))
-        elif n in FLAKY_SCHEMAS or '"$ref"' in json.dumps(corpus[n]):
+        if n in FLAKY_SCHEMAS or '"$ref"' in json.dumps(corpus[n]):
             yield pytest.param(n, marks=pytest.mark.skip)
         else:
             yield n

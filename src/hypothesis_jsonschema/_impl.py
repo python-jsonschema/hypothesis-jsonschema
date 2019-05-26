@@ -436,7 +436,12 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         "format" in schema and "pattern" in schema
     ), "format and regex constraints are supported, but not both at once."
     if "pattern" in schema:
-        strategy = st.from_regex(schema["pattern"])
+        try:
+            re.compile(schema["pattern"])
+            strategy = st.from_regex(schema["pattern"])
+        except re.error:
+            # Patterns that are invalid in Python, or just malformed
+            strategy = st.nothing()
     elif "format" in schema:
         url_synonyms = ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
         domains = prov.domains()  # type: ignore
