@@ -60,6 +60,10 @@ def canonicalish(schema: JSONType) -> Dict:
         if not is_valid(schema["const"], schema):
             return FALSEY
         return {"const": schema["const"]}
+    if "enum" in schema:
+        schema["enum"] = [v for v in schema["enum"] if is_valid(v, schema)]
+        if not schema["enum"]:
+            return FALSEY
     # If the "type" is not specified, add the relevant key or keys based on
     # type-specific validation keywords.
     # TODO: move this logic to a "get type" helper, because adding a type key
@@ -263,7 +267,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         )
     # Simple special cases
     if "enum" in schema:
-        return st.sampled_from(schema["enum"]) if schema["enum"] else st.nothing()
+        assert schema["enum"], "Canonicalises to non-empty list or FALSEY"
+        return st.sampled_from(schema["enum"])
     if "const" in schema:
         return st.just(schema["const"])
     # Finally, resolve schema by type - defaulting to "object"

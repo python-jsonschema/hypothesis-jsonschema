@@ -108,6 +108,7 @@ def test_merged(group, result):
         {"type": "an unknown type"},
         {"type": "string", "format": "not a real format"},
         {"allOf": [{"type": "boolean"}, {"const": None}]},
+        {"allOf": [{"type": "boolean"}, {"enum": [None]}]},
     ],
 )
 def test_invalid_schemas_raise(schema):
