@@ -17,6 +17,7 @@ from hypothesis_jsonschema._impl import (
     gen_number,
     gen_object,
     gen_string,
+    is_valid,
     json_schemata,
     merged,
 )
@@ -58,11 +59,13 @@ def test_generated_data_matches_schema(schema_strategy, data):
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(data=st.data())
 @schema_strategy
-def test_canonicalises_to_fixpoint(schema_strategy, data):
+def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
-    schema = data.draw(schema_strategy)
+    schema = data.draw(schema_strategy, label="schema")
     cc = canonicalish(schema)
     assert cc == canonicalish(cc)
+    instance = data.draw(JSON_STRATEGY | from_schema(cc), label="instance")
+    assert is_valid(instance, schema) == is_valid(instance, cc)
 
 
 def test_boolean_true_is_valid_schema_and_resolvable():
