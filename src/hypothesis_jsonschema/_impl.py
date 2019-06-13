@@ -219,7 +219,7 @@ def merged_as_strategies(schemas):
         if combined.issuperset(group):
             continue
         s = merged([inputs[g] for g in group])
-        if s is not None:  # pragma: no branch
+        if s is not None and s != FALSEY:  # pragma: no branch
             strats.append(
                 from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
             )
@@ -303,23 +303,23 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     type_ = get_type(schema) or ["integer", "number"]
 
     exmin = schema.get("exclusiveMinimum")
-    if exmin is True and "integer" in type_:  # pragma: no cover
+    if exmin is True and "integer" in type_:
         lower += 1
     elif exmin is not False and exmin is not None:
         lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
         if lower is None:
             lower = lo if "integer" in type_ else exmin
-        else:  # pragma: no cover
+        else:
             lower = max(lower, lo if "integer" in type_ else exmin)
 
     exmax = schema.get("exclusiveMaximum")
-    if exmax is True and "integer" in type_:  # pragma: no cover
+    if exmax is True and "integer" in type_:
         upper -= 1
     elif exmax is not False and exmax is not None:
         hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
         if upper is None:
             upper = hi if "integer" in type_ else exmax
-        else:  # pragma: no cover
+        else:
             upper = min(upper, hi if "integer" in type_ else exmax)
 
     if multiple_of is not None:

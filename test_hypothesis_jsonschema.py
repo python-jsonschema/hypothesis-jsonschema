@@ -32,7 +32,7 @@ def test_canonical_json_encoding(v):
     assert encode_canonical_json(v2) == encoded
 
 
-schema_strategy = pytest.mark.parametrize(
+schema_strategy_params = pytest.mark.parametrize(
     "schema_strategy",
     [
         gen_number("integer"),
@@ -48,7 +48,7 @@ schema_strategy = pytest.mark.parametrize(
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(data=st.data())
-@schema_strategy
+@schema_strategy_params
 def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy)
@@ -58,7 +58,7 @@ def test_generated_data_matches_schema(schema_strategy, data):
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(data=st.data())
-@schema_strategy
+@schema_strategy_params
 def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy, label="schema")
@@ -136,9 +136,15 @@ with open("corpus-reported.json") as f:
     suite.update(reported)
 
 
+def _has_refs(s):
+    if isinstance(s, dict):
+        return "$ref" in s or any(_has_refs(v) for v in s.values())
+    return isinstance(s, list) and any(_has_refs(v) for v in s)
+
+
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n in FLAKY_SCHEMAS or '"$ref"' in json.dumps(corpus[n]):
+        if n in FLAKY_SCHEMAS or _has_refs(corpus[n]):
             yield pytest.param(n, marks=pytest.mark.skip)
         else:
             yield n

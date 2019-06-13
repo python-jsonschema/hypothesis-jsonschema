@@ -98,5 +98,13 @@
     "float bounds that are not floats": {
         "maximum": 18014398509481983,
         "minimum": -18014398509481983
+    },
+    "integer with numeric maximum and exclusiveMaximum": {
+        "maximum": 1,
+        "exclusiveMaximum": 0
+    },
+    "integer with numeric minimum and exclusiveMinimum": {
+        "minimum": 0,
+        "exclusiveMinimum": 1
     }
 }
