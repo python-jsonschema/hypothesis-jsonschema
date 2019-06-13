@@ -445,9 +445,10 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength", float("inf"))
     strategy: Any = st.text(min_size=min_size, max_size=schema.get("maxLength"))
-    assert not (
-        "format" in schema and "pattern" in schema
-    ), "format and regex constraints are supported, but not both at once."
+    if "format" in schema and "pattern" in schema:  # pragma: no cover
+        raise InvalidArgument(
+            "format and regex constraints are supported, but not both at once."
+        )
     if "pattern" in schema:
         try:
             re.compile(schema["pattern"])

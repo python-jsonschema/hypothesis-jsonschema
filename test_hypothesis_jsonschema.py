@@ -5,7 +5,8 @@ import json
 import hypothesis.strategies as st
 import jsonschema
 import pytest
-from hypothesis import HealthCheck, given, note, settings
+from hypothesis import HealthCheck, given, note, reject, settings
+from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._impl import (
@@ -52,7 +53,10 @@ schema_strategy_params = pytest.mark.parametrize(
 def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy)
-    value = data.draw(from_schema(schema), "value from schema")
+    try:
+        value = data.draw(from_schema(schema), "value from schema")
+    except InvalidArgument:
+        reject()
     jsonschema.validate(value, schema)
 
 
