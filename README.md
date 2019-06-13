@@ -36,6 +36,9 @@ of generating values that don't quite match.
 
 ### Changelog:
 
+#### 0.9.3 - 2019-06-13
+- Future-proofed canonicalisation of `type` key.
+
 #### 0.9.2 - 2019-05-23
 - Better internal canonicalization, which makes current and future
   optimisations more widely applicable.

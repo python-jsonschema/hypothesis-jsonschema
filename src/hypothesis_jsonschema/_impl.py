@@ -31,11 +31,43 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
 
 # Canonical type strings, in order.
 TYPE_STRINGS = ("null", "boolean", "integer", "number", "string", "array", "object")
+TYPE_SPECIFIC_KEYS = (
+    ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+    ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
+    ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
+    ("array", "items additionalItems maxItems uniqueItems contains"),
+    (
+        "object",
+        "maxProperties minProperties required properties patternProperties "
+        "additionalProperties dependencies propertyNames",
+    ),
+)
 
 
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
     return json.dumps(value, sort_keys=True)
+
+
+def get_type(schema):
+    """Return a canonical value for the "type" key.
+
+    If the "type" key is not present, infer a plausible value from other keys.
+    If we can't guess based on them, return None.
+    """
+    type_ = schema.get("type")
+    if type_ is None:
+        type_ = []
+        for t, kw in TYPE_SPECIFIC_KEYS:
+            if any(k in schema for k in kw.split()):
+                type_.append(t)
+        return type_ or None
+    # Canonicalise the "type" key to a sorted list of type strings.
+    elif isinstance(type_, str):
+        assert type_ in TYPE_STRINGS
+        return [type_]
+    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
+    return [t for t in TYPE_STRINGS if t in type_]
 
 
 def canonicalish(schema: JSONType) -> Dict:
@@ -64,36 +96,14 @@ def canonicalish(schema: JSONType) -> Dict:
         schema["enum"] = [v for v in schema["enum"] if is_valid(v, schema)]
         if not schema["enum"]:
             return FALSEY
-    # If the "type" is not specified, add the relevant key or keys based on
-    # type-specific validation keywords.
-    # TODO: move this logic to a "get type" helper, because adding a type key
-    # changes semantics - without one the type-specific keys constrain that
-    # type but allow others to be passed.  We do want to guess, but can't add
-    # the key as it affects other intersection/union canonicalisation logic
-    # which we would like to add.
-    if "type" not in schema:
-        type_ = []
-        for t, kw in [
-            ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
-            ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
-            ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
-            ("array", "items additionalItems maxItems uniqueItems contains"),
-            (
-                "object",
-                "maxProperties minProperties required properties patternProperties "
-                "additionalProperties dependencies propertyNames",
-            ),
-        ]:
-            if any(k in schema for k in kw.split()):
-                type_.append(t)
-        if type_:
-            schema["type"] = type_
-    # Canonicalise the "type" key to a sorted list of type strings.
+    # Canonicalise the "type" if specified, but avoid changing semantics by
+    # adding a type key (which would affect intersection/union logic).
     if "type" in schema:
-        if isinstance(schema["type"], str):
-            schema["type"] = [schema["type"]]
-        assert set(schema["type"]).issubset(TYPE_STRINGS)
-        schema["type"] = [t for t in TYPE_STRINGS if t in schema["type"]]
+        type_ = get_type(schema)
+        if not type_:
+            assert type_ == []
+            return FALSEY
+        schema["type"] = type_
     # Canonicalise "not" subschemas
     if "not" in schema:
         not_ = canonicalish(schema.pop("not"))
@@ -281,7 +291,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         object=object_schema,
     )
     return st.one_of(
-        [map_[t](schema) for t in schema.get("type", ["object"])]  # type: ignore
+        [map_[t](schema) for t in schema.get("type", list(TYPE_STRINGS))]  # type: ignore
     )
 
 
@@ -290,26 +300,27 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     multiple_of = schema.get("multipleOf")
     lower = schema.get("minimum")
     upper = schema.get("maximum")
+    type_ = get_type(schema) or ["integer", "number"]
 
     exmin = schema.get("exclusiveMinimum")
-    if exmin is True and "integer" in schema["type"]:  # pragma: no cover
+    if exmin is True and "integer" in type_:  # pragma: no cover
         lower += 1
     elif exmin is not False and exmin is not None:
         lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
         if lower is None:
-            lower = lo if "integer" in schema["type"] else exmin
+            lower = lo if "integer" in type_ else exmin
         else:  # pragma: no cover
-            lower = max(lower, lo if "integer" in schema["type"] else exmin)
+            lower = max(lower, lo if "integer" in type_ else exmin)
 
     exmax = schema.get("exclusiveMaximum")
-    if exmax is True and "integer" in schema["type"]:  # pragma: no cover
+    if exmax is True and "integer" in type_:  # pragma: no cover
         upper -= 1
     elif exmax is not False and exmax is not None:
         hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
         if upper is None:
-            upper = hi if "integer" in schema["type"] else exmax
+            upper = hi if "integer" in type_ else exmax
         else:  # pragma: no cover
-            upper = min(upper, hi if "integer" in schema["type"] else exmax)
+            upper = min(upper, hi if "integer" in type_ else exmax)
 
     if multiple_of is not None:
         assert isinstance(multiple_of, (int, float))
@@ -331,12 +342,12 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
         return strat
 
     strat = st.nothing()
-    if "integer" in schema["type"]:
+    if "integer" in type_:
         lo = lower if lower is None else math.ceil(lower)
         hi = upper if upper is None else math.floor(upper)
         if lo is None or hi is None or lo <= hi:
             strat = st.integers(lo, hi)
-    if "number" in schema["type"]:
+    if "number" in type_:
         # Filter out negative-zero as it does not exist in JSON
         lo = exmin if lower is None else lower
         if lo is not None:

@@ -76,19 +76,16 @@ def test_boolean_true_is_valid_schema_and_resolvable():
 @pytest.mark.parametrize(
     "group,result",
     [
+        ([{"type": []}, {}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
+        ([{"type": "null"}, {"type": ["null", "boolean"]}], {"type": ["null"]}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": ["integer"], "maximum": 20}),
         (
             [
                 {"properties": {"foo": {"maximum": 20}}},
                 {"properties": {"foo": {"minimum": 10}}},
             ],
-            {
-                "type": ["object"],
-                "properties": {
-                    "foo": {"type": ["integer", "number"], "maximum": 20, "minimum": 10}
-                },
-            },
+            {"properties": {"foo": {"maximum": 20, "minimum": 10}}},
         ),
         (
             [
@@ -179,6 +176,7 @@ def test_cannot_generate_for_empty_test_suite_schema(name):
 # merged or otherwise handled correctly, with the exception of the key "ab" which
 # would have to be both an integer and a string (and is thus disallowed).
 OVERLAPPING_PATTERNS_SCHEMA = dict(
+    type="string",
     patternProperties={
         r"\A[ab]{1,2}\Z": {},
         r"\Aa[ab]\Z": {"type": "integer"},
