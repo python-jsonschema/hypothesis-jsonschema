@@ -171,7 +171,7 @@ def test_can_generate_for_test_suite_schema(data, name):
         jsonschema.Draft4Validator(suite[name]).validate(value)
 
 
-@pytest.mark.parametrize("name", sorted(invalid_suite))
+@pytest.mark.parametrize("name", to_name_params(invalid_suite))
 def test_cannot_generate_for_empty_test_suite_schema(name):
     strat = from_schema(invalid_suite[name])
     with pytest.raises(Exception):

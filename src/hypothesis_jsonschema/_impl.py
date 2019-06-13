@@ -290,9 +290,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         array=array_schema,
         object=object_schema,
     )
-    return st.one_of(
-        [map_[t](schema) for t in schema.get("type", list(TYPE_STRINGS))]  # type: ignore
-    )
+    return st.one_of([map_[t](schema) for t in schema.get("type", list(TYPE_STRINGS))])
 
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
@@ -430,7 +428,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
             st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")
         ).map(":".join)
     if name == "time-offset":
-        return st.just("Z") | rfc3339("time-numoffset")  # type: ignore
+        return st.just("Z") | rfc3339("time-numoffset")
     if name == "partial-time":
         return st.times().map(str)
     if name == "full-date":
@@ -459,18 +457,18 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
             strategy = st.nothing()
     elif "format" in schema:
         url_synonyms = ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
-        domains = prov.domains()  # type: ignore
+        domains = prov.domains()
         strategy = {
             # A value of None indicates a known but unsupported format.
             **{name: rfc3339(name) for name in RFC3339_FORMATS},
             "date": rfc3339("full-date"),
             "time": rfc3339("full-time"),
-            "email": st.emails(),  # type: ignore
-            "idn-email": st.emails(),  # type: ignore
+            "email": st.emails(),
+            "idn-email": st.emails(),
             "hostname": domains,
             "idn-hostname": domains,
-            "ipv4": prov.ip4_addr_strings(),  # type: ignore
-            "ipv6": prov.ip6_addr_strings(),  # type: ignore
+            "ipv4": prov.ip4_addr_strings(),
+            "ipv6": prov.ip6_addr_strings(),
             **{name: domains.map("https://{}".format) for name in url_synonyms},
             "json-pointer": st.just(""),
             "relative-json-pointer": st.just(""),
@@ -478,7 +476,7 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         }.get(schema["format"])
         if strategy is None:
             raise InvalidArgument(f"Unsupported string format={schema['format']}")
-    return strategy.filter(lambda s: min_size <= len(s) <= max_size)  # type: ignore
+    return strategy.filter(lambda s: min_size <= len(s) <= max_size)
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
@@ -512,9 +510,7 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         extra_items = st.lists(
             from_schema(additional_items), min_size=min_size, max_size=max_size
         )
-        return st.tuples(fixed_items, extra_items).map(
-            lambda t: list(t[0]) + t[1]  # type: ignore
-        )
+        return st.tuples(fixed_items, extra_items).map(lambda t: list(t[0]) + t[1])
     if contains is not None:
         assert items == {}, "Cannot handle items and contains togther"
         items = contains
@@ -593,7 +589,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
         If any Hypothesis maintainers are reading this... I'm so, so sorry.
         """
-        elements = cu.many(  # type: ignore
+        elements = cu.many(
             draw(st.data()).conjecture_data,
             min_size=min_size,
             max_size=max_size,
@@ -667,7 +663,7 @@ def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
         re.compile(result)
     except re.error:
         assume(False)
-    return result  # type: ignore
+    return result
 
 
 REGEX_PATTERNS = regex_patterns()
