@@ -168,6 +168,12 @@ def canonicalish(schema: JSONType) -> Dict:
         schema["required"] = sorted(set(schema["required"]))
         if not schema["required"]:
             schema.pop("required")
+    # if/then/else schemas are ignored unless if and another are present
+    if "if" not in schema:
+        schema.pop("then", None)
+        schema.pop("else", None)
+    if "then" not in schema and "else" not in schema:
+        schema.pop("if", None)
 
     return schema
 
