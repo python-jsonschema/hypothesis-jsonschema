@@ -106,5 +106,16 @@
     "integer with numeric minimum and exclusiveMinimum": {
         "minimum": 0,
         "exclusiveMinimum": 1
+    },
+    "disallowed object but allows other type": {
+        "type": [
+            "null",
+            "object"
+        ],
+        "maxProperties": 1,
+        "required": [
+            "0",
+            "1"
+        ]
     }
 }

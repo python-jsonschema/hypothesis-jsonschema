@@ -75,6 +75,13 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     assert is_valid(instance, schema) == is_valid(instance, cc)
 
 
+@pytest.mark.parametrize(
+    "schema", [{"type": "object", "maxProperties": 1, "required": ["0", "1"]}]
+)
+def test_canonicalises_to_empty(schema):
+    assert canonicalish(schema) == {"not": {}}
+
+
 def test_boolean_true_is_valid_schema_and_resolvable():
     """...even though it's currently broken in jsonschema."""
     from_schema(True).example()

@@ -168,6 +168,10 @@ def canonicalish(schema: JSONType) -> Dict:
         schema["required"] = sorted(set(schema["required"]))
         if not schema["required"]:
             schema.pop("required")
+        if len(schema.get("required", [])) > schema.get("maxProperties", float("inf")):
+            types = [t for t in get_type(schema) if t != "object"]
+            if not types:
+                return FALSEY
     # if/then/else schemas are ignored unless if and another are present
     if "if" not in schema:
         schema.pop("then", None)
@@ -620,6 +624,8 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         and not additional_allowed
         else float("inf"),
     )
+    if min_size > max_size:
+        return st.nothing()
 
     dependencies = schema.get("dependencies", {})
     dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
