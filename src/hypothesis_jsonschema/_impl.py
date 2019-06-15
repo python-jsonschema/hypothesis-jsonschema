@@ -66,7 +66,7 @@ def get_type(schema):
     elif isinstance(type_, str):
         assert type_ in TYPE_STRINGS
         return [type_]
-    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
+    assert type_ and isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
     return [t for t in TYPE_STRINGS if t in type_]
 
 
@@ -728,6 +728,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
         lower, upper = upper, lower
     multiple_of = draw(st.none() | st.integers(2, 100))
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
+    assert kind in ("integer", "number")
     out: Dict[str, Union[str, float]] = {"type": kind}
     # Generate the latest draft supported by jsonschema.
     # We skip coverage for version branches because it's a pain to combine.
