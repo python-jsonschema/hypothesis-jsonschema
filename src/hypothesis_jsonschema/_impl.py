@@ -54,6 +54,9 @@ def get_type(schema):
 
     If the "type" key is not present, infer a plausible value from other keys.
     If we can't guess based on them, return None.
+
+    Note that this will return [], the empty list, if the value is a list without
+    any allowed type names; *even though* this is explicitly an invalid value.
     """
     type_ = schema.get("type")
     if type_ is None:
@@ -66,7 +69,7 @@ def get_type(schema):
     elif isinstance(type_, str):
         assert type_ in TYPE_STRINGS
         return [type_]
-    assert type_ and isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
+    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
     return [t for t in TYPE_STRINGS if t in type_]
 
 
@@ -168,8 +171,15 @@ FALSEY = canonicalish(False)
 
 def merged(schemas):
     """Merge *n* schemas into a single schema, or None if result is invalid.
+
     Takes the logical intersection, so any object that validates against the returned
     schema must also validate against all of the input schemas.
+
+    None is returned for keys that cannot be merged short of pushing parts of
+    the schema into an allOf construct, such as the "contains" key for arrays -
+    there is no other way to merge two schema that could otherwise be applied to
+    different array elements.
+    It's currently also used for keys that could be merged but aren't yet.
     """
     assert schemas, "internal error: must pass at least one schema to merge"
     out = canonicalish(schemas[0])
@@ -187,20 +197,18 @@ def merged(schemas):
                 if v != op.get(k, v):
                     v = merged([op[k], v])
                     if v is None:  # pragma: no cover
-                        # This is no-cover because I aim to handle
-                        # every well-formed case I can think of.
-                        # TODO: remove branches with coverage pragmas
                         return None
                 op[k] = v
         if "required" in out and "required" in s:
             out["required"] = sorted(set(out["required"] + s.pop("required")))
-        if set(s) & set(out):
-            # TODO: Handle all mergable overlapping keys above,
-            # then return FALSEY for anything else.
-            return None
-        out.update(s)
-    # hopefully this catches empty things like allOf different types?
-    out = canonicalish(out)
+        # TODO: Handle remaining mergable keys.
+
+        for k, v in s.items():
+            if k not in out:
+                out[k] = v
+            elif out[k] != v:
+                return None
+        out = canonicalish(out)
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
 

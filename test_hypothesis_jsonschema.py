@@ -5,11 +5,12 @@ import json
 import hypothesis.strategies as st
 import jsonschema
 import pytest
-from hypothesis import HealthCheck, given, note, reject, settings
+from hypothesis import HealthCheck, assume, given, note, reject, settings
 from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._impl import (
+    FALSEY,
     JSON_STRATEGY,
     canonicalish,
     encode_canonical_json,
@@ -58,6 +59,8 @@ def test_generated_data_matches_schema(schema_strategy, data):
     except InvalidArgument:
         reject()
     jsonschema.validate(value, schema)
+    # This checks that our canonicalisation is semantically equivalent.
+    jsonschema.validate(value, canonicalish(schema))
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
@@ -102,6 +105,29 @@ def test_boolean_true_is_valid_schema_and_resolvable():
 )
 def test_merged(group, result):
     assert merged(group) == result
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@given(json_schemata())
+def test_self_merge_eq_canonicalish(schema):
+    m = merged([schema, schema])
+    assert m == canonicalish(schema)
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@given(st.data(), json_schemata(), json_schemata())
+def test_merge_semantics(data, s1, s2):
+    assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
+    combined = merged([s1, s2])
+    assume(combined is not None)
+    assume(combined != FALSEY)
+    note(combined)
+    ic = data.draw(from_schema(combined), label="combined")
+    i1 = data.draw(from_schema(s1), label="s1")
+    i2 = data.draw(from_schema(s2), label="s2")
+    assert is_valid(ic, s1) and is_valid(ic, s2)
+    assert is_valid(i1, s2) == is_valid(i1, combined)
+    assert is_valid(i2, s1) == is_valid(i2, combined)
 
 
 @pytest.mark.parametrize(
