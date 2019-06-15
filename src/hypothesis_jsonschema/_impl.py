@@ -444,19 +444,8 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength", float("inf"))
-    strategy: Any = st.text(min_size=min_size, max_size=schema.get("maxLength"))
-    if "format" in schema and "pattern" in schema:  # pragma: no cover
-        raise InvalidArgument(
-            "format and regex constraints are supported, but not both at once."
-        )
-    if "pattern" in schema:
-        try:
-            re.compile(schema["pattern"])
-            strategy = st.from_regex(schema["pattern"])
-        except re.error:
-            # Patterns that are invalid in Python, or just malformed
-            strategy = st.nothing()
-    elif "format" in schema:
+    strategy: str = st.text(min_size=min_size, max_size=schema.get("maxLength"))
+    if "format" in schema:
         url_synonyms = ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
         domains = prov.domains()
         strategy = {
@@ -477,6 +466,18 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         }.get(schema["format"])
         if strategy is None:
             raise InvalidArgument(f"Unsupported string format={schema['format']}")
+        if "pattern" in schema:  # pragma: no cover
+            # This isn't really supported, but we'll do our best.
+            strategy = strategy.filter(
+                lambda s: re.search(schema["pattern"], string=s) is not None
+            )
+    elif "pattern" in schema:
+        try:
+            re.compile(schema["pattern"])
+            strategy = st.from_regex(schema["pattern"])
+        except re.error:
+            # Patterns that are invalid in Python, or just malformed
+            strategy = st.nothing()
     return strategy.filter(lambda s: min_size <= len(s) <= max_size)
 
 
