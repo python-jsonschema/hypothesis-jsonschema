@@ -94,17 +94,39 @@ def test_boolean_true_is_valid_schema_and_resolvable():
             ],
             {"properties": {"foo": {"maximum": 20, "minimum": 10}}},
         ),
-        (
-            [
-                {"$schema": "http://json-schema.org/draft-04/schema#"},
-                {"$schema": "http://json-schema.org/draft-07/schema#"},
-            ],
-            None,
-        ),
     ],
 )
 def test_merged(group, result):
     assert merged(group) == result
+
+
+@pytest.mark.parametrize(
+    "group",
+    [
+        [
+            {"$schema": "http://json-schema.org/draft-04/schema#"},
+            {"$schema": "http://json-schema.org/draft-07/schema#"},
+        ],
+        [
+            {"additionalProperties": {"type": "null"}},
+            {"additionalProperties": {"type": "boolean"}},
+        ],
+        [
+            {"additionalProperties": {"type": "null"}, "properties": {"foo": {}}},
+            {"additionalProperties": {"type": "boolean"}},
+        ],
+        [
+            {"additionalProperties": {"patternProperties": {".": {}}}},
+            {"additionalProperties": {"patternProperties": {"a": {}}}},
+        ],
+        [
+            {"patternProperties": {".": {}}},
+            {"patternProperties": {"ab": {"type": "boolean"}}},
+        ],
+    ],
+)
+def test_unable_to_merge(group):
+    assert merged(group) is None
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
@@ -114,7 +136,7 @@ def test_self_merge_eq_canonicalish(schema):
     assert m == canonicalish(schema)
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@settings(suppress_health_check=HealthCheck.all(), deadline=None)
 @given(st.data(), json_schemata(), json_schemata())
 def test_merge_semantics(data, s1, s2):
     assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)

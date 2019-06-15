@@ -203,7 +203,42 @@ def merged(schemas):
             out["type"] = [t for t in out["type"] if t in tt]
             if not out["type"]:
                 return FALSEY
-        if "properties" in out and "properties" in s:
+        # TODO: keeping track of which elements are affected by which schemata
+        # while merging properties, patternProperties, and additionalProperties
+        # is a nightmare, so I'm just not going to try for now.  e.g.:
+        #    {"patternProperties": {".": {"type": "null"}}}
+        #    {"type": "object", "additionalProperties": {"type": "boolean"}}
+        # The the former requries null values for all non-"" keys, while the
+        # latter requires all-bool values.  Merging them should output
+        #    {"enum": [{}, {"": None}]}
+        # but dealing with this in the general case is a nightmare.
+
+        def diff_in_out(k):
+            sval = s.get(k, object())
+            return k in s and sval != out.get(k, sval)
+
+        def diff_keys(k):
+            return set(out.get(k, [])) != set(s.get(k, []))
+
+        if diff_in_out("patternProperties"):
+            # Do I want to compute regex intersections with optional anchors? No.
+            return None
+        if "additionalProperties" in out and (
+            diff_keys("properties") or diff_keys("patternProperties")
+        ):
+            # If the known names or regex patterns vary at all, we'd have to merge the
+            # additionalProperties schema into some and it's just not worth it.
+            return None
+        if diff_in_out("additionalProperties"):
+            m = merged([out["additionalProperties"], s["additionalProperties"]])
+            if m is None:
+                return None
+            out["additionalProperties"] = m
+
+        if diff_in_out("properties"):
+            # TODO: this doesn't account for cases where patternProperties in one
+            # overlap with properties in the other.  It would be nice to try merging
+            # them in that case, or correctly bail out if we can't merge them.
             op = out["properties"]
             sp = s.pop("properties")
             for k, v in sp.items():
