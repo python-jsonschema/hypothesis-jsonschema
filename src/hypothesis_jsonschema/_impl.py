@@ -4,6 +4,7 @@ import itertools
 import json
 import math
 import re
+from functools import partial
 from typing import Any, Dict, List, Union
 
 import hypothesis.internal.conjecture.utils as cu
@@ -96,9 +97,10 @@ def canonicalish(schema: JSONType) -> Dict:
             return FALSEY
         return {"const": schema["const"]}
     if "enum" in schema:
-        schema["enum"] = [v for v in schema["enum"] if is_valid(v, schema)]
-        if not schema["enum"]:
+        enum_ = [v for v in schema["enum"] if is_valid(v, schema)]
+        if not enum_:
             return FALSEY
+        return {"enum": enum_}
     # Canonicalise the "type" if specified, but avoid changing semantics by
     # adding a type key (which would affect intersection/union logic).
     if "type" in schema:
@@ -254,7 +256,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic
     if "not" in schema:
-        return JSON_STRATEGY.filter(lambda inst: is_valid(inst, schema))
+        return JSON_STRATEGY.filter(partial(is_valid, schema=schema))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
@@ -270,8 +272,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
         schemas = [merged([tmp, s]) for s in oo]
-        return st.one_of([from_schema(s) for s in schemas]).filter(
-            lambda inst: 1 == sum(is_valid(inst, s) for s in schemas)
+        return st.one_of([from_schema(s) for s in schemas if s is not None]).filter(
+            partial(is_valid, schema=schema)
         )
     # Conditional application of subschemata
     if "if" in schema:
@@ -280,7 +282,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         then = tmp.pop("then", {})
         else_ = tmp.pop("else", {})
         return st.one_of([from_schema(s) for s in (then, else_, if_, tmp)]).filter(
-            lambda v: is_valid(v, schema)
+            partial(is_valid, schema=schema)
         )
     # Simple special cases
     if "enum" in schema:
@@ -579,15 +581,14 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     del dependencies
 
     name_strats = (
-        st.sampled_from(sorted(dep_names) + sorted(dep_schemas))
-        if (dep_names or dep_schemas)
+        st.sampled_from(sorted(dep_names) + sorted(dep_schemas) + sorted(properties))
+        if (dep_names or dep_schemas or properties)
         else st.nothing(),
         from_schema(names) if additional_allowed else st.nothing(),
-        st.sampled_from(sorted(properties)) if properties else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
-        lambda instance: is_valid(instance, names)
+        partial(is_valid, schema=names)
     )
 
     @st.composite
