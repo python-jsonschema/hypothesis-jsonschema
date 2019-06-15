@@ -148,16 +148,21 @@ def canonicalish(schema: JSONType) -> Dict:
             if tmp is not None:  # pragma: no branch
                 schema = tmp
     if "oneOf" in schema:
-        schema["oneOf"] = sorted(
-            [canonicalish(s) for s in schema["oneOf"]], key=encode_canonical_json
+        oneOf = sorted(
+            map(canonicalish, schema.pop("oneOf")), key=encode_canonical_json
         )
-        schema["oneOf"] = [s for s in schema["oneOf"] if s != FALSEY]
-        if len(schema) == len(schema["oneOf"]) == 1:
-            return schema["oneOf"][0]
-        if (not schema["oneOf"]) or len(schema["oneOf"]) > len(
-            {encode_canonical_json(s) for s in schema["oneOf"]}
+        oneOf = [s for s in oneOf if s != FALSEY]
+        if len(oneOf) == 1:
+            m = merged([schema, oneOf[0]])
+            if m is not None:  # pragma: no branch
+                return m
+        if (
+            (not oneOf)
+            or oneOf.count(TRUTHY) > 1
+            or len(oneOf) > len({encode_canonical_json(s) for s in oneOf})
         ):
             return FALSEY
+        schema["oneOf"] = oneOf
     # Canonicalise "required" schemas to remove redundancy
     if "required" in schema:
         schema["required"] = sorted(set(schema["required"]))
