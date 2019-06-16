@@ -355,7 +355,6 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
-    multiple_of = schema.get("multipleOf")
     lower = schema.get("minimum")
     upper = schema.get("maximum")
     type_ = get_type(schema) or ["integer", "number"]
@@ -363,35 +362,36 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
     exmin = schema.get("exclusiveMinimum")
     if exmin is True and "integer" in type_:
         lower += 1
+        exmin = False
     elif exmin is not False and exmin is not None:
         lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
         if lower is None:
             lower = lo if "integer" in type_ else exmin
         else:
             lower = max(lower, lo if "integer" in type_ else exmin)
+        exmin = False
 
     exmax = schema.get("exclusiveMaximum")
     if exmax is True and "integer" in type_:
         upper -= 1
+        exmax = False
     elif exmax is not False and exmax is not None:
         hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
         if upper is None:
             upper = hi if "integer" in type_ else exmax
         else:
             upper = min(upper, hi if "integer" in type_ else exmax)
+        exmax = False
 
-    if multiple_of is not None:
+    if "multipleOf" in schema:
+        multiple_of = schema["multipleOf"]
         assert isinstance(multiple_of, (int, float))
         if lower is not None:
             lo = math.ceil(lower / multiple_of)
-            if exmin is not False and exmin is not None and lo * multiple_of == lower:
-                lo += 1
             assert lo * multiple_of >= lower, (lower, lo)
             lower = lo
         if upper is not None:
             hi = math.floor(upper / multiple_of)
-            if exmax is not False and exmax is not None and hi * multiple_of == upper:
-                hi -= 1
             assert hi * multiple_of <= upper, (upper, hi)
             upper = hi
         strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
