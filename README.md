@@ -33,6 +33,14 @@ small enough that this should be avoidable.  The main source of breaks will be
 if or when schema that never really worked turn into explicit errors instead
 of generating values that don't quite match.
 
+Professional support for Hypothesis and hypothesis-jsonschema
+is available as part of the [Tidelift Subscription][sub_link].
+Tidelift gives software development teams a single source for purchasing and
+maintaining their software, with professional grade assurances from the experts
+who know it best.
+
+[sub_link]: https://tidelift.com/subscription/pkg/pypi-hypothesis-jsonschema?utm_source=pypi-hypothesis-jsonschema&utm_medium=referral&utm_campaign=readme
+
 
 ### Changelog:
 
@@ -108,3 +116,9 @@ Inference for null, boolean, string, and numeric types.
 
 #### 0.1.0 - 2018-11-21
 Stake in the ground (generate arbitrary JSON and filter it!)
+
+
+### Security contact information
+To report a security vulnerability, please use the
+[Tidelift security contact](https://tidelift.com/security).
+Tidelift will coordinate the fix and disclosure.
