@@ -1,4 +1,41 @@
 {
+    "allOf with if-then-else": {
+        "allOf": [
+            {
+                "type": "null"
+            },
+            {
+                "else": {},
+                "if": {
+                    "type": "boolean"
+                },
+                "then": {
+                    "type": "boolean"
+                }
+            }
+        ]
+    },
+    "close bounds for integers with multiple and exMax": {
+        "exclusiveMaximum": 1,
+        "minimum": 0,
+        "multipleOf": 2,
+        "type": "integer"
+    },
+    "disallowed object but allows other type": {
+        "maxProperties": 1,
+        "required": [
+            "0",
+            "1"
+        ],
+        "type": [
+            "null",
+            "object"
+        ]
+    },
+    "float bounds that are not floats": {
+        "maximum": 18014398509481983,
+        "minimum": -18014398509481983
+    },
     "impossible integer or valid number": {
         "maximum": 1.9,
         "minimum": 1.2,
@@ -6,6 +43,14 @@
             "integer",
             "number"
         ]
+    },
+    "integer with numeric maximum and exclusiveMaximum": {
+        "exclusiveMaximum": 0,
+        "maximum": 1
+    },
+    "integer with numeric minimum and exclusiveMinimum": {
+        "exclusiveMinimum": 1,
+        "minimum": 0
     },
     "issue12-longer": {
         "additionalProperties": false,
@@ -78,50 +123,5 @@
             "ids"
         ],
         "type": "object"
-    },
-    "allOf with if-then-else": {
-        "allOf": [
-            {
-                "type": "null"
-            },
-            {
-                "if": {
-                    "type": "boolean"
-                },
-                "then": {
-                    "type": "boolean"
-                },
-                "else": {}
-            }
-        ]
-    },
-    "float bounds that are not floats": {
-        "maximum": 18014398509481983,
-        "minimum": -18014398509481983
-    },
-    "integer with numeric maximum and exclusiveMaximum": {
-        "maximum": 1,
-        "exclusiveMaximum": 0
-    },
-    "integer with numeric minimum and exclusiveMinimum": {
-        "minimum": 0,
-        "exclusiveMinimum": 1
-    },
-    "disallowed object but allows other type": {
-        "type": [
-            "null",
-            "object"
-        ],
-        "maxProperties": 1,
-        "required": [
-            "0",
-            "1"
-        ]
-    },
-    "close bounds for integers with multiple and exMax": {
-        "type": "integer",
-        "multipleOf": 2,
-        "minimum": 0,
-        "exclusiveMaximum": 1
     }
 }

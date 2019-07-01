@@ -1,5 +1,50 @@
 [
     {
+        "draft4/Location-independent identifier": {
+            "allOf": [
+                {
+                    "$ref": "#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "id": "#foo",
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/Location-independent identifier with absolute URI": {
+            "allOf": [
+                {
+                    "$ref": "http://localhost:1234/bar#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "id": "http://localhost:1234/bar#foo",
+                    "type": "integer"
+                }
+            }
+        },
+        "draft4/Location-independent identifier with base URI change in subschema": {
+            "allOf": [
+                {
+                    "$ref": "http://localhost:1234/nested.json#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "definitions": {
+                        "B": {
+                            "id": "#foo",
+                            "type": "integer"
+                        }
+                    },
+                    "id": "nested.json"
+                }
+            },
+            "id": "http://localhost:1234/root"
+        },
         "draft4/Recursive references between schemas": {
             "definitions": {
                 "node": {
@@ -929,6 +974,51 @@
             "$ref": "#/definitions/bool",
             "definitions": {
                 "bool": true
+            }
+        },
+        "draft7/Location-independent identifier": {
+            "allOf": [
+                {
+                    "$ref": "#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "$id": "#foo",
+                    "type": "integer"
+                }
+            }
+        },
+        "draft7/Location-independent identifier with absolute URI": {
+            "allOf": [
+                {
+                    "$ref": "http://localhost:1234/bar#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "$id": "http://localhost:1234/bar#foo",
+                    "type": "integer"
+                }
+            }
+        },
+        "draft7/Location-independent identifier with base URI change in subschema": {
+            "$id": "http://localhost:1234/root",
+            "allOf": [
+                {
+                    "$ref": "http://localhost:1234/nested.json#foo"
+                }
+            ],
+            "definitions": {
+                "A": {
+                    "$id": "nested.json",
+                    "definitions": {
+                        "B": {
+                            "$id": "#foo",
+                            "type": "integer"
+                        }
+                    }
+                }
             }
         },
         "draft7/Recursive references between schemas": {
