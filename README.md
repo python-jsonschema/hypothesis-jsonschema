@@ -44,6 +44,11 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.4 - 2019-07-01
+- Improved canonicalisation and merging for a wide range of schemas,
+  which as usual unlocks significant optimisations and performance
+  improvements for cases where they apply.
+
 #### 0.9.3 - 2019-06-13
 - Future-proofed canonicalisation of `type` key.
 
