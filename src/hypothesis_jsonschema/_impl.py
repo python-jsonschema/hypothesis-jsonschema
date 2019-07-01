@@ -435,9 +435,8 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
             assert hi * multiple_of <= upper, (upper, hi)
             upper = hi
         strat = st.integers(lower, upper).map(lambda x: x * multiple_of)
-        if isinstance(multiple_of, float):
-            return strat.filter(lambda x: int(x / multiple_of) == x / multiple_of)
-        return strat
+        # check for and filter out float bounds, inexact multiplication, etc.
+        return strat.filter(partial(is_valid, schema=schema))
 
     strat = st.nothing()
     if "integer" in type_:

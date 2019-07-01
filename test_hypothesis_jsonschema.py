@@ -185,7 +185,8 @@ FLAKY_SCHEMAS = {
     "Datalogic Scan2Deploy Android file",
     "Datalogic Scan2Deploy CE file",
     # Just not handling this one correctly yet
-    "additionalProperties should not look in applicators",
+    "draft4/additionalProperties should not look in applicators",
+    "draft7/additionalProperties should not look in applicators",
 }
 
 with open("corpus-schemastore-catalog.json") as f:
