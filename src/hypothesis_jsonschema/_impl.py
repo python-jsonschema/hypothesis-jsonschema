@@ -112,10 +112,11 @@ def canonicalish(schema: JSONType) -> Dict:
             return FALSEY
         if type_ == ["null"]:
             return {"const": None}
-        if type_ == ["boolean"]:
-            return {"enum": [False, True]}
-        if type_ == ["null", "boolean"]:
-            return {"enum": [None, False, True]}
+        # See https://github.com/Julian/jsonschema/issues/575
+        # if type_ == ["boolean"]:
+        #     return {"enum": [False, True]}
+        # if type_ == ["null", "boolean"]:
+        #     return {"enum": [None, False, True]}
         schema["type"] = type_
         for t, kw in TYPE_SPECIFIC_KEYS:
             numeric = ["number", "integer"]
