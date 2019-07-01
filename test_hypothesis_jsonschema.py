@@ -92,7 +92,7 @@ def test_boolean_true_is_valid_schema_and_resolvable():
     [
         ([{"type": []}, {}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
-        ([{"type": "null"}, {"type": ["null", "boolean"]}], {"type": ["null"]}),
+        ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": ["integer"], "maximum": 20}),
         (
             [

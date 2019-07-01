@@ -100,6 +100,8 @@ def canonicalish(schema: JSONType) -> Dict:
         enum_ = [v for v in schema["enum"] if is_valid(v, schema)]
         if not enum_:
             return FALSEY
+        elif len(enum_) == 1:
+            return {"const": enum_[0]}
         return {"enum": enum_}
     # Canonicalise the "type" if specified, but avoid changing semantics by
     # adding a type key (which would affect intersection/union logic).
@@ -108,6 +110,12 @@ def canonicalish(schema: JSONType) -> Dict:
         if not type_:
             assert type_ == []
             return FALSEY
+        if type_ == ["null"]:
+            return {"const": None}
+        if type_ == ["boolean"]:
+            return {"enum": [False, True]}
+        if type_ == ["null", "boolean"]:
+            return {"enum": [None, False, True]}
         schema["type"] = type_
     # Canonicalise "not" subschemas
     if "not" in schema:
@@ -202,6 +210,22 @@ def merged(schemas):
     out = canonicalish(schemas[0])
     for s in schemas[1:]:
         s = canonicalish(s)
+        # If we have a const or enum, this is fairly easy by filtering:
+        if "const" in s:
+            if is_valid(s["const"], out):
+                out = s
+                continue
+            return FALSEY
+        if "enum" in s:
+            enum_ = [v for v in s["enum"] if is_valid(v, out)]
+            if not enum_:
+                return FALSEY
+            elif len(enum_) == 1:
+                out = {"const": enum_[0]}
+            else:
+                out = {"enum": enum_}
+            continue
+
         if "type" in out and "type" in s:
             tt = s.pop("type")
             out["type"] = [t for t in out["type"] if t in tt]
