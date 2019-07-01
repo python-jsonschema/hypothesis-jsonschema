@@ -117,6 +117,12 @@ def canonicalish(schema: JSONType) -> Dict:
         if type_ == ["null", "boolean"]:
             return {"enum": [None, False, True]}
         schema["type"] = type_
+        for t, kw in TYPE_SPECIFIC_KEYS:
+            numeric = ["number", "integer"]
+            if t in type_ or t in numeric and t in type_ + numeric:
+                continue
+            for k in kw.split():
+                schema.pop(k, None)
     # Canonicalise "not" subschemas
     if "not" in schema:
         not_ = canonicalish(schema.pop("not"))
@@ -231,6 +237,13 @@ def merged(schemas):
             out["type"] = [t for t in out["type"] if t in tt]
             if not out["type"]:
                 return FALSEY
+            for t, kw in TYPE_SPECIFIC_KEYS:
+                numeric = ["number", "integer"]
+                if t in out["type"] or t in numeric and t in out["type"] + numeric:
+                    continue
+                for k in kw.split():
+                    s.pop(k, None)
+                    out.pop(k, None)
         # TODO: keeping track of which elements are affected by which schemata
         # while merging properties, patternProperties, and additionalProperties
         # is a nightmare, so I'm just not going to try for now.  e.g.:
@@ -285,6 +298,8 @@ def merged(schemas):
             elif out[k] != v:
                 return None
         out = canonicalish(out)
+        if out == FALSEY:
+            return FALSEY
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
 
