@@ -36,7 +36,7 @@ TYPE_SPECIFIC_KEYS = (
     ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
     ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
     ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
-    ("array", "items additionalItems maxItems uniqueItems contains"),
+    ("array", "items additionalItems maxItems minItems uniqueItems contains"),
     (
         "object",
         "maxProperties minProperties required properties patternProperties "
