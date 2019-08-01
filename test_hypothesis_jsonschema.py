@@ -213,6 +213,12 @@ def _has_refs(s):
 
 def to_name_params(corpus):
     for n in sorted(corpus):
+        if n.endswith("/oneOf complex types"):
+            # oneOf on property names means only objects are valid,
+            # but it's a very filter-heavy way to express that...
+            # TODO: see if we can auto-detect this, fix it, and emit a warning.
+            assert "type" not in corpus[n]
+            corpus[n]["type"] = "object"
         if n in FLAKY_SCHEMAS or _has_refs(corpus[n]):
             yield pytest.param(n, marks=pytest.mark.skip)
         else:
