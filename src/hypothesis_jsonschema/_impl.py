@@ -59,15 +59,9 @@ def get_type(schema):
     Note that this will return [], the empty list, if the value is a list without
     any allowed type names; *even though* this is explicitly an invalid value.
     """
-    type_ = schema.get("type")
-    if type_ is None:
-        type_ = []
-        for t, kw in TYPE_SPECIFIC_KEYS:
-            if any(k in schema for k in kw.split()):
-                type_.append(t)
-        return type_ or None
+    type_ = schema.get("type", list(TYPE_STRINGS))
     # Canonicalise the "type" key to a sorted list of type strings.
-    elif isinstance(type_, str):
+    if isinstance(type_, str):
         assert type_ in TYPE_STRINGS
         return [type_]
     assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
