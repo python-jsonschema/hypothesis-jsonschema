@@ -3,5 +3,5 @@ pyupgrade --py36-plus $(find . -name '*.py')
 isort --recursive --apply .
 black .
 flake8
-mypy .
+mypy . src/
 pytest
