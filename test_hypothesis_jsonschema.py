@@ -80,6 +80,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     [
         {"type": "object", "maxProperties": 1, "required": ["0", "1"]},
         {"type": "array", "contains": False},
+        {"type": "null", "enum": [False, True]},
     ],
 )
 def test_canonicalises_to_empty(schema):
@@ -95,7 +96,9 @@ def test_boolean_true_is_valid_schema_and_resolvable():
     "group,result",
     [
         ([{"type": []}, {}], {"not": {}}),
+        ([{"type": "null"}, {"enum": [0]}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
+        ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": ["integer"], "maximum": 20}),
         (
