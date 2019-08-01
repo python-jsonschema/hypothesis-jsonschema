@@ -44,6 +44,9 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.5 - 2019-08-02
+- Improved handling of the `contains` keyword for arrays
+
 #### 0.9.4 - 2019-07-01
 - Improved canonicalisation and merging for a wide range of schemas,
   which as usual unlocks significant optimisations and performance

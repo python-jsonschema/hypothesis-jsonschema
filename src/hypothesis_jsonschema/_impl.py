@@ -101,6 +101,13 @@ def canonicalish(schema: JSONType) -> Dict:
     # adding a type key (which would affect intersection/union logic).
     if "type" in schema:
         type_ = get_type(schema)
+        if "array" in type_ and "contains" in schema:
+            if canonicalish(schema["contains"]) == FALSEY:
+                type_.remove("array")
+            else:
+                schema["minItems"] = max(schema.get("minItems", 0), 1)
+            if canonicalish(schema["contains"]) == TRUTHY:
+                schema.pop("contains")
         if not type_:
             assert type_ == []
             return FALSEY
@@ -581,7 +588,6 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     min_size = schema.get("minItems", 0)
     max_size = schema.get("maxItems")
     unique = schema.get("uniqueItems")
-    contains = schema.get("contains")
     if isinstance(items, list):
         for i, s in enumerate(items):
             if canonicalish(s) == FALSEY:
@@ -595,29 +601,21 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
-        if contains is not None:
-            assert (
-                additional_items == {}
-            ), "Cannot handle additionalItems and contains togther"
-            additional_items = contains
-            min_size = max(min_size, 1)
         fixed_items = st.tuples(*map(from_schema, items))
         extra_items = st.lists(
             from_schema(additional_items), min_size=min_size, max_size=max_size
         )
-        return st.tuples(fixed_items, extra_items).map(lambda t: list(t[0]) + t[1])
-    if contains is not None:
-        assert items == {}, "Cannot handle items and contains togther"
-        items = contains
-        min_size = max(min_size, 1)
-    if unique:
-        return st.lists(
+        strat = st.tuples(fixed_items, extra_items).map(lambda t: list(t[0]) + t[1])
+    else:
+        strat = st.lists(
             from_schema(items),
             min_size=min_size,
             max_size=max_size,
-            unique_by=encode_canonical_json,
+            unique_by=encode_canonical_json if unique else None,
         )
-    return st.lists(from_schema(items), min_size=min_size, max_size=max_size)
+    if "contains" not in schema:
+        return strat
+    return strat.filter(lambda val: any(is_valid(x, schema["contains"]) for x in val))
 
 
 def is_valid(instance: JSONType, schema: JSONType) -> bool:

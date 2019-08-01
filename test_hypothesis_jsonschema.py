@@ -76,7 +76,11 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
 
 
 @pytest.mark.parametrize(
-    "schema", [{"type": "object", "maxProperties": 1, "required": ["0", "1"]}]
+    "schema",
+    [
+        {"type": "object", "maxProperties": 1, "required": ["0", "1"]},
+        {"type": "array", "contains": False},
+    ],
 )
 def test_canonicalises_to_empty(schema):
     assert canonicalish(schema) == {"not": {}}
@@ -187,6 +191,8 @@ FLAKY_SCHEMAS = {
     # Just not handling this one correctly yet
     "draft4/additionalProperties should not look in applicators",
     "draft7/additionalProperties should not look in applicators",
+    # https://github.com/json-schema-org/JSON-Schema-Test-Suite/issues/273
+    "draft7/contains keyword with boolean schema false",
 }
 
 with open("corpus-schemastore-catalog.json") as f:
