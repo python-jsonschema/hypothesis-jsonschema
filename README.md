@@ -44,6 +44,10 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.6 - 2019-08-02
+- A performance optimisation for null and boolean schema,
+  which relies on a bugfix in `jsonschema >= 3.0.2`.
+
 #### 0.9.5 - 2019-08-02
 - Improved handling of the `contains` keyword for arrays
 
