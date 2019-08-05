@@ -389,10 +389,30 @@
                 }
             }
         },
+        "draft4/enum with 0 does not match false": {
+            "enum": [
+                0
+            ]
+        },
+        "draft4/enum with 1 does not match true": {
+            "enum": [
+                1
+            ]
+        },
         "draft4/enum with escaped characters": {
             "enum": [
                 "foo\nbar",
                 "foo\rbar"
+            ]
+        },
+        "draft4/enum with false does not match 0": {
+            "enum": [
+                false
+            ]
+        },
+        "draft4/enum with true does not match 1": {
+            "enum": [
+                true
             ]
         },
         "draft4/enums in properties": {
@@ -600,6 +620,17 @@
             "type": [
                 "integer",
                 "string"
+            ]
+        },
+        "draft4/nested anyOf, to check validation semantics": {
+            "anyOf": [
+                {
+                    "anyOf": [
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
             ]
         },
         "draft4/nested items": {
@@ -1362,12 +1393,21 @@
         "draft7/const validation": {
             "const": 2
         },
+        "draft7/const with 0 does not match false": {
+            "const": 0
+        },
+        "draft7/const with 1 does not match true": {
+            "const": 1
+        },
         "draft7/const with array": {
             "const": [
                 {
                     "foo": "bar"
                 }
             ]
+        },
+        "draft7/const with false does not match 0": {
+            "const": false
         },
         "draft7/const with null": {
             "const": null
@@ -1377,6 +1417,9 @@
                 "baz": "bax",
                 "foo": "bar"
             }
+        },
+        "draft7/const with true does not match 1": {
+            "const": true
         },
         "draft7/contains keyword validation": {
             "contains": {
@@ -1432,10 +1475,30 @@
                 "foo": []
             }
         },
+        "draft7/enum with 0 does not match false": {
+            "enum": [
+                0
+            ]
+        },
+        "draft7/enum with 1 does not match true": {
+            "enum": [
+                1
+            ]
+        },
         "draft7/enum with escaped characters": {
             "enum": [
                 "foo\nbar",
                 "foo\rbar"
+            ]
+        },
+        "draft7/enum with false does not match 0": {
+            "enum": [
+                false
+            ]
+        },
+        "draft7/enum with true does not match 1": {
+            "enum": [
+                true
             ]
         },
         "draft7/enums in properties": {
@@ -1679,6 +1742,17 @@
             "type": [
                 "integer",
                 "string"
+            ]
+        },
+        "draft7/nested anyOf, to check validation semantics": {
+            "anyOf": [
+                {
+                    "anyOf": [
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
             ]
         },
         "draft7/nested items": {
