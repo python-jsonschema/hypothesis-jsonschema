@@ -81,10 +81,34 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
         {"type": "object", "maxProperties": 1, "required": ["0", "1"]},
         {"type": "array", "contains": False},
         {"type": "null", "enum": [False, True]},
+        {"type": "array", "items": False, "minItems": 1},
+        {
+            "type": "array",
+            "items": {"type": "null"},
+            "uniqueItems": True,
+            "minItems": 2,
+        },
+        {
+            "type": "array",
+            "items": {"type": "boolean"},
+            "uniqueItems": True,
+            "minItems": 3,
+        },
+        {
+            "type": "array",
+            "items": {"type": ["null", "boolean"]},
+            "uniqueItems": True,
+            "minItems": 4,
+        },
     ],
 )
 def test_canonicalises_to_empty(schema):
     assert canonicalish(schema) == {"not": {}}
+
+
+@pytest.mark.parametrize("schema,expected", [({"required": []}, {})])
+def test_canonicalises_to_expected(schema, expected):
+    assert canonicalish(schema) == expected
 
 
 def test_boolean_true_is_valid_schema_and_resolvable():

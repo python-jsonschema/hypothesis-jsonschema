@@ -71,6 +71,21 @@ def get_type(schema: Schema) -> List[str]:
     return [t for t in TYPE_STRINGS if t in type_]
 
 
+def upper_bound_instances(schema: Schema) -> float:
+    """Return an upper bound on the number of instances that match this schema."""
+    schema = canonicalish(schema)
+    if schema == FALSEY:
+        return 0
+    if "const" in schema:
+        return 1
+    if "enum" in schema:
+        assert isinstance(schema["enum"], list)
+        return len(schema["enum"])
+    # TODO: could handle lots more cases here...
+    # Converting known cases to enums would also be a good approach.
+    return math.inf
+
+
 def canonicalish(schema: JSONType) -> Dict:
     """Convert a schema into a more-canonical form.
 
@@ -111,6 +126,24 @@ def canonicalish(schema: JSONType) -> Dict:
                 schema["minItems"] = max(schema.get("minItems", 0), 1)
             if canonicalish(schema["contains"]) == TRUTHY:
                 schema.pop("contains")
+        if (
+            "array" in type_
+            and "minItems" in schema
+            and isinstance(schema.get("items", []), (bool, dict))
+        ):
+            count = upper_bound_instances(canonicalish(schema["items"]))
+            if (count == 0 and schema["minItems"] > 0) or (
+                schema.get("uniqueItems", False) and count < schema["minItems"]
+            ):
+                type_.remove("array")
+        # Canonicalise "required" schemas to remove redundancy
+        if "required" in schema:
+            assert isinstance(schema["required"], list)
+            schema["required"] = sorted(set(schema["required"]))
+            max_ = schema.get("maxProperties", float("inf"))
+            assert isinstance(max_, (int, float))
+            if len(schema["required"]) > max_:
+                type_.remove("object")
         if not type_:
             assert type_ == []
             return FALSEY
@@ -127,6 +160,9 @@ def canonicalish(schema: JSONType) -> Dict:
                 continue
             for k in kw.split():
                 schema.pop(k, None)
+    # Remove no-op requires
+    if "required" in schema and not schema["required"]:
+        schema.pop("required")
     # Canonicalise "not" subschemas
     if "not" in schema:
         not_ = canonicalish(schema.pop("not"))
@@ -184,18 +220,6 @@ def canonicalish(schema: JSONType) -> Dict:
         ):
             return FALSEY
         schema["oneOf"] = oneOf
-    # Canonicalise "required" schemas to remove redundancy
-    if "required" in schema:
-        assert isinstance(schema["required"], list)
-        schema["required"] = sorted(set(schema["required"]))
-        max_ = schema.get("maxProperties", float("inf"))
-        assert isinstance(max_, (int, float))
-        if len(schema["required"]) > max_:
-            types = [t for t in get_type(schema) if t != "object"]
-            if not types:
-                return FALSEY
-        if not schema["required"]:
-            schema.pop("required")
     # if/then/else schemas are ignored unless if and another are present
     if "if" not in schema:
         schema.pop("then", None)
@@ -671,8 +695,6 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         and not additional_allowed
         else float("inf"),
     )
-    if min_size > max_size:
-        return st.nothing()
 
     dependencies = schema.get("dependencies", {})
     dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
