@@ -100,15 +100,25 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "uniqueItems": True,
             "minItems": 4,
         },
+        {"type": "array", "items": [True, False], "minItems": 2},
     ],
 )
 def test_canonicalises_to_empty(schema):
-    assert canonicalish(schema) == {"not": {}}
+    assert canonicalish(schema) == {"not": {}}, (schema, canonicalish(schema))
 
 
-@pytest.mark.parametrize("schema,expected", [({"required": []}, {})])
+@pytest.mark.parametrize(
+    "schema,expected",
+    [
+        ({"required": []}, {}),
+        (
+            {"type": "array", "items": [True, False, True]},
+            {"type": ["array"], "items": [True], "maxItems": 1},
+        ),
+    ],
+)
 def test_canonicalises_to_expected(schema, expected):
-    assert canonicalish(schema) == expected
+    assert canonicalish(schema) == expected, (schema, canonicalish(schema), expected)
 
 
 def test_boolean_true_is_valid_schema_and_resolvable():
@@ -120,6 +130,7 @@ def test_boolean_true_is_valid_schema_and_resolvable():
     "group,result",
     [
         ([{"type": []}, {}], {"not": {}}),
+        ([{"type": "null"}, {"const": 0}], {"not": {}}),
         ([{"type": "null"}, {"enum": [0]}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
         ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),

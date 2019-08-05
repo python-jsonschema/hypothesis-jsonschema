@@ -136,6 +136,16 @@ def canonicalish(schema: JSONType) -> Dict:
                 schema.get("uniqueItems", False) and count < schema["minItems"]
             ):
                 type_.remove("array")
+        if "array" in type_ and isinstance(schema.get("items"), list):
+            schema["items"] = schema["items"][: schema.get("maxItems")]
+            for idx, s in enumerate(schema["items"]):
+                if canonicalish(s) == FALSEY:
+                    if schema.get("minItems", 0) > idx:
+                        type_.remove("array")
+                        break
+                    schema["items"] = schema["items"][:idx]
+                    schema["maxItems"] = idx
+                    schema.pop("additionalItems", None)
         # Canonicalise "required" schemas to remove redundancy
         if "required" in schema:
             assert isinstance(schema["required"], list)
@@ -628,16 +638,6 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
     max_size = schema.get("maxItems")
     unique = schema.get("uniqueItems")
     if isinstance(items, list):
-        for i, s in enumerate(items):
-            if canonicalish(s) == FALSEY:
-                # No item can validate against this position,
-                # so we cut off the elements to generate here.
-                # TODO: this cutoff logic really belongs in canonicalish
-                assert min_size <= i
-                assert max_size is None or max_size >= i
-                items = items[:i]
-                min_size = max_size = i
-                break
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
