@@ -9,4 +9,5 @@ isort
 mypy
 pytest
 pytest-cov
+pytest-xdist
 pyupgrade
