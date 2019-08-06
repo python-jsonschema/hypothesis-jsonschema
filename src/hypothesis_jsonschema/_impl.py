@@ -333,6 +333,10 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                 op[k] = v
         if "required" in out and "required" in s:
             out["required"] = sorted(set(out["required"] + s.pop("required")))
+        for key in {"maxLength", "maxItems", "maxProperties"} & set(s) & set(out):
+            out[key] = min([out[key], s[key]])
+        for key in {"minLength", "minItems", "minProperties"} & set(s) & set(out):
+            out[key] = max([out[key], s[key]])
         # TODO: Handle remaining mergable keys.
 
         for k, v in s.items():
