@@ -143,8 +143,6 @@ def test_boolean_true_is_valid_schema_and_resolvable():
             ],
             {"properties": {"foo": {"maximum": 20, "minimum": 10}}},
         ),
-        ([{"maximum": 1}, {"exclusiveMaximum": 10}], {"maximum": 11}),
-        ([{"minimum": 10}, {"exclusiveMinimum": 1}], {"minimum": 0}),
     ],
 )
 def test_merged(group, result):
