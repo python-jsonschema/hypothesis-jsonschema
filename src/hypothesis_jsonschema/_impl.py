@@ -288,16 +288,12 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                     s.pop(k, None)
                     out.pop(k, None)
 
-        max_keys = [
-            x for x in ["maximum", "maxLength", "maxItems", "maxProperties"] if x in s
-        ]
+        max_keys = {"maxLength", "maxItems", "maxProperties"}.intersection(s)
         for key in max_keys:
             if key in out:
                 out[key] = min([out[key], s[key]])
 
-        min_keys = [
-            x for x in ["minimum", "minLength", "minItems", "minProperties"] if x in s
-        ]
+        min_keys = {"minLength", "minItems", "minProperties"}.intersection(s)
         for key in min_keys:
             if key in out:
                 out[key] = max([out[key], s[key]])
