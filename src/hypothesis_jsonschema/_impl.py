@@ -287,25 +287,10 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                 for k in kw.split():
                     s.pop(k, None)
                     out.pop(k, None)
-        for key in {"maxLength", "maxItems", "maxProperties"}.intersection(s):
-            if key in out:
-                out[key] = min([out[key], s[key]])
-        for key in {"minLength", "minItems", "minProperties"}.intersection(s):
-            if key in out:
-                out[key] = max([out[key], s[key]])
-        # TODO: For the exclusive methods a workaround has been made around
-        # Floats as you cant just increment them. Instead these are just ignored
-        # A fix needs to be implemented for the number datatype.
-        if "exclusiveMinimum" in s and "number" not in get_type(s):
-            if "minimum" not in out:
-                out["minimum"] = s.pop("exclusiveMinimum") - 1
-            else:
-                out["minimum"] = max([out["minimum"], s["minimum"] - 1])
-        if "exclusiveMaximum" in s and "number" not in get_type(s):
-            if "maximum" not in out:
-                out["maximum"] = s.pop("exclusiveMaximum") + 1
-            else:
-                out["maximum"] = max([out["maximum"], s["maximum"] + 1])
+        for key in {"maxLength", "maxItems", "maxProperties"} & set(s) & set(out):
+            out[key] = min([out[key], s[key]])
+        for key in {"minLength", "minItems", "minProperties"} & set(s) & set(out):
+            out[key] = max([out[key], s[key]])
         # TODO: keeping track of which elements are affected by which schemata
         # while merging properties, patternProperties, and additionalProperties
         # is a nightmare, so I'm just not going to try for now.  e.g.:
