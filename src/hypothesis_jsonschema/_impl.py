@@ -288,10 +288,10 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                     s.pop(k, None)
                     out.pop(k, None)
 
-        if any([x in s for x in ["maximum", "maxLength", "maxItems"]]):
+        if any([x in s for x in ["maximum", "maxLength", "maxItems", "maxProperties"]]):
 
             # Ensures numeric
-            keys = [x for x in ["maximum", "maxLength", "maxItems"] if x in s]
+            keys = [x for x in ["maximum", "maxLength", "maxItems", "maxProperties"] if x in s]
             for key in keys:
                 # if not any(
                 #     [x in ["number", "integer"] for x in get_type(out)]
@@ -301,11 +301,10 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                 if key in out:
                     out[key] = min([out[key], s[key]])
 
-
-        if any([x in s for x in ["minimum", "minLength", "minItems"]]):
+        if any([x in s for x in ["minimum", "minLength", "minItems", "minProperties"]]):
 
             # Ensures numeric
-            keys = [x for x in ["minimum", "minLength", "minItems"] if x in s]
+            keys = [x for x in ["minimum", "minLength", "minItems", "minProperties"] if x in s]
             for key in keys:
                 # if not any(
                 #     [x in ["number", "integer"] for x in get_type(out)]
