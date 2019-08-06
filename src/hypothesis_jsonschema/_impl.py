@@ -288,52 +288,34 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                     s.pop(k, None)
                     out.pop(k, None)
 
-        if any([x in s for x in ["maximum", "maxLength", "maxItems", "maxProperties"]]):
+        max_keys = [
+            x for x in ["maximum", "maxLength", "maxItems", "maxProperties"] if x in s
+        ]
+        for key in max_keys:
+            if key in out:
+                out[key] = min([out[key], s[key]])
 
-            # Ensures numeric
-            keys = [x for x in ["maximum", "maxLength", "maxItems", "maxProperties"] if x in s]
-            for key in keys:
-                # if not any(
-                #     [x in ["number", "integer"] for x in get_type(out)]
-                # ) or not get_type(out):
-                #     return FALSEY
+        min_keys = [
+            x for x in ["minimum", "minLength", "minItems", "minProperties"] if x in s
+        ]
+        for key in min_keys:
+            if key in out:
+                out[key] = max([out[key], s[key]])
 
-                if key in out:
-                    out[key] = min([out[key], s[key]])
+        # TODO: For the exclusive methods a workaround has been made around
+        # Floats as you cant just increment them. Instead these are just ignored
+        # A fix needs to be implemented for the number datatype.
+        if "exclusiveMinimum" in s and "number" not in get_type(s):
+            if "minimum" not in out:
+                out["minimum"] = s["exclusiveMinimum"] - 1
+            else:
+                out["minimum"] = max([out["minimum"], s["minimum"] - 1])
 
-        if any([x in s for x in ["minimum", "minLength", "minItems", "minProperties"]]):
-
-            # Ensures numeric
-            keys = [x for x in ["minimum", "minLength", "minItems", "minProperties"] if x in s]
-            for key in keys:
-                # if not any(
-                #     [x in ["number", "integer"] for x in get_type(out)]
-                # ) or not get_type(out):
-                #     return FALSEY
-
-                if key in out:
-                    out[key] = max([out[key], s[key]])
-
-
-        if "exclusiveMinimum" in s:
-
-            if "number" not in get_type(s):
-                if "minimum" not in out:
-                    out["minimum"] = s["exclusiveMinimum"] - 1
-                else:
-                    out["minimum"] = max([out["minimum"], s["minimum"] - 1])
-            # else:
-            #     pass  # TODO: Make this work with floats
-
-        if "exclusiveMaximum" in s:
-
-            if "number" not in get_type(s):
-                if "maximum" not in out:
-                    out["maximum"] = s["exclusiveMaximum"] + 1
-                else:
-                    out["maximum"] = max([out["maximum"], s["maximum"] + 1])
-            # else:
-            #     pass  # TODO: Make this work with floats
+        if "exclusiveMaximum" in s and "number" not in get_type(s):
+            if "maximum" not in out:
+                out["maximum"] = s["exclusiveMaximum"] + 1
+            else:
+                out["maximum"] = max([out["maximum"], s["maximum"] + 1])
 
         # TODO: keeping track of which elements are affected by which schemata
         # while merging properties, patternProperties, and additionalProperties
