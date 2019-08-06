@@ -287,6 +287,55 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                 for k in kw.split():
                     s.pop(k, None)
                     out.pop(k, None)
+
+        if "maximum" in s:
+
+            # Ensures numeric
+            if not any(
+                [x in ["number", "integer"] for x in get_type(out)]
+            ) or not get_type(out):
+                return FALSEY
+
+            elif "maximum" not in out:
+                out["maximum"] = s["maximum"]
+
+            else:
+                out["maximum"] = min([out["maximum"], s["maximum"]])
+
+        if "minimum" in s:
+
+            # Ensures numeric
+            if not any(
+                [x in ["number", "integer"] for x in get_type(out)]
+            ) or not get_type(out):
+                return FALSEY
+
+            if "minimum" not in out:
+                out["minimum"] = s["minimum"]
+
+            else:
+                out["minimum"] = max([out["minimum"], s["minimum"]])
+
+        if "exclusiveMinimum" in s:
+
+            if "number" not in get_type(s):
+                if "minimum" not in out:
+                    out["minimum"] = s["exclusiveMinimum"] - 1
+                else:
+                    out["minimum"] = max([out["minimum"], s["minimum"] - 1])
+            # else:
+            #     pass  # TODO: Make this work with floats
+
+        if "exclusiveMaximum" in s:
+
+            if "number" not in get_type(s):
+                if "maximum" not in out:
+                    out["maximum"] = s["exclusiveMaximum"] + 1
+                else:
+                    out["maximum"] = max([out["maximum"], s["maximum"] + 1])
+            # else:
+            #     pass  # TODO: Make this work with floats
+
         # TODO: keeping track of which elements are affected by which schemata
         # while merging properties, patternProperties, and additionalProperties
         # is a nightmare, so I'm just not going to try for now.  e.g.:
