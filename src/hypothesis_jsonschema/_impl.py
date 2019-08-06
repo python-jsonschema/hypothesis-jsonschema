@@ -288,33 +288,33 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
                     s.pop(k, None)
                     out.pop(k, None)
 
-        if "maximum" in s:
+        if any([x in s for x in ["maximum", "maxLength", "maxItems"]]):
 
             # Ensures numeric
-            if not any(
-                [x in ["number", "integer"] for x in get_type(out)]
-            ) or not get_type(out):
-                return FALSEY
+            keys = [x for x in ["maximum", "maxLength", "maxItems"] if x in s]
+            for key in keys:
+                # if not any(
+                #     [x in ["number", "integer"] for x in get_type(out)]
+                # ) or not get_type(out):
+                #     return FALSEY
 
-            elif "maximum" not in out:
-                out["maximum"] = s["maximum"]
+                if key in out:
+                    out[key] = min([out[key], s[key]])
 
-            else:
-                out["maximum"] = min([out["maximum"], s["maximum"]])
 
-        if "minimum" in s:
+        if any([x in s for x in ["minimum", "minLength", "minItems"]]):
 
             # Ensures numeric
-            if not any(
-                [x in ["number", "integer"] for x in get_type(out)]
-            ) or not get_type(out):
-                return FALSEY
+            keys = [x for x in ["minimum", "minLength", "minItems"] if x in s]
+            for key in keys:
+                # if not any(
+                #     [x in ["number", "integer"] for x in get_type(out)]
+                # ) or not get_type(out):
+                #     return FALSEY
 
-            if "minimum" not in out:
-                out["minimum"] = s["minimum"]
+                if key in out:
+                    out[key] = max([out[key], s[key]])
 
-            else:
-                out["minimum"] = max([out["minimum"], s["minimum"]])
 
         if "exclusiveMinimum" in s:
 
