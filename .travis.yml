@@ -1,18 +1,14 @@
 language: python
-sudo: required
-dist: xenial
 python:
   - "3.6"
   - "3.7"
 install:
-  - pip install --upgrade pip setuptools twine
-  - pip install -r requirements.txt
-  - pip install .
+  - pip install --upgrade pip setuptools tox twine
 script:
-  - source check.sh
+  - tox
   - git diff --exit-code
 jobs:
   include:
     - stage: publish
       if: branch = master AND repo = Zac-HD/hypothesis-jsonschema
-      script: python setup.py sdist && twine upload --skip-existing dist/*
+      script: python setup.py sdist bdist_wheel && twine upload --skip-existing dist/*
