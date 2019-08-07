@@ -1,8 +1,12 @@
-# Development requirements
-hypothesis
-jsonschema
-
+# These are the development requirements, which are not listed in setup.py.
+# `tox` will install exact versions (in requirements.txt) for us.
+#
+# To update the pinned versions, run:
+#
+#    pip-compile --upgrade --output-file=requirements.txt requirements.in setup.py
+#
 autoflake
+bandit
 black
 flake8
 isort
