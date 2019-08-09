@@ -1426,6 +1426,9 @@
                 "minimum": 5
             }
         },
+        "draft7/contains keyword with boolean schema false": {
+            "contains": false
+        },
         "draft7/contains keyword with boolean schema true": {
             "contains": true
         },
@@ -2289,9 +2292,6 @@
             ]
         },
         "draft7/boolean schema 'false'": false,
-        "draft7/contains keyword with boolean schema false": {
-            "contains": false
-        },
         "draft7/invalid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
