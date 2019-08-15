@@ -44,6 +44,9 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.7 - 2019-08-15
+- Improved canonicalisation, especially for deeply nested schemas.
+
 #### 0.9.6 - 2019-08-02
 - A performance optimisation for null and boolean schema,
   which relies on a bugfix in `jsonschema >= 3.0.2`.

@@ -165,7 +165,7 @@ def test_canonicalises_to_empty(schema):
         ({"required": []}, {}),
         (
             {"type": "array", "items": [True, False, True]},
-            {"type": ["array"], "items": [True], "maxItems": 1},
+            {"type": ["array"], "items": [{}], "maxItems": 1},
         ),
     ],
 )

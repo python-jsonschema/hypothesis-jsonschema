@@ -46,6 +46,14 @@ TYPE_SPECIFIC_KEYS = (
         "additionalProperties dependencies propertyNames",
     ),
 )
+# Names of keywords where the associated values may be schemas or lists of schemas.
+SCHEMA_KEYS = tuple(
+    "items additionalItems contains additionalProperties propertyNames "
+    "if then else allOf anyOf oneOf not".split()
+)
+# Names of keywords where the value is an object whose values are schemas.
+# Note that in some cases ("dependencies"), the value may be a list of strings.
+SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
 
 def encode_canonical_json(value: JSONType) -> str:
@@ -115,6 +123,18 @@ def canonicalish(schema: JSONType) -> Dict:
         elif len(enum_) == 1:
             return {"const": enum_[0]}
         return {"enum": enum_}
+    # Recurse into the value of each keyword with a schema (or list of them) as a value
+    for key in SCHEMA_KEYS:
+        if isinstance(schema.get(key), list):
+            schema[key] = [canonicalish(v) for v in schema[key]]
+        if isinstance(schema.get(key), dict):
+            schema[key] = canonicalish(schema[key])
+    for key in SCHEMA_OBJECT_KEYS:
+        if key in schema:
+            schema[key] = {
+                k: canonicalish(v) if isinstance(v, dict) else v
+                for k, v in schema[key].items()
+            }
     # Canonicalise the "type" if specified, but avoid changing semantics by
     # adding a type key (which would affect intersection/union logic).
     if "type" in schema:
