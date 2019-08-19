@@ -11,6 +11,7 @@ black
 flake8
 isort
 mypy
+pylint
 pytest
 pytest-cov
 pytest-xdist
