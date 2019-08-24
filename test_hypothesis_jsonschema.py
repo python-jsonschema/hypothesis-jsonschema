@@ -133,6 +133,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
         {"type": "object", "maxProperties": 1, "required": ["0", "1"]},
         {"type": "array", "contains": False},
         {"type": "null", "enum": [False, True]},
+        {"type": "boolean", "const": None},
         {"type": "array", "items": False, "minItems": 1},
         {
             "type": "array",
