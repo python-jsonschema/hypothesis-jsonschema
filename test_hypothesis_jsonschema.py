@@ -25,6 +25,7 @@ from hypothesis_jsonschema._impl import (
     gen_number,
     gen_object,
     gen_string,
+    get_type,
     is_valid,
     json_schemata,
     merged,
@@ -163,10 +164,11 @@ def test_canonicalises_to_empty(schema):
 @pytest.mark.parametrize(
     "schema,expected",
     [
+        ({"type": get_type({})}, {}),
         ({"required": []}, {}),
         (
             {"type": "array", "items": [True, False, True]},
-            {"type": ["array"], "items": [{}], "maxItems": 1},
+            {"type": "array", "items": [{}], "maxItems": 1},
         ),
     ],
 )
@@ -188,7 +190,7 @@ def test_boolean_true_is_valid_schema_and_resolvable():
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
         ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
-        ([{"type": "integer"}, {"maximum": 20}], {"type": ["integer"], "maximum": 20}),
+        ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         (
             [
                 {"properties": {"foo": {"maximum": 20}}},

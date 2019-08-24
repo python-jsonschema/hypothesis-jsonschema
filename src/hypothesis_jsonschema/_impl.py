@@ -75,7 +75,7 @@ def get_type(schema: Schema) -> List[str]:
     if isinstance(type_, str):
         assert type_ in TYPE_STRINGS
         return [type_]
-    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS)
+    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS), type_
     return [t for t in TYPE_STRINGS if t in type_]
 
 
@@ -190,6 +190,13 @@ def canonicalish(schema: JSONType) -> Dict:
                 continue
             for k in kw.split():
                 schema.pop(k, None)
+        assert isinstance(type_, list), type_
+        if len(type_) == 1:
+            schema["type"] = type_[0]
+        elif type_ == get_type({}):
+            schema.pop("type")
+        else:
+            schema["type"] = type_
     # Remove no-op requires
     if "required" in schema and not schema["required"]:
         schema.pop("required")
@@ -297,12 +304,12 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
 
         if "type" in out and "type" in s:
             tt = s.pop("type")
-            out["type"] = [t for t in out["type"] if t in tt]
-            if not out["type"]:
+            out["type"] = [t for t in get_type(out) if t in tt]
+            if not get_type(out):
                 return FALSEY
             for t, kw in TYPE_SPECIFIC_KEYS:
                 numeric = ["number", "integer"]
-                if t in out["type"] or t in numeric and t in out["type"] + numeric:
+                if t in get_type(out) or t in numeric and t in get_type(out) + numeric:
                     continue
                 for k in kw.split():
                     s.pop(k, None)
@@ -457,7 +464,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         object=object_schema,
     )
     assert set(map_) == set(TYPE_STRINGS)
-    return st.one_of([map_[t](schema) for t in schema.get("type", list(TYPE_STRINGS))])
+    return st.one_of([map_[t](schema) for t in get_type(schema)])
 
 
 def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
