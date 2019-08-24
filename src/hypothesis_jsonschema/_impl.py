@@ -607,36 +607,62 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)
 
 
+@st.composite
+def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
+    """A strategy for simple regular expression patterns."""
+    fragments = st.one_of(
+        st.just("."),
+        st.from_regex(r"\[\^?[A-Za-z0-9]+\]"),
+        REGEX_PATTERNS.map("{}+".format),
+        REGEX_PATTERNS.map("{}?".format),
+        REGEX_PATTERNS.map("{}*".format),
+    )
+    result = draw(st.lists(fragments, min_size=1, max_size=3).map("".join))
+    try:
+        re.compile(result)
+    except re.error:
+        assume(False)
+    # The @composite decorator *is* well-typed, but expressing this is painful :/
+    return result  # type: ignore
+
+
+REGEX_PATTERNS = regex_patterns()
+
+
+_domains = prov.domains()  # type: ignore
+STRING_FORMATS = {
+    # A value of None indicates a known but unsupported format.
+    **{name: rfc3339(name) for name in RFC3339_FORMATS},
+    "date": rfc3339("full-date"),
+    "time": rfc3339("full-time"),
+    # Hypothesis' provisional strategies are not type-annotated.
+    # We should get a principled plan for them at some point I guess...
+    "email": st.emails(),  # type: ignore
+    "idn-email": st.emails(),  # type: ignore
+    "hostname": _domains,
+    "idn-hostname": _domains,
+    "ipv4": prov.ip4_addr_strings(),  # type: ignore
+    "ipv6": prov.ip6_addr_strings(),  # type: ignore
+    **{
+        name: _domains.map("https://{}".format)
+        for name in ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
+    },
+    "json-pointer": st.just(""),
+    "relative-json-pointer": st.just(""),
+    "regex": REGEX_PATTERNS,
+}
+
+
 def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength", float("inf"))
     strategy = st.text(min_size=min_size, max_size=schema.get("maxLength"))
-    if "format" in schema:
-        url_synonyms = ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
-        domains = prov.domains()  # type: ignore
-        formats = {
-            # A value of None indicates a known but unsupported format.
-            **{name: rfc3339(name) for name in RFC3339_FORMATS},
-            "date": rfc3339("full-date"),
-            "time": rfc3339("full-time"),
-            # Hypothesis' provisional strategies are not type-annotated.
-            # We should get a principled plan for them at some point I guess...
-            "email": st.emails(),  # type: ignore
-            "idn-email": st.emails(),  # type: ignore
-            "hostname": domains,
-            "idn-hostname": domains,
-            "ipv4": prov.ip4_addr_strings(),  # type: ignore
-            "ipv6": prov.ip6_addr_strings(),  # type: ignore
-            **{name: domains.map("https://{}".format) for name in url_synonyms},
-            "json-pointer": st.just(""),
-            "relative-json-pointer": st.just(""),
-            "regex": REGEX_PATTERNS,
-        }
-        if schema["format"] not in formats:
-            raise InvalidArgument(f"Unsupported string format={schema['format']}")
-        strategy = formats[schema["format"]]
+    if schema.get("format") in STRING_FORMATS:
+        # Unknown "format" specifiers should be ignored for validation.
+        # See https://json-schema.org/latest/json-schema-validation.html#format
+        strategy = STRING_FORMATS[schema["format"]]
         if "pattern" in schema:  # pragma: no cover
             # This isn't really supported, but we'll do our best.
             strategy = strategy.filter(
@@ -803,28 +829,6 @@ def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
     and is used to provide full branch coverage when testing this package.
     """
     return _json_schemata()
-
-
-@st.composite
-def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
-    """A strategy for simple regular expression patterns."""
-    fragments = st.one_of(
-        st.just("."),
-        st.from_regex(r"\[\^?[A-Za-z0-9]+\]"),
-        REGEX_PATTERNS.map("{}+".format),
-        REGEX_PATTERNS.map("{}?".format),
-        REGEX_PATTERNS.map("{}*".format),
-    )
-    result = draw(st.lists(fragments, min_size=1, max_size=3).map("".join))
-    try:
-        re.compile(result)
-    except re.error:
-        assume(False)
-    # The @composite decorator *is* well-typed, but expressing this is painful :/
-    return result  # type: ignore
-
-
-REGEX_PATTERNS = regex_patterns()
 
 
 @st.composite

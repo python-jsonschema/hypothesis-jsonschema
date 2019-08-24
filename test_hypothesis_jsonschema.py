@@ -260,7 +260,6 @@ def test_merge_semantics(data, s1, s2):
         None,
         False,
         {"type": "an unknown type"},
-        {"type": "string", "format": "not a real format"},
         {"allOf": [{"type": "boolean"}, {"const": None}]},
         {"allOf": [{"type": "boolean"}, {"enum": [None]}]},
     ],

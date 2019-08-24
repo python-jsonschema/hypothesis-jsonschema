@@ -44,6 +44,10 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.8 - 2019-08-24
+- Corrected handling of the `"format"` keyword with unknown values - custom values
+  are allowed by the spec and should be treated as annotations (i.e. ignored).
+
 #### 0.9.7 - 2019-08-15
 - Improved canonicalisation, especially for deeply nested schemas.
 
