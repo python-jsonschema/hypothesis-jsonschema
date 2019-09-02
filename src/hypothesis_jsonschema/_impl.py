@@ -635,8 +635,6 @@ def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
 
 REGEX_PATTERNS = regex_patterns()
 
-
-_domains = prov.domains()  # type: ignore
 STRING_FORMATS = {
     # A value of None indicates a known but unsupported format.
     **{name: rfc3339(name) for name in RFC3339_FORMATS},
@@ -646,12 +644,12 @@ STRING_FORMATS = {
     # We should get a principled plan for them at some point I guess...
     "email": st.emails(),  # type: ignore
     "idn-email": st.emails(),  # type: ignore
-    "hostname": _domains,
-    "idn-hostname": _domains,
-    "ipv4": prov.ip4_addr_strings(),  # type: ignore
-    "ipv6": prov.ip6_addr_strings(),  # type: ignore
+    "hostname": prov.domains(),
+    "idn-hostname": prov.domains(),
+    "ipv4": prov.ip4_addr_strings(),
+    "ipv6": prov.ip6_addr_strings(),
     **{
-        name: _domains.map("https://{}".format)
+        name: prov.domains().map("https://{}".format)
         for name in ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
     },
     "json-pointer": st.just(""),

@@ -1,0 +1,9 @@
+# Top-level dependencies for `tox -e check`
+autoflake
+bandit
+black
+flake8
+isort
+mypy
+pylint
+pyupgrade

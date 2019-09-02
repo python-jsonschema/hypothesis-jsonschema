@@ -1,0 +1,2 @@
+# Top-level dependencies for `tox -e deps`
+pip-tools
