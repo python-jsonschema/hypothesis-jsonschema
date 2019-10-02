@@ -696,11 +696,35 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
-        fixed_items = st.tuples(*map(from_schema, items)).map(list)
-        extra_items = st.lists(
-            from_schema(additional_items), min_size=min_size, max_size=max_size
-        )
-        strat = st.builds(operator.add, fixed_items, extra_items)
+        if unique:
+
+            @st.composite
+            def compose_lists_with_filter(draw: Any) -> List[JSONType]:
+                elems = []
+                seen: Set[str] = set()
+
+                def not_seen(elem: JSONType) -> bool:
+                    return encode_canonical_json(elem) not in seen
+
+                for s in items:
+                    elems.append(draw(from_schema(s).filter(not_seen)))
+                    seen.add(encode_canonical_json(elems[-1]))
+                extra_items = st.lists(
+                    from_schema(additional_items).filter(not_seen),
+                    min_size=min_size,
+                    max_size=max_size,
+                    unique_by=encode_canonical_json,
+                )
+                more_elems: List[JSONType] = draw(extra_items)
+                return elems + more_elems
+
+            strat = compose_lists_with_filter()
+        else:
+            fixed_items = st.tuples(*map(from_schema, items)).map(list)
+            extra_items = st.lists(
+                from_schema(additional_items), min_size=min_size, max_size=max_size
+            )
+            strat = st.builds(operator.add, fixed_items, extra_items)
     else:
         strat = st.lists(
             from_schema(items),

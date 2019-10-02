@@ -2169,6 +2169,29 @@
         "draft7/uniqueItems validation": {
             "uniqueItems": true
         },
+        "draft7/uniqueItems with an array of items": {
+            "items": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "boolean"
+                }
+            ],
+            "uniqueItems": true
+        },
+        "draft7/uniqueItems with an array of items and additionalItems=false": {
+            "additionalItems": false,
+            "items": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "boolean"
+                }
+            ],
+            "uniqueItems": true
+        },
         "draft7/valid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },

@@ -44,6 +44,9 @@ who know it best.
 
 ### Changelog:
 
+#### Next release
+- Correct handling of `{"items": [...], "uniqueItems": true"}` schemas
+
 #### 0.9.8 - 2019-08-24
 - Corrected handling of the `"format"` keyword with unknown values - custom values
   are allowed by the spec and should be treated as annotations (i.e. ignored).
