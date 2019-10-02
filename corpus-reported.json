@@ -125,7 +125,7 @@
         "type": "object"
     },
     "string with unknown format": {
-        "type": "string",
-        "format": "Unknown formats should be treated as annotations and pass validation"
+        "format": "Unknown formats should be treated as annotations and pass validation",
+        "type": "string"
     }
 }

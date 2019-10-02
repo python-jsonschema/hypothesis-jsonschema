@@ -1001,6 +1001,9 @@
         "draft4/validation of host names": {
             "format": "hostname"
         },
+        "draft4/validation of hostnames": {
+            "format": "hostname"
+        },
         "draft7/$ref to boolean schema true": {
             "$ref": "#/definitions/bool",
             "definitions": {
@@ -2180,6 +2183,12 @@
                 "minimum": -10
             }
         },
+        "draft7/validation of IDN e-mail addresses": {
+            "format": "idn-email"
+        },
+        "draft7/validation of IDN hostnames": {
+            "format": "idn-hostname"
+        },
         "draft7/validation of IP addresses": {
             "format": "ipv4"
         },
@@ -2189,8 +2198,14 @@
         "draft7/validation of IRI References": {
             "format": "iri-reference"
         },
+        "draft7/validation of IRI references": {
+            "format": "iri-reference"
+        },
         "draft7/validation of IRIs": {
             "format": "iri"
+        },
+        "draft7/validation of JSON pointers": {
+            "format": "json-pointer"
         },
         "draft7/validation of JSON-pointers (JSON String Representation)": {
             "format": "json-pointer"
@@ -2200,6 +2215,12 @@
         },
         "draft7/validation of URI References": {
             "format": "uri-reference"
+        },
+        "draft7/validation of URI references": {
+            "format": "uri-reference"
+        },
+        "draft7/validation of URI templates": {
+            "format": "uri-template"
         },
         "draft7/validation of URIs": {
             "format": "uri"
@@ -2226,11 +2247,20 @@
         "draft7/validation of host names": {
             "format": "hostname"
         },
+        "draft7/validation of hostnames": {
+            "format": "hostname"
+        },
         "draft7/validation of internationalized host names": {
             "format": "idn-hostname"
         },
+        "draft7/validation of regexes": {
+            "format": "regex"
+        },
         "draft7/validation of regular expressions": {
             "format": "regex"
+        },
+        "draft7/validation of relative JSON pointers": {
+            "format": "relative-json-pointer"
         },
         "draft7/validation of string-encoded content based on media type": {
             "contentMediaType": "application/json"

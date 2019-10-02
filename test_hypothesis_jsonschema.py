@@ -176,9 +176,9 @@ def test_canonicalises_to_expected(schema, expected):
     assert canonicalish(schema) == expected, (schema, canonicalish(schema), expected)
 
 
-def test_boolean_true_is_valid_schema_and_resolvable():
+@given(from_schema(True))
+def test_boolean_true_is_valid_schema_and_resolvable(_):
     """...even though it's currently broken in jsonschema."""
-    from_schema(True).example()
 
 
 @pytest.mark.parametrize(
