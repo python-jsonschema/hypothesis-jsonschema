@@ -615,7 +615,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
 
 
 @st.composite
-def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
+def regex_patterns(draw: Any) -> str:
     """A strategy for simple regular expression patterns."""
     fragments = st.one_of(
         st.just("."),
@@ -625,12 +625,12 @@ def regex_patterns(draw: Any) -> st.SearchStrategy[str]:
         REGEX_PATTERNS.map("{}*".format),
     )
     result = draw(st.lists(fragments, min_size=1, max_size=3).map("".join))
+    assert isinstance(result, str)
     try:
         re.compile(result)
     except re.error:
         assume(False)
-    # The @composite decorator *is* well-typed, but expressing this is painful :/
-    return result  # type: ignore
+    return result
 
 
 REGEX_PATTERNS = regex_patterns()
