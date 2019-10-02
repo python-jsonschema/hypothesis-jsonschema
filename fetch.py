@@ -28,7 +28,7 @@ except FileNotFoundError:
     schemata = {}
 
 # Download all the examples known to schemastore.org, concurrently!
-with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+with concurrent.futures.ThreadPoolExecutor() as ex:
     futures = []
 
     def add_future(name: str, url: str) -> None:
@@ -63,14 +63,26 @@ with urllib.request.urlopen(
 ) as handle:
     start = "JSON-Schema-Test-Suite-master/tests/"
     with zipfile.ZipFile(io.BytesIO(handle.read())) as zf:
+        seen = set()
         for path in zf.namelist():
-            for draft in ("draft4/", "draft7/"):
-                if path.startswith(start + draft) and path.endswith(".json"):
-                    for v in json.load(zf.open(path)):
-                        if any(t["valid"] for t in v["tests"]):
-                            suite[draft + v["description"]] = v["schema"]
-                        elif "/optional/" not in path:
-                            invalid_suite[draft + v["description"]] = v["schema"]
+            if path.startswith(start + "draft7/") and path.endswith(".json"):
+                for v in json.load(zf.open(path)):
+                    if any(t["valid"] for t in v["tests"]):
+                        suite["draft7/" + v["description"]] = v["schema"]
+                        seen.add(json.dumps(v["schema"], sort_keys=True))
+                    elif "/optional/" not in path:
+                        invalid_suite["draft7/" + v["description"]] = v["schema"]
+                        seen.add(json.dumps(v["schema"], sort_keys=True))
+        for path in zf.namelist():
+            if path.startswith(start + "draft4/") and path.endswith(".json"):
+                for v in json.load(zf.open(path)):
+                    if json.dumps(v["schema"], sort_keys=True) in seen:
+                        # No point testing an exact duplicate schema, so skip this one
+                        continue
+                    elif any(t["valid"] for t in v["tests"]):
+                        suite["draft4/" + v["description"]] = v["schema"]
+                    elif "/optional/" not in path:
+                        invalid_suite["draft4/" + v["description"]] = v["schema"]
 
 with open("corpus-suite-schemas.json", mode="w") as f:
     json.dump([suite, invalid_suite], f, indent=4, sort_keys=True)
