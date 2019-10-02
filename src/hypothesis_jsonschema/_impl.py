@@ -22,15 +22,14 @@ JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 # TODO: grep for uses of JSONType which are actually Schema (or bool-or-Schema)
 Schema = Dict[str, JSONType]
 
-JSON_STRATEGY: st.SearchStrategy[JSONType] = st.deferred(
-    lambda: st.one_of(
-        st.none(),
-        st.booleans(),
-        st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0),
-        st.text(),
-        st.lists(JSON_STRATEGY, max_size=3),
-        st.dictionaries(st.text(), JSON_STRATEGY, max_size=3),
-    )
+JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
+    st.none()
+    | st.booleans()
+    | st.integers()
+    | st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0)
+    | st.text(),
+    lambda strategy: st.lists(strategy, max_size=3)  # type: ignore
+    | st.dictionaries(st.text(), strategy, max_size=3),
 )
 
 # Canonical type strings, in order.
