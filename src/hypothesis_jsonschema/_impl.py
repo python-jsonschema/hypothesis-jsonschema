@@ -28,7 +28,7 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
     | st.integers()
     | st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0)
     | st.text(),
-    lambda strategy: st.lists(strategy, max_size=3)  # type: ignore
+    lambda strategy: st.lists(strategy, max_size=3)
     | st.dictionaries(st.text(), strategy, max_size=3),
 )
 
@@ -525,13 +525,13 @@ def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
         if lo is not None:
             lower = float(lo)
             if lower < lo:
-                lower = next_up(lower)  # type: ignore  # scary floats magic
+                lower = next_up(lower)  # scary floats magic
             assert lower >= lo
         hi = exmax if upper is None else upper
         if hi is not None:
             upper = float(hi)
             if upper > hi:
-                upper = next_down(upper)  # type: ignore  # scary floats magic
+                upper = next_down(upper)  # scary floats magic
             assert upper <= hi
         strat |= st.floats(
             min_value=lower,
@@ -613,7 +613,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)
 
 
-@st.composite
+@st.composite  # type: ignore
 def regex_patterns(draw: Any) -> str:
     """A strategy for simple regular expression patterns."""
     fragments = st.one_of(
@@ -697,7 +697,7 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
             max_size -= len(items)
         if unique:
 
-            @st.composite
+            @st.composite  # type: ignore
             def compose_lists_with_filter(draw: Any) -> List[JSONType]:
                 elems = []
                 seen: Set[str] = set()
@@ -790,7 +790,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         partial(is_valid, schema=names)
     )
 
-    @st.composite
+    @st.composite  # type: ignore
     def from_object_schema(draw: Any) -> Any:
         """Here, we do some black magic with private Hypothesis internals.
 
@@ -800,7 +800,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         If any Hypothesis maintainers are reading this... I'm so, so sorry.
         """
         # Hypothesis internals are not type-annotated... I do mean *black* magic!
-        elements = cu.many(  # type: ignore
+        elements = cu.many(
             draw(st.data()).conjecture_data,
             min_size=min_size,
             max_size=max_size,
@@ -859,7 +859,7 @@ def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
     return _json_schemata()
 
 
-@st.composite
+@st.composite  # type: ignore
 def _json_schemata(draw: Any, recur: bool = True) -> Any:
     """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
@@ -889,7 +889,7 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
     return draw(st.one_of(options))
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
     """Draw an enum schema."""
     elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
@@ -899,7 +899,7 @@ def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
     return {"enum": elems}
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_if_then_else(draw: Any) -> Schema:
     """Draw a conditional schema."""
     # Cheat by using identical if and then schemata, else accepting anything.
@@ -907,7 +907,7 @@ def gen_if_then_else(draw: Any) -> Schema:
     return {"if": if_schema, "then": if_schema, "else": {}}
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     """Draw a numeric schema."""
     max_int_float = 2 ** 53
@@ -945,7 +945,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     return out
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     """Draw a string schema."""
     min_size = draw(st.none() | st.integers(0, 10))
@@ -966,7 +966,7 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     return out
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_array(draw: Any) -> Schema:
     """Draw an array schema."""
     min_size = draw(st.none() | st.integers(0, 5))
@@ -1003,7 +1003,7 @@ def gen_array(draw: Any) -> Schema:
     return out
 
 
-@st.composite
+@st.composite  # type: ignore
 def gen_object(draw: Any) -> Schema:
     """Draw an object schema."""
     out: Schema = {"type": "object"}
