@@ -6,7 +6,7 @@ python:
 install:
   - pip install --upgrade pip setuptools tox twine
 script:
-  - tox
+  - tox --recreate
   - git diff --exit-code
 jobs:
   include:
