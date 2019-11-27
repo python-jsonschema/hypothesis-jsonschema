@@ -214,7 +214,7 @@ def canonicalish(schema: JSONType) -> Dict:
     # sub-schemas then handling any key-specific logic.
     if "anyOf" in schema:
         schema["anyOf"] = sorted(
-            [canonicalish(s) for s in schema["anyOf"]], key=encode_canonical_json
+            (canonicalish(s) for s in schema["anyOf"]), key=encode_canonical_json
         )
         schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
         if not schema["anyOf"]:
@@ -223,7 +223,7 @@ def canonicalish(schema: JSONType) -> Dict:
             return canonicalish(schema["anyOf"][0])
     if "allOf" in schema:
         schema["allOf"] = sorted(
-            [canonicalish(s) for s in schema["allOf"]], key=encode_canonical_json
+            (canonicalish(s) for s in schema["allOf"]), key=encode_canonical_json
         )
         if any(s == FALSEY for s in schema["allOf"]):
             return FALSEY
@@ -453,15 +453,15 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     if "const" in schema:
         return st.just(schema["const"])
     # Finally, resolve schema by type - defaulting to "object"
-    map_: Dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = dict(
-        null=lambda _: st.none(),
-        boolean=lambda _: st.booleans(),
-        number=numeric_schema,
-        integer=numeric_schema,
-        string=string_schema,
-        array=array_schema,
-        object=object_schema,
-    )
+    map_: Dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = {
+        "null": lambda _: st.none(),
+        "boolean": lambda _: st.booleans(),
+        "number": numeric_schema,
+        "integer": numeric_schema,
+        "string": string_schema,
+        "array": array_schema,
+        "object": object_schema,
+    }
     assert set(map_) == set(TYPE_STRINGS)
     return st.one_of([map_[t](schema) for t in get_type(schema)])
 
@@ -641,8 +641,8 @@ STRING_FORMATS = {
     "time": rfc3339("full-time"),
     # Hypothesis' provisional strategies are not type-annotated.
     # We should get a principled plan for them at some point I guess...
-    "email": st.emails(),  # type: ignore
-    "idn-email": st.emails(),  # type: ignore
+    "email": st.emails(),
+    "idn-email": st.emails(),
     "hostname": prov.domains(),
     "idn-hostname": prov.domains(),
     "ipv4": prov.ip4_addr_strings(),
@@ -896,7 +896,7 @@ def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
     # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
     for i, val in enumerate(elems):
         assume(not any(val == v for v in elems[i + 1 :]))  # noqa
-    return dict(enum=elems)
+    return {"enum": elems}
 
 
 @st.composite
