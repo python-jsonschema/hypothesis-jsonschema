@@ -16,6 +16,7 @@ from typing import Any
 
 def get_json(url: str) -> Any:
     """Fetch the json payload at the given url."""
+    assert url.startswith("http://") or url.startswith("https://")
     with urllib.request.urlopen(url) as handle:
         return json.load(handle)
 

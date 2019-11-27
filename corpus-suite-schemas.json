@@ -148,6 +148,27 @@
             "exclusiveMinimum": false,
             "minimum": 1.1
         },
+        "draft4/oneOf with missing optional property": {
+            "oneOf": [
+                {
+                    "properties": {
+                        "bar": {},
+                        "baz": {}
+                    },
+                    "required": [
+                        "bar"
+                    ]
+                },
+                {
+                    "properties": {
+                        "foo": {}
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                }
+            ]
+        },
         "draft4/remote ref, containing refs itself": {
             "$ref": "http://json-schema.org/draft-04/schema#"
         },
@@ -168,6 +189,46 @@
             "definitions": {
                 "bool": true
             }
+        },
+        "draft7/ECMA 262 \\D matches everything but ascii digits": {
+            "pattern": "^\\D$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\S matches everything but ascii whitespace": {
+            "pattern": "^\\S$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\d matches ascii digits only": {
+            "pattern": "^\\d$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\s matches ascii whitespace only": {
+            "pattern": "^\\s$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\w matches ascii letters only": {
+            "pattern": "^\\w$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\w matches everything but ascii letters": {
+            "pattern": "^\\W$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 regex $ does not match trailing newline": {
+            "pattern": "^abc$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 regex converts \\a to ascii BEL": {
+            "pattern": "^\\a$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 regex escapes control codes with \\c and lower letter": {
+            "pattern": "^\\cc$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 regex escapes control codes with \\c and upper letter": {
+            "pattern": "^\\cC$",
+            "type": "string"
         },
         "draft7/Location-independent identifier": {
             "allOf": [
@@ -1080,6 +1141,27 @@
                     "type": "number"
                 },
                 {}
+            ]
+        },
+        "draft7/oneOf with missing optional property": {
+            "oneOf": [
+                {
+                    "properties": {
+                        "bar": true,
+                        "baz": true
+                    },
+                    "required": [
+                        "bar"
+                    ]
+                },
+                {
+                    "properties": {
+                        "foo": true
+                    },
+                    "required": [
+                        "foo"
+                    ]
+                }
             ]
         },
         "draft7/oneOf with required": {

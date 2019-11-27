@@ -283,6 +283,8 @@ FLAKY_SCHEMAS = {
     # Just not handling this one correctly yet
     "draft4/additionalProperties should not look in applicators",
     "draft7/additionalProperties should not look in applicators",
+    "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
+    "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
 }
 
 with open("corpus-schemastore-catalog.json") as f:
