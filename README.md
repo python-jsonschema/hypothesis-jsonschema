@@ -44,6 +44,9 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.10 - 2019-11-27
+- Updated project metadata
+
 #### 0.9.9 - 2019-10-02
 - Correct handling of `{"items": [...], "uniqueItems": true"}` schemas
 
