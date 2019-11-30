@@ -804,7 +804,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
             draw(st.data()).conjecture_data,
             min_size=min_size,
             max_size=max_size,
-            average_size=min(min_size + 5, (min_size + max_size) // 2),
+            average_size=min(min_size + 5, (min_size + max_size) / 2),
         )
         out: dict = {}
         while elements.more():

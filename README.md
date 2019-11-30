@@ -44,6 +44,10 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.11 - 2019-11-30
+- Fixed a bug where objects which could have either zero or one
+  properties would always be generated with zero.
+
 #### 0.9.10 - 2019-11-27
 - Updated project metadata and development tooling
 - Supported and tested on Python 3.8

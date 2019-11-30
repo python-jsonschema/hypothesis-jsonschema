@@ -366,3 +366,17 @@ OVERLAPPING_PATTERNS_SCHEMA = {
 def test_handles_overlapping_patternProperties(value):
     jsonschema.validate(value, OVERLAPPING_PATTERNS_SCHEMA)
     assert "ab" not in value
+
+
+# A dictionary with zero or one keys, which was always empty due to a bug.
+SCHEMA = {
+    "type": "object",
+    "properties": {"key": {"type": "string"}},
+    "additionalProperties": False,
+}
+
+
+@given(from_schema(SCHEMA))
+def test_single_property_can_generate_nonempty(query):
+    # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/25
+    assume(query)
