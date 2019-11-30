@@ -384,7 +384,6 @@ def test_single_property_can_generate_nonempty(query):
     assume(query)
 
 
-@given(data=st.data())
-def test_rfc3339(data):
-    value = data.draw(rfc3339("date-time"))
-    assert strict_rfc3339.validate_rfc3339(value)
+@given(rfc3339("date-time"))
+def test_generated_rfc3339_datetime_strings_are_valid(datetime_string):
+    assert strict_rfc3339.validate_rfc3339(datetime_string)

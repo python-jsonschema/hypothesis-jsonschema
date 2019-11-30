@@ -587,7 +587,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     # would make this a lot easier...
     assert name in RFC3339_FORMATS
 
-    def zfill(width):
+    def zfill(width: int) -> Callable[[int], str]:
         return lambda v: str(v).zfill(width)
 
     simple = {

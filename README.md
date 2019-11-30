@@ -44,8 +44,8 @@ who know it best.
 
 ### Changelog:
 
-#### Next release
-- Fixed RFC 3339 strings generation.
+#### 0.9.12 - 2019-11-30
+- Fixed RFC 3339 strings generation.  Thanks to Dmitry Dygalo for the patch!
 
 #### 0.9.11 - 2019-11-30
 - Fixed a bug where objects which could have either zero or one
