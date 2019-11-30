@@ -18,12 +18,12 @@ flake8-polyfill==1.0.2    # via flake8-bandit
 flake8==3.7.9
 gitdb2==2.0.6             # via gitpython
 gitpython==3.0.5          # via bandit
-importlib-metadata==0.23  # via flake8-comprehensions
+importlib-metadata==1.0.0  # via flake8-comprehensions
 isort==4.3.21
 mccabe==0.6.1             # via flake8
-more-itertools==7.2.0     # via zipp
+more-itertools==8.0.0     # via zipp
 mypy-extensions==0.4.3    # via mypy
-mypy==0.740
+mypy==0.750
 pathspec==0.6.0           # via black
 pbr==5.4.4                # via stevedore
 pycodestyle==2.5.0        # via flake8, flake8-bandit
