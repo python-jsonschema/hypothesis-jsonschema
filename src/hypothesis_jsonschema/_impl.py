@@ -586,13 +586,17 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     # Hmm, https://github.com/HypothesisWorks/hypothesis/issues/170
     # would make this a lot easier...
     assert name in RFC3339_FORMATS
+
+    def zfill(width):
+        return lambda v: str(v).zfill(width)
+
     simple = {
-        "date-fullyear": st.integers(0, 9999).map(str),
-        "date-month": st.integers(1, 12).map(str),
-        "date-mday": st.integers(1, 28).map(str),  # incomplete but valid
-        "time-hour": st.integers(0, 23).map(str),
-        "time-minute": st.integers(0, 59).map(str),
-        "time-second": st.integers(0, 59).map(str),  # ignore negative leap seconds
+        "date-fullyear": st.integers(0, 9999).map(zfill(4)),
+        "date-month": st.integers(1, 12).map(zfill(2)),
+        "date-mday": st.integers(1, 28).map(zfill(2)),  # incomplete but valid
+        "time-hour": st.integers(0, 23).map(zfill(2)),
+        "time-minute": st.integers(0, 59).map(zfill(2)),
+        "time-second": st.integers(0, 59).map(zfill(2)),  # ignore negative leap seconds
         "time-secfrac": st.from_regex(r"\.[0-9]+"),
     }
     if name in simple:
@@ -600,7 +604,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     if name == "time-numoffset":
         return st.tuples(
             st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")
-        ).map(":".join)
+        ).map("%s%s:%s".__mod__)
     if name == "time-offset":
         return st.one_of(st.just("Z"), rfc3339("time-numoffset"))
     if name == "partial-time":

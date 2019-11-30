@@ -10,6 +10,7 @@ from typing import NamedTuple
 import hypothesis.strategies as st
 import jsonschema
 import pytest
+import strict_rfc3339
 from hypothesis import HealthCheck, assume, given, note, reject, settings
 from hypothesis.errors import InvalidArgument
 
@@ -29,6 +30,7 @@ from hypothesis_jsonschema._impl import (
     is_valid,
     json_schemata,
     merged,
+    rfc3339,
 )
 
 
@@ -380,3 +382,9 @@ SCHEMA = {
 def test_single_property_can_generate_nonempty(query):
     # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/25
     assume(query)
+
+
+@given(data=st.data())
+def test_rfc3339(data):
+    value = data.draw(rfc3339("date-time"))
+    assert strict_rfc3339.validate_rfc3339(value)
