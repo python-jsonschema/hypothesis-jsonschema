@@ -844,9 +844,9 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                     break
             else:
                 for k in dep_names:
-                    if k in out:
+                    if k in out:  # pragma: no cover  # flaky coverage :-/
                         key = next((n for n in dep_names[k] if n not in out), None)
-                        if key is not None:  # pragma: no cover  # flaky coverage :-/
+                        if key is not None:
                             break
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))
@@ -872,7 +872,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
         for k in dep_names:
             if k in out:
-                assume(all(n in out for n in dep_names[k]))
+                assume(all(n in out for n in dep_names[k]))  # pragma: no branch
         return out
 
     return from_object_schema()
