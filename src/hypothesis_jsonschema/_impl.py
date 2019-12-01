@@ -6,6 +6,7 @@ import math
 import operator
 import re
 from functools import partial
+from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
 from typing import Any, Callable, Dict, List, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
@@ -55,9 +56,35 @@ SCHEMA_KEYS = tuple(
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
 
+class CanonicalisingJsonEncoder(json.JSONEncoder):
+    def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
+        """Modified and simplified from the stdlib version."""
+
+        def floatstr(o: float) -> str:
+            # This is the bit we're overriding - integer-valued floats are
+            # encoded as integers, to support JSONschemas's uniqueness.
+            assert math.isfinite(o)
+            if o == int(o):
+                return repr(int(o))
+            return repr(o)
+
+        return _make_iterencode(
+            {},
+            self.default,
+            encode_basestring_ascii,
+            self.indent,
+            floatstr,
+            self.key_separator,
+            self.item_separator,
+            self.sort_keys,
+            self.skipkeys,
+            _one_shot,
+        )(o, 0)
+
+
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    return json.dumps(value, sort_keys=True)
+    return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
 def get_type(schema: Schema) -> List[str]:
@@ -819,7 +846,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 for k in dep_names:
                     if k in out:
                         key = next((n for n in dep_names[k] if n not in out), None)
-                        if key is not None:
+                        if key is not None:  # pragma: no cover  # flaky coverage :-/
                             break
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))

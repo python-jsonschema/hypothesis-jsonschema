@@ -44,8 +44,11 @@ who know it best.
 
 ### Changelog:
 
-#### 0.9.12 - 2019-11-30
+#### 0.9.12 - 2019-12-01
 - Fixed RFC 3339 strings generation.  Thanks to Dmitry Dygalo for the patch!
+- Fixed a bug where equal floats and ints could be generated in a unique array,
+  even though JSONSchema considers 0 === 0.0
+  (though this may also require an upstream fix to work...)
 
 #### 0.9.11 - 2019-11-30
 - Fixed a bug where objects which could have either zero or one
