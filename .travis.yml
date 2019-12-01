@@ -11,5 +11,5 @@ script:
 jobs:
   include:
     - stage: publish
-      if: branch = master AND repo = Zac-HD/hypothesis-jsonschema
+      if: type = push AND branch = master AND repo = Zac-HD/hypothesis-jsonschema
       script: python setup.py sdist bdist_wheel && twine upload --skip-existing dist/*
