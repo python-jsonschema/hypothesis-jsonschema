@@ -6,6 +6,7 @@ import math
 import operator
 import re
 from functools import partial
+from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
 from typing import Any, Callable, Dict, List, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
@@ -55,9 +56,35 @@ SCHEMA_KEYS = tuple(
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
 
+class CanonicalisingJsonEncoder(json.JSONEncoder):
+    def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
+        """Modified and simplified from the stdlib version."""
+
+        def floatstr(o: float) -> str:
+            # This is the bit we're overriding - integer-valued floats are
+            # encoded as integers, to support JSONschemas's uniqueness.
+            assert math.isfinite(o)
+            if o == int(o):
+                return repr(int(o))
+            return repr(o)
+
+        return _make_iterencode(
+            {},
+            self.default,
+            encode_basestring_ascii,
+            self.indent,
+            floatstr,
+            self.key_separator,
+            self.item_separator,
+            self.sort_keys,
+            self.skipkeys,
+            _one_shot,
+        )(o, 0)
+
+
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    return json.dumps(value, sort_keys=True)
+    return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
 def get_type(schema: Schema) -> List[str]:
@@ -586,13 +613,17 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     # Hmm, https://github.com/HypothesisWorks/hypothesis/issues/170
     # would make this a lot easier...
     assert name in RFC3339_FORMATS
+
+    def zfill(width: int) -> Callable[[int], str]:
+        return lambda v: str(v).zfill(width)
+
     simple = {
-        "date-fullyear": st.integers(0, 9999).map(str),
-        "date-month": st.integers(1, 12).map(str),
-        "date-mday": st.integers(1, 28).map(str),  # incomplete but valid
-        "time-hour": st.integers(0, 23).map(str),
-        "time-minute": st.integers(0, 59).map(str),
-        "time-second": st.integers(0, 59).map(str),  # ignore negative leap seconds
+        "date-fullyear": st.integers(0, 9999).map(zfill(4)),
+        "date-month": st.integers(1, 12).map(zfill(2)),
+        "date-mday": st.integers(1, 28).map(zfill(2)),  # incomplete but valid
+        "time-hour": st.integers(0, 23).map(zfill(2)),
+        "time-minute": st.integers(0, 59).map(zfill(2)),
+        "time-second": st.integers(0, 59).map(zfill(2)),  # ignore negative leap seconds
         "time-secfrac": st.from_regex(r"\.[0-9]+"),
     }
     if name in simple:
@@ -600,7 +631,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     if name == "time-numoffset":
         return st.tuples(
             st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")
-        ).map(":".join)
+        ).map("%s%s:%s".__mod__)
     if name == "time-offset":
         return st.one_of(st.just("Z"), rfc3339("time-numoffset"))
     if name == "partial-time":
@@ -815,7 +846,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 for k in dep_names:
                     if k in out:
                         key = next((n for n in dep_names[k] if n not in out), None)
-                        if key is not None:
+                        if key is not None:  # pragma: no cover  # flaky coverage :-/
                             break
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))

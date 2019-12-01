@@ -10,6 +10,7 @@ from typing import NamedTuple
 import hypothesis.strategies as st
 import jsonschema
 import pytest
+import strict_rfc3339
 from hypothesis import HealthCheck, assume, given, note, reject, settings
 from hypothesis.errors import InvalidArgument
 
@@ -29,6 +30,7 @@ from hypothesis_jsonschema._impl import (
     is_valid,
     json_schemata,
     merged,
+    rfc3339,
 )
 
 
@@ -187,6 +189,7 @@ def test_boolean_true_is_valid_schema_and_resolvable(_):
         ([{"type": []}, {}], {"not": {}}),
         ([{"type": "null"}, {"const": 0}], {"not": {}}),
         ([{"type": "null"}, {"enum": [0]}], {"not": {}}),
+        ([{"type": "integer"}, {"type": "string"}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
         ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
@@ -380,3 +383,22 @@ SCHEMA = {
 def test_single_property_can_generate_nonempty(query):
     # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/25
     assume(query)
+
+
+@given(rfc3339("date-time"))
+def test_generated_rfc3339_datetime_strings_are_valid(datetime_string):
+    assert strict_rfc3339.validate_rfc3339(datetime_string)
+
+
+UNIQUE_NUMERIC_ARRAY_SCHEMA = {
+    "type": "array",
+    "uniqueItems": True,
+    "items": {"enum": [0, 0.0]},
+    "minItems": 1,
+}
+
+
+@pytest.mark.xfail  # See https://github.com/HypothesisWorks/hypothesis/issues/2247
+@given(from_schema(UNIQUE_NUMERIC_ARRAY_SCHEMA))
+def test_numeric_uniqueness(value):
+    jsonschema.validate(value, UNIQUE_NUMERIC_ARRAY_SCHEMA)
