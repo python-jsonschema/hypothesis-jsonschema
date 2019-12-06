@@ -47,7 +47,7 @@ class Version(NamedTuple):
 @lru_cache()
 def get_releases():
     pattern = re.compile(r"^#### (\d+\.\d+\.\d+) - (\d\d\d\d-\d\d-\d\d)$")
-    with open(Path(__file__).parent / "README.md") as f:
+    with open(Path(__file__).parent.parent / "README.md") as f:
         return tuple(
             (Version.from_string(match.group(1)), match.group(2))
             for match in map(pattern.match, f)
@@ -292,11 +292,11 @@ FLAKY_SCHEMAS = {
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
 }
 
-with open("corpus-schemastore-catalog.json") as f:
+with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
     catalog = json.load(f)
-with open("corpus-suite-schemas.json") as f:
+with open(Path(__file__).parent / "corpus-suite-schemas.json") as f:
     suite, invalid_suite = json.load(f)
-with open("corpus-reported.json") as f:
+with open(Path(__file__).parent / "corpus-reported.json") as f:
     reported = json.load(f)
     assert set(reported).isdisjoint(suite)
     suite.update(reported)
