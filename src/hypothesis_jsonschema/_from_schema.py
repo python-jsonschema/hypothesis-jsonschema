@@ -392,20 +392,15 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     required = schema.get("required", [])  # required keys
     min_size = max(len(required), schema.get("minProperties", 0))
     names = schema.get("propertyNames", {})  # schema for optional keys
-    if isinstance(names, dict) and "type" not in names:
-        names["type"] = "string"
-    elif names is True:
-        names = {"type": "string"}
-    elif names is False:
+    if names == FALSEY:
         assert min_size == 0, schema
         return st.builds(dict)
+    names["type"] = "string"
 
     properties = schema.get("properties", {})  # exact name: value schema
-    properties = {k: canonicalish(v) for k, v in properties.items()}
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
-    patterns = {k: canonicalish(v) for k, v in patterns.items()}
     # schema for other values; handled specially if nothing matches
-    additional = canonicalish(schema.get("additionalProperties", {}))
+    additional = schema.get("additionalProperties", {})
     additional_allowed = additional != FALSEY
 
     # When a known set of names is allowed, we cap the max_size at that number

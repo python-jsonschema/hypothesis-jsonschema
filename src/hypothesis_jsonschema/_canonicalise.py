@@ -116,7 +116,6 @@ def get_type(schema: Schema) -> List[str]:
 
 def upper_bound_instances(schema: Schema) -> float:
     """Return an upper bound on the number of instances that match this schema."""
-    schema = canonicalish(schema)
     if schema == FALSEY:
         return 0
     if "const" in schema:
@@ -162,12 +161,12 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     for key in SCHEMA_KEYS:
         if isinstance(schema.get(key), list):
             schema[key] = [canonicalish(v) for v in schema[key]]
-        if isinstance(schema.get(key), dict):
+        if isinstance(schema.get(key), (bool, dict)):
             schema[key] = canonicalish(schema[key])
     for key in SCHEMA_OBJECT_KEYS:
         if key in schema:
             schema[key] = {
-                k: canonicalish(v) if isinstance(v, dict) else v
+                k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
     # Canonicalise the "type" if specified, but avoid changing semantics by
@@ -175,18 +174,19 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if "type" in schema:
         type_ = get_type(schema)
         if "array" in type_ and "contains" in schema:
-            if canonicalish(schema["contains"]) == FALSEY:
+            if schema["contains"] == FALSEY:
                 type_.remove("array")
             else:
                 schema["minItems"] = max(schema.get("minItems", 0), 1)
-            if canonicalish(schema["contains"]) == TRUTHY:
+            if schema["contains"] == TRUTHY:
                 schema.pop("contains")
         if (
             "array" in type_
             and "minItems" in schema
+            # TODO: could add logic for unsatisfiable list-of-items case
             and isinstance(schema.get("items", []), (bool, dict))
         ):
-            count = upper_bound_instances(canonicalish(schema["items"]))
+            count = upper_bound_instances(schema["items"])
             if (count == 0 and schema["minItems"] > 0) or (
                 schema.get("uniqueItems", False) and count < schema["minItems"]
             ):
@@ -194,7 +194,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if "array" in type_ and isinstance(schema.get("items"), list):
             schema["items"] = schema["items"][: schema.get("maxItems")]
             for idx, s in enumerate(schema["items"]):
-                if canonicalish(s) == FALSEY:
+                if s == FALSEY:
                     if schema.get("minItems", 0) > idx:
                         type_.remove("array")
                         break
@@ -237,7 +237,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema.pop("required")
     # Canonicalise "not" subschemas
     if "not" in schema:
-        not_ = canonicalish(schema.pop("not"))
+        not_ = schema.pop("not")
         if not_ == TRUTHY or not_ == schema:
             # If everything is rejected, discard all other (irrelevant) keys
             # TODO: more sensitive detection of cases where the not-clause
@@ -249,24 +249,20 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Canonicalise "xxxOf" lists; in each case canonicalising and sorting the
     # sub-schemas then handling any key-specific logic.
     if "anyOf" in schema:
-        schema["anyOf"] = sorted(
-            (canonicalish(s) for s in schema["anyOf"]), key=encode_canonical_json
-        )
+        schema["anyOf"] = sorted(schema["anyOf"], key=encode_canonical_json)
         schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
         if not schema["anyOf"]:
             return FALSEY
         if len(schema) == len(schema["anyOf"]) == 1:
-            return canonicalish(schema["anyOf"][0])
+            return schema["anyOf"][0]  # type: ignore
     if "allOf" in schema:
-        schema["allOf"] = sorted(
-            (canonicalish(s) for s in schema["allOf"]), key=encode_canonical_json
-        )
+        schema["allOf"] = sorted(schema["allOf"], key=encode_canonical_json)
         if any(s == FALSEY for s in schema["allOf"]):
             return FALSEY
         if all(s == TRUTHY for s in schema["allOf"]):
             schema.pop("allOf")
         elif len(schema) == len(schema["allOf"]) == 1:
-            return canonicalish(schema["allOf"][0])
+            return schema["allOf"][0]  # type: ignore
         else:
             tmp = schema.copy()
             ao = tmp.pop("allOf")
@@ -279,7 +275,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if "oneOf" in schema:
         oneOf = schema.pop("oneOf")
         assert isinstance(oneOf, list)
-        oneOf = sorted(map(canonicalish, oneOf), key=encode_canonical_json)
+        oneOf = sorted(oneOf, key=encode_canonical_json)
         oneOf = [s for s in oneOf if s != FALSEY]
         if len(oneOf) == 1:
             m = merged([schema, oneOf[0]])
