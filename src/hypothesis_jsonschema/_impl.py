@@ -90,9 +90,6 @@ def encode_canonical_json(value: JSONType) -> str:
 def get_type(schema: Schema) -> List[str]:
     """Return a canonical value for the "type" key.
 
-    If the "type" key is not present, infer a plausible value from other keys.
-    If we can't guess based on them, return None.
-
     Note that this will return [], the empty list, if the value is a list without
     any allowed type names; *even though* this is explicitly an invalid value.
     """
@@ -666,12 +663,9 @@ def regex_patterns(draw: Any) -> str:
 REGEX_PATTERNS = regex_patterns()
 
 STRING_FORMATS = {
-    # A value of None indicates a known but unsupported format.
     **{name: rfc3339(name) for name in RFC3339_FORMATS},
     "date": rfc3339("full-date"),
     "time": rfc3339("full-time"),
-    # Hypothesis' provisional strategies are not type-annotated.
-    # We should get a principled plan for them at some point I guess...
     "email": st.emails(),
     "idn-email": st.emails(),
     "hostname": prov.domains(),
@@ -710,9 +704,7 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         except re.error:
             # Patterns that are invalid in Python, or just malformed
             return st.nothing()
-    # TODO: mypy should be able to tell that the lambda is returning a bool
-    # without the explicit cast, but can't as of v 0.720 - report upstream.
-    return strategy.filter(lambda s: bool(min_size <= len(s) <= max_size))
+    return strategy.filter(lambda s: min_size <= len(s) <= max_size)
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
