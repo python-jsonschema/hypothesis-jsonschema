@@ -23,7 +23,7 @@ def get_json(url: str) -> Any:
 
 # Load cached schemas, so we cope with flaky connections and keep deleted entries
 try:
-    with open("corpus-schemastore-catalog.json") as f:
+    with open("tests/corpus-schemastore-catalog.json") as f:
         schemata = json.load(f)
 except FileNotFoundError:
     schemata = {}
@@ -51,7 +51,7 @@ with concurrent.futures.ThreadPoolExecutor() as ex:
 
 
 # Dump them all back to the catalog file.
-with open("corpus-schemastore-catalog.json", mode="w") as f:
+with open("tests/corpus-schemastore-catalog.json", mode="w") as f:
     json.dump(schemata, f, indent=4, sort_keys=True)
 
 
@@ -85,12 +85,12 @@ with urllib.request.urlopen(
                     elif "/optional/" not in path:
                         invalid_suite["draft4/" + v["description"]] = v["schema"]
 
-with open("corpus-suite-schemas.json", mode="w") as f:
+with open("tests/corpus-suite-schemas.json", mode="w") as f:
     json.dump([suite, invalid_suite], f, indent=4, sort_keys=True)
 
 
 # Part three: canonicalise tricky schemas reported on the issue tracker
-with open("corpus-reported.json") as f:
+with open("tests/corpus-reported.json") as f:
     schemata = json.load(f)
-with open("corpus-reported.json", mode="w") as f:
+with open("tests/corpus-reported.json", mode="w") as f:
     json.dump(schemata, f, indent=4, sort_keys=True)
