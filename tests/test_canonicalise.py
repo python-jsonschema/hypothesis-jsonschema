@@ -7,15 +7,7 @@ import pytest
 from hypothesis import HealthCheck, assume, given, note, settings
 
 from hypothesis_jsonschema import from_schema
-from hypothesis_jsonschema._gen_schemas import (
-    gen_array,
-    gen_enum,
-    gen_number,
-    gen_object,
-    gen_string,
-    json_schemata,
-)
-from hypothesis_jsonschema._impl import (
+from hypothesis_jsonschema._canonicalise import (
     FALSEY,
     JSON_STRATEGY,
     canonicalish,
@@ -23,6 +15,14 @@ from hypothesis_jsonschema._impl import (
     get_type,
     is_valid,
     merged,
+)
+from hypothesis_jsonschema._gen_schemas import (
+    gen_array,
+    gen_enum,
+    gen_number,
+    gen_object,
+    gen_string,
+    json_schemata,
 )
 
 

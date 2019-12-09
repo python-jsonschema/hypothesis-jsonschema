@@ -10,7 +10,8 @@ import strict_rfc3339
 from hypothesis import HealthCheck, assume, given, note, reject, settings
 from hypothesis.errors import InvalidArgument
 
-from hypothesis_jsonschema import from_schema
+from hypothesis_jsonschema._canonicalise import canonicalish
+from hypothesis_jsonschema._from_schema import from_schema, rfc3339
 from hypothesis_jsonschema._gen_schemas import (
     gen_array,
     gen_enum,
@@ -19,7 +20,6 @@ from hypothesis_jsonschema._gen_schemas import (
     gen_string,
     json_schemata,
 )
-from hypothesis_jsonschema._impl import canonicalish, rfc3339
 
 schema_strategy_params = pytest.mark.parametrize(
     "schema_strategy",

@@ -7,15 +7,8 @@ import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
 
-from ._impl import (
-    JSON_SCHEMA_STRING_FORMATS,
-    JSON_STRATEGY,
-    REGEX_PATTERNS,
-    JSONType,
-    Schema,
-    encode_canonical_json,
-    from_schema,
-)
+from ._canonicalise import JSON_STRATEGY, JSONType, Schema, encode_canonical_json
+from ._from_schema import JSON_SCHEMA_STRING_FORMATS, REGEX_PATTERNS, from_schema
 
 
 def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
