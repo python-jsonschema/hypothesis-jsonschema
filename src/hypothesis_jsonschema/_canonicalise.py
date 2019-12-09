@@ -25,7 +25,6 @@ from hypothesis.errors import InvalidArgument
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
 JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
-# TODO: grep for uses of JSONType which are actually Schema (or bool-or-Schema)
 Schema = Dict[str, JSONType]
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
@@ -130,7 +129,7 @@ def upper_bound_instances(schema: Schema) -> float:
     return math.inf
 
 
-def canonicalish(schema: JSONType) -> Dict:
+def canonicalish(schema: JSONType) -> Dict[str, Any]:
     """Convert a schema into a more-canonical form.
 
     This is obviously incomplete, but improves best-effort recognition of
@@ -274,7 +273,7 @@ def canonicalish(schema: JSONType) -> Dict:
             out = merged([tmp] + ao)
             if isinstance(out, dict):  # pragma: no branch
                 schema = out
-                # TODO: this assertion is soley because mypy 0.720 doesn't know
+                # TODO: this assertion is soley because mypy 0.750 doesn't know
                 # that `schema` is a dict otherwise. Needs minimal report upstream.
                 assert isinstance(schema, dict)
     if "oneOf" in schema:
