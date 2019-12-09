@@ -11,16 +11,15 @@ from hypothesis import HealthCheck, assume, given, note, reject, settings
 from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema
-from hypothesis_jsonschema._impl import (
-    canonicalish,
+from hypothesis_jsonschema._gen_schemas import (
     gen_array,
     gen_enum,
     gen_number,
     gen_object,
     gen_string,
     json_schemata,
-    rfc3339,
 )
+from hypothesis_jsonschema._impl import canonicalish, rfc3339
 
 schema_strategy_params = pytest.mark.parametrize(
     "schema_strategy",
