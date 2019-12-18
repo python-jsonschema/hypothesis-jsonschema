@@ -230,8 +230,7 @@ JSON_SCHEMA_STRING_FORMATS = RFC3339_FORMATS + (
 
 
 def rfc3339(name: str) -> st.SearchStrategy[str]:
-    """Given the name of an RFC3339 date or time format,
-    return a strategy for conforming values.
+    """Get a strategy for date or time strings in the given RFC3339 format.
 
     See https://tools.ietf.org/html/rfc3339#section-5.6
     """
@@ -271,7 +270,7 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
 
 @st.composite  # type: ignore
 def regex_patterns(draw: Any) -> str:
-    """A strategy for simple regular expression patterns."""
+    """Return a recursive strategy for simple regular expression patterns."""
     fragments = st.one_of(
         st.just("."),
         st.from_regex(r"\[\^?[A-Za-z0-9]+\]"),
@@ -430,7 +429,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
     @st.composite  # type: ignore
     def from_object_schema(draw: Any) -> Any:
-        """Here, we do some black magic with private Hypothesis internals.
+        """Do some black magic with private Hypothesis internals for objects.
 
         It's unfortunate, but also the only way that I know of to satisfy all
         the interacting constraints without making shrinking totally hopeless.

@@ -12,7 +12,7 @@ from ._from_schema import JSON_SCHEMA_STRING_FORMATS, REGEX_PATTERNS, from_schem
 
 
 def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
-    """A Hypothesis strategy for arbitrary JSON schemata.
+    """Return a Hypothesis strategy for arbitrary JSON schemata.
 
     This strategy may generate anything that can be handled by `from_schema`,
     and is used to provide full branch coverage when testing this package.
@@ -22,7 +22,6 @@ def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
 
 @st.composite  # type: ignore
 def _json_schemata(draw: Any, recur: bool = True) -> Any:
-    """Wrapped so we can disable the pylint error in one place only."""
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
     options = [
@@ -52,7 +51,7 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
 
 @st.composite  # type: ignore
 def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
-    """Draw an enum schema."""
+    """Return a strategy for enum schema."""
     elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
     # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
     for i, val in enumerate(elems):

@@ -1,5 +1,3 @@
-"""It's a setup.py"""
-
 import os
 
 import setuptools

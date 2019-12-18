@@ -70,7 +70,7 @@ def is_valid(instance: JSONType, schema: Schema) -> bool:
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
     def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
-        """Modified and simplified from the stdlib version."""
+        """Replace a stdlib method, so we encode integer-valued floats as ints."""
 
         def floatstr(o: float) -> str:
             # This is the bit we're overriding - integer-valued floats are
