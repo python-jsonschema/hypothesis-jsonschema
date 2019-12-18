@@ -44,6 +44,9 @@ who know it best.
 
 ### Changelog:
 
+#### 0.9.13 - 2019-12-18
+- Improved internal handling of schemas for arrays which must always be length-zero.
+
 #### 0.9.12 - 2019-12-01
 - Fixed RFC 3339 strings generation.  Thanks to Dmitry Dygalo for the patch!
 - Fixed a bug where equal floats and ints could be generated in a unique array,
