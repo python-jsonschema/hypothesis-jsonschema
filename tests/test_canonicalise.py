@@ -3,6 +3,7 @@
 import json
 
 import hypothesis.strategies as st
+import jsonschema
 import pytest
 from hypothesis import HealthCheck, assume, given, note, settings
 
@@ -56,6 +57,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     assert cc == canonicalish(cc)
     instance = data.draw(JSON_STRATEGY | from_schema(cc), label="instance")
     assert is_valid(instance, schema) == is_valid(instance, cc)
+    jsonschema.validators.validator_for(schema).check_schema(schema)
 
 
 @pytest.mark.parametrize(

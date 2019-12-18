@@ -33,6 +33,7 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
         gen_string(),
         st.builds(dict, const=JSON_STRATEGY),
         gen_enum(),
+        st.booleans(),
     ]
     if recur:
         options += [
@@ -49,14 +50,11 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
     return draw(st.one_of(options))
 
 
-@st.composite  # type: ignore
-def gen_enum(draw: Any) -> Dict[str, List[JSONType]]:
+def gen_enum() -> st.SearchStrategy[Dict[str, List[JSONType]]]:
     """Return a strategy for enum schema."""
-    elems = draw(st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json))
-    # We do need this O(n^2) loop; see https://github.com/Julian/jsonschema/issues/529
-    for i, val in enumerate(elems):
-        assume(not any(val == v for v in elems[i + 1 :]))  # noqa
-    return {"enum": elems}
+    return st.fixed_dictionaries(
+        {"enum": st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json)}
+    )
 
 
 @st.composite  # type: ignore

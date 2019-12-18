@@ -467,9 +467,10 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
             if pattern_schemas:
                 out[key] = draw(merged_as_strategies(pattern_schemas))
-            else:
-                assert additional_allowed
+            elif additional_allowed:
                 out[key] = draw(from_schema(additional))
+            else:
+                elements.reject()
 
             for k, v in dep_schemas.items():
                 if k in out and not is_valid(out, v):

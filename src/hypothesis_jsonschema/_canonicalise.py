@@ -161,8 +161,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     for key in SCHEMA_KEYS:
         if isinstance(schema.get(key), list):
             schema[key] = [canonicalish(v) for v in schema[key]]
-        if isinstance(schema.get(key), (bool, dict)):
+        elif isinstance(schema.get(key), (bool, dict)):
             schema[key] = canonicalish(schema[key])
+        else:
+            assert key not in schema
     for key in SCHEMA_OBJECT_KEYS:
         if key in schema:
             schema[key] = {
@@ -201,6 +203,14 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                     schema["items"] = schema["items"][:idx]
                     schema["maxItems"] = idx
                     schema.pop("additionalItems", None)
+                    break
+        if "array" in type_ and (
+            schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0
+        ):
+            schema["maxItems"] = 0
+            schema.pop("items", None)
+            schema.pop("uniqueItems", None)
+            schema.pop("additionalItems", None)
         # Canonicalise "required" schemas to remove redundancy
         if "required" in schema:
             assert isinstance(schema["required"], list)
