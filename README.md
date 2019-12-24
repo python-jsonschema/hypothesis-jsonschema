@@ -19,11 +19,7 @@ For details on how to use this strategy in your tests,
 
 ## Supported versions
 
-`hypothesis-jsonschema` does not support Python 2, because
-[it's close to end of life](https://pythonclock.org/) and Python 3.6+ is a
-much nicer language.  Contact me if you would like this changed and are
-willing to either pay for or do the work to support Python 2.
-
+`hypothesis-jsonschema` requires Python 3.6 or later.
 In general, 0.x versions will require very recent versions of all dependencies
 because I don't want to deal with compatibility workarounds.
 
@@ -33,11 +29,15 @@ small enough that this should be avoidable.  The main source of breaks will be
 if or when schema that never really worked turn into explicit errors instead
 of generating values that don't quite match.
 
-Professional support for Hypothesis and hypothesis-jsonschema
-is available as part of the [Tidelift Subscription][sub_link].
+You can [sponsor me](https://github.com/sponsors/Zac-HD) to get priority
+support, roadmap input, and prioritized feature development.
+
+Hypothesis is part of the [Tidelift Subscription][sub_link].
 Tidelift gives software development teams a single source for purchasing and
 maintaining their software, with professional grade assurances from the experts
 who know it best.
+You can also [sponsor me](https://github.com/sponsors/Zac-HD) to get priority
+support, roadmap input, and prioritized feature development.
 
 [sub_link]: https://tidelift.com/subscription/pkg/pypi-hypothesis-jsonschema?utm_source=pypi-hypothesis-jsonschema&utm_medium=referral&utm_campaign=readme
 
