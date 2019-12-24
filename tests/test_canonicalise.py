@@ -168,7 +168,6 @@ def test_self_merge_eq_canonicalish(schema):
     assert m == canonicalish(schema)
 
 
-@pytest.mark.xfail  # See https://github.com/Julian/jsonschema/issues/575
 @settings(suppress_health_check=HealthCheck.all(), deadline=None)
 @given(st.data(), json_schemata(), json_schemata())
 def test_merge_semantics(data, s1, s2):
@@ -185,7 +184,7 @@ def test_merge_semantics(data, s1, s2):
     assert is_valid(i2, s1) == is_valid(i2, combined)
 
 
-@pytest.mark.xfail(strict=True)
+@pytest.mark.xfail
 def test_merge_should_notice_required_disallowed_properties():
     # The required "name" property is banned by the additionalProperties: False
     # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/30 for details.
