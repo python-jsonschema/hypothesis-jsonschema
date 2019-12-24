@@ -108,7 +108,11 @@ def test_can_generate_for_real_large_schema(data, name):
 
 
 @pytest.mark.parametrize("name", to_name_params(suite))
-@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=20)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large],
+    deadline=None,
+    max_examples=20,
+)
 @given(data=st.data())
 def test_can_generate_for_test_suite_schema(data, name):
     note(suite[name])
