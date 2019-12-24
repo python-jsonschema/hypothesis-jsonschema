@@ -24,13 +24,13 @@ from hypothesis_jsonschema._gen_schemas import (
 schema_strategy_params = pytest.mark.parametrize(
     "schema_strategy",
     [
-        gen_number("integer"),
-        gen_number("number"),
-        gen_string(),
-        gen_enum(),
-        gen_array(),
-        gen_object(),
-        json_schemata(),
+        pytest.param(gen_number("integer"), id="integer-schema"),
+        pytest.param(gen_number("number"), id="number-schema"),
+        pytest.param(gen_string(), id="string-schema"),
+        pytest.param(gen_enum(), id="enum-schema"),
+        pytest.param(gen_array(), id="array-schema"),
+        pytest.param(gen_object(), id="object-schema"),
+        pytest.param(json_schemata(), id="any-schema"),
     ],
 )
 
@@ -41,6 +41,7 @@ schema_strategy_params = pytest.mark.parametrize(
 def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy)
+    note(schema)
     try:
         value = data.draw(from_schema(schema), "value from schema")
     except InvalidArgument:
