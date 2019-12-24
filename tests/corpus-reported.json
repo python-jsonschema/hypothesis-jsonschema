@@ -15,6 +15,14 @@
             }
         ]
     },
+    "array with list items and too-high maxItems": {
+        "additionalItems": false,
+        "items": [
+            {}
+        ],
+        "maxItems": 3,
+        "type": "array"
+    },
     "close bounds for integers with multiple and exMax": {
         "exclusiveMaximum": 1,
         "minimum": 0,
