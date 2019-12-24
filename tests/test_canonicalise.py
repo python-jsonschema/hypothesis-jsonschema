@@ -69,6 +69,22 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "minItems": 4,
         },
         {"type": "array", "items": [True, False], "minItems": 2},
+        pytest.param(
+            {"type": "integer", "minimum": 2, "maximum": 1}, marks=pytest.mark.xfail
+        ),
+        pytest.param(
+            {"type": "integer", "minimum": 1, "maximum": 2, "multipleOf": 3},
+            marks=pytest.mark.xfail,
+        ),
+        pytest.param(
+            {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "exclusiveMaximum": 3,
+                "multipleOf": 3,
+            },
+            marks=pytest.mark.xfail,
+        ),
     ],
 )
 def test_canonicalises_to_empty(schema):
