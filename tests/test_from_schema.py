@@ -193,7 +193,6 @@ UNIQUE_NUMERIC_ARRAY_SCHEMA = {
 }
 
 
-@pytest.mark.xfail  # See https://github.com/HypothesisWorks/hypothesis/issues/2247
 @given(from_schema(UNIQUE_NUMERIC_ARRAY_SCHEMA))
 def test_numeric_uniqueness(value):
     jsonschema.validate(value, UNIQUE_NUMERIC_ARRAY_SCHEMA)
