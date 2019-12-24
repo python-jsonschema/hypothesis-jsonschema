@@ -204,6 +204,12 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                     schema["maxItems"] = idx
                     schema.pop("additionalItems", None)
                     break
+        if (
+            "array" in type_
+            and isinstance(schema.get("items"), list)
+            and schema.get("additionalItems") == FALSEY
+        ):
+            schema.pop("maxItems", None)
         if "array" in type_ and (
             schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0
         ):
