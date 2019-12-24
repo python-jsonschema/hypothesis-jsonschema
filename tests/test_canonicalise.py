@@ -183,3 +183,14 @@ def test_merge_semantics(data, s1, s2):
     assert is_valid(ic, s1) and is_valid(ic, s2)
     assert is_valid(i1, s2) == is_valid(i1, combined)
     assert is_valid(i2, s1) == is_valid(i2, combined)
+
+
+@pytest.mark.xfail(strict=True)
+def test_merge_should_notice_required_disallowed_properties():
+    # The required "name" property is banned by the additionalProperties: False
+    # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/30 for details.
+    schemas = [
+        {"type": "object", "properties": {"name": True}, "required": ["name"]},
+        {"type": "object", "properties": {"id": True}, "additionalProperties": False},
+    ]
+    assert merged(schemas) == FALSEY
