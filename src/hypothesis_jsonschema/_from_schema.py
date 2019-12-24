@@ -390,6 +390,9 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
     required = schema.get("required", [])  # required keys
     min_size = max(len(required), schema.get("minProperties", 0))
+    max_size = schema.get("maxProperties", math.inf)
+    assert min_size <= max_size, (min_size, max_size)
+
     names = schema.get("propertyNames", {})  # schema for optional keys
     if names == FALSEY:
         assert min_size == 0, schema
@@ -401,15 +404,6 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
     # schema for other values; handled specially if nothing matches
     additional = schema.get("additionalProperties", {})
     additional_allowed = additional != FALSEY
-
-    # When a known set of names is allowed, we cap the max_size at that number
-    max_size = min(
-        schema.get("maxProperties", float("inf")),
-        len(schema.get("propertyNames", [])) + len(schema.get("properties", []))
-        if ("propertyNames" in schema or "properties" in schema)
-        and not additional_allowed
-        else float("inf"),
-    )
 
     dependencies = schema.get("dependencies", {})
     dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}
