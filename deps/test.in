@@ -2,4 +2,4 @@
 pytest
 pytest-cov
 pytest-xdist
-strict_rfc3339
+jsonschema[format]
