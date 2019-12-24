@@ -5,10 +5,20 @@ from typing import Any, Dict, List, Union
 
 import hypothesis.strategies as st
 import jsonschema
+import pytest
 from hypothesis import assume
 
-from ._canonicalise import JSON_STRATEGY, JSONType, Schema, encode_canonical_json
-from ._from_schema import JSON_SCHEMA_STRING_FORMATS, REGEX_PATTERNS, from_schema
+from hypothesis_jsonschema._canonicalise import (
+    JSON_STRATEGY,
+    JSONType,
+    Schema,
+    encode_canonical_json,
+)
+from hypothesis_jsonschema._from_schema import (
+    JSON_SCHEMA_STRING_FORMATS,
+    REGEX_PATTERNS,
+    from_schema,
+)
 
 
 def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
@@ -205,3 +215,17 @@ def gen_object(draw: Any) -> Schema:
     if additional is not None:
         out["additionalProperties"] = additional
     return out
+
+
+schema_strategy_params = pytest.mark.parametrize(
+    "schema_strategy",
+    [
+        pytest.param(gen_number("integer"), id="integer-schema"),
+        pytest.param(gen_number("number"), id="number-schema"),
+        pytest.param(gen_string(), id="string-schema"),
+        pytest.param(gen_enum(), id="enum-schema"),
+        pytest.param(gen_array(), id="array-schema"),
+        pytest.param(gen_object(), id="object-schema"),
+        pytest.param(json_schemata(), id="any-schema"),
+    ],
+)

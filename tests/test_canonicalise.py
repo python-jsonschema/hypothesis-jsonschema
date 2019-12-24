@@ -7,6 +7,7 @@ import jsonschema
 import pytest
 from hypothesis import HealthCheck, assume, given, note, settings
 
+from gen_schemas import json_schemata, schema_strategy_params
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
@@ -16,14 +17,6 @@ from hypothesis_jsonschema._canonicalise import (
     get_type,
     is_valid,
     merged,
-)
-from hypothesis_jsonschema._gen_schemas import (
-    gen_array,
-    gen_enum,
-    gen_number,
-    gen_object,
-    gen_string,
-    json_schemata,
 )
 
 
@@ -38,18 +31,7 @@ def test_canonical_json_encoding(v):
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(data=st.data())
-@pytest.mark.parametrize(
-    "schema_strategy",
-    [
-        gen_number("integer"),
-        gen_number("number"),
-        gen_string(),
-        gen_enum(),
-        gen_array(),
-        gen_object(),
-        json_schemata(),
-    ],
-)
+@schema_strategy_params
 def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy, label="schema")
