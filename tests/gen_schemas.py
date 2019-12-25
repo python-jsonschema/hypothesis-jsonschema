@@ -88,24 +88,15 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     assert kind in ("integer", "number")
     out: Dict[str, Union[str, float]] = {"type": kind}
     # Generate the latest draft supported by jsonschema.
-    # We skip coverage for version branches because it's a pain to combine.
-    boolean_bounds = not hasattr(jsonschema, "Draft7Validator")
+    assert hasattr(jsonschema, "Draft7Validator")
     if lower is not None:
         if draw(st.booleans(), label="exclusiveMinimum"):
-            if boolean_bounds:  # pragma: no cover
-                out["exclusiveMinimum"] = True
-                out["minimum"] = lower - 1
-            else:
-                out["exclusiveMinimum"] = lower - 1
+            out["exclusiveMinimum"] = lower - 1
         else:
             out["minimum"] = lower
     if upper is not None:
         if draw(st.booleans(), label="exclusiveMaximum"):
-            if boolean_bounds:  # pragma: no cover
-                out["exclusiveMaximum"] = True
-                out["maximum"] = upper + 1
-            else:
-                out["exclusiveMaximum"] = upper + 1
+            out["exclusiveMaximum"] = upper + 1
         else:
             out["maximum"] = upper
     if multiple_of is not None:
@@ -210,10 +201,19 @@ def gen_object(draw: Any) -> Schema:
         out["maxProperties"] = max_size
     if properties:
         out["properties"] = properties
+
+        props = st.sampled_from(sorted(properties))
+        if draw(st.integers(0, 3)) == 3:
+            out["dependencies"] = draw(
+                st.dictionaries(props, st.lists(props, unique=True))
+            )
+        elif draw(st.integers(0, 3)) == 3:
+            out["dependencies"] = draw(st.dictionaries(props, json_schemata()))
     if patterns:
         out["patternProperties"] = patterns
     if additional is not None:
         out["additionalProperties"] = additional
+
     return out
 
 
