@@ -132,8 +132,44 @@
         ],
         "type": "object"
     },
+    "object with dependencies and size limits so only one key is allowed": {
+        "additionalProperties": false,
+        "dependencies": {
+            "a": [
+                "b"
+            ]
+        },
+        "maxProperties": 1,
+        "minProperties": 1,
+        "properties": {
+            "a": true,
+            "b": true
+        },
+        "type": "object"
+    },
+    "string with format and pattern": {
+        "format": "email",
+        "pattern": "^\\w+@",
+        "type": "string"
+    },
     "string with unknown format": {
         "format": "Unknown formats should be treated as annotations and pass validation",
         "type": "string"
+    },
+    "unmergable allOf schema can still be resolved": {
+        "allOf": [
+            {
+                "patternProperties": {
+                    ".": {}
+                }
+            },
+            {
+                "patternProperties": {
+                    "ab": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        ]
     }
 }

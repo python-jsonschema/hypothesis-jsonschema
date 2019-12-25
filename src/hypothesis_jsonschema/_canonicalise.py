@@ -171,83 +171,82 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
-    # Canonicalise the "type" if specified, but avoid changing semantics by
-    # adding a type key (which would affect intersection/union logic).
-    if "type" in schema:
-        type_ = get_type(schema)
-        if "array" in type_ and "contains" in schema:
-            if schema["contains"] == FALSEY:
-                type_.remove("array")
-            else:
-                schema["minItems"] = max(schema.get("minItems", 0), 1)
-            if schema["contains"] == TRUTHY:
-                schema.pop("contains")
-        if (
-            "array" in type_
-            and "minItems" in schema
-            # TODO: could add logic for unsatisfiable list-of-items case
-            and isinstance(schema.get("items", []), (bool, dict))
-        ):
-            count = upper_bound_instances(schema["items"])
-            if (count == 0 and schema["minItems"] > 0) or (
-                schema.get("uniqueItems", False) and count < schema["minItems"]
-            ):
-                type_.remove("array")
-        if "array" in type_ and isinstance(schema.get("items"), list):
-            schema["items"] = schema["items"][: schema.get("maxItems")]
-            for idx, s in enumerate(schema["items"]):
-                if s == FALSEY:
-                    if schema.get("minItems", 0) > idx:
-                        type_.remove("array")
-                        break
-                    schema["items"] = schema["items"][:idx]
-                    schema["maxItems"] = idx
-                    schema.pop("additionalItems", None)
-                    break
-        if (
-            "array" in type_
-            and isinstance(schema.get("items"), list)
-            and schema.get("additionalItems") == FALSEY
-        ):
-            schema.pop("maxItems", None)
-        if "array" in type_ and (
-            schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0
-        ):
-            schema["maxItems"] = 0
-            schema.pop("items", None)
-            schema.pop("uniqueItems", None)
-            schema.pop("additionalItems", None)
-        # Canonicalise "required" schemas to remove redundancy
-        if "required" in schema:
-            assert isinstance(schema["required"], list)
-            schema["required"] = sorted(set(schema["required"]))
-            max_ = schema.get("maxProperties", float("inf"))
-            assert isinstance(max_, (int, float))
-            if len(schema["required"]) > max_:
-                type_.remove("object")
-        if not type_:
-            assert type_ == []
-            return FALSEY
-        if type_ == ["null"]:
-            return {"const": None}
-        if type_ == ["boolean"]:
-            return {"enum": [False, True]}
-        if type_ == ["null", "boolean"]:
-            return {"enum": [None, False, True]}
-        schema["type"] = type_
-        for t, kw in TYPE_SPECIFIC_KEYS:
-            numeric = ["number", "integer"]
-            if t in type_ or t in numeric and t in type_ + numeric:
-                continue
-            for k in kw.split():
-                schema.pop(k, None)
-        assert isinstance(type_, list), type_
-        if len(type_) == 1:
-            schema["type"] = type_[0]
-        elif type_ == get_type({}):
-            schema.pop("type")
+
+    type_ = get_type(schema)
+    if "array" in type_ and "contains" in schema:
+        if schema["contains"] == FALSEY:
+            type_.remove("array")
         else:
-            schema["type"] = type_
+            schema["minItems"] = max(schema.get("minItems", 0), 1)
+        if schema["contains"] == TRUTHY:
+            schema.pop("contains")
+    if (
+        "array" in type_
+        and "minItems" in schema
+        # TODO: could add logic for unsatisfiable list-of-items case
+        and isinstance(schema.get("items", []), (bool, dict))
+    ):
+        count = upper_bound_instances(schema["items"])
+        if (count == 0 and schema["minItems"] > 0) or (
+            schema.get("uniqueItems", False) and count < schema["minItems"]
+        ):
+            type_.remove("array")
+    if "array" in type_ and isinstance(schema.get("items"), list):
+        schema["items"] = schema["items"][: schema.get("maxItems")]
+        for idx, s in enumerate(schema["items"]):
+            if s == FALSEY:
+                if schema.get("minItems", 0) > idx:
+                    type_.remove("array")
+                    break
+                schema["items"] = schema["items"][:idx]
+                schema["maxItems"] = idx
+                schema.pop("additionalItems", None)
+                break
+    if (
+        "array" in type_
+        and isinstance(schema.get("items"), list)
+        and schema.get("additionalItems") == FALSEY
+    ):
+        schema.pop("maxItems", None)
+    if "array" in type_ and (
+        schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0
+    ):
+        schema["maxItems"] = 0
+        schema.pop("items", None)
+        schema.pop("uniqueItems", None)
+        schema.pop("additionalItems", None)
+    # Canonicalise "required" schemas to remove redundancy
+    if "required" in schema:
+        assert isinstance(schema["required"], list)
+        schema["required"] = sorted(set(schema["required"]))
+        max_ = schema.get("maxProperties", float("inf"))
+        assert isinstance(max_, (int, float))
+        if len(schema["required"]) > max_:
+            type_.remove("object")
+    if not type_:
+        assert type_ == []
+        return FALSEY
+    if type_ == ["null"]:
+        return {"const": None}
+    if type_ == ["boolean"]:
+        return {"enum": [False, True]}
+    if type_ == ["null", "boolean"]:
+        return {"enum": [None, False, True]}
+    schema["type"] = type_
+
+    for t, kw in TYPE_SPECIFIC_KEYS:
+        numeric = ["number", "integer"]
+        if t in type_ or t in numeric and t in type_ + numeric:
+            continue
+        for k in kw.split():
+            schema.pop(k, None)
+    assert isinstance(type_, list), type_
+    if len(type_) == 1:
+        schema["type"] = type_[0]
+    elif type_ == get_type({}):
+        schema.pop("type")
+    else:
+        schema["type"] = type_
     # Remove no-op requires
     if "required" in schema and not schema["required"]:
         schema.pop("required")
@@ -381,6 +380,7 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
         if diff_in_out("patternProperties"):
             # Do I want to compute regex intersections with optional anchors? No.
             return None
+
         if "additionalProperties" in out and (
             diff_keys("properties") or diff_keys("patternProperties")
         ):
@@ -402,7 +402,7 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
             for k, v in sp.items():
                 if v != op.get(k, v):
                     v = merged([op[k], v])
-                    if v is None:  # pragma: no cover
+                    if v is None:
                         return None
                 op[k] = v
         if "required" in out and "required" in s:

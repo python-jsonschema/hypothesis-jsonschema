@@ -43,7 +43,7 @@ def merged_as_strategies(schemas: List[Schema]) -> st.SearchStrategy[JSONType]:
         if combined.issuperset(group):
             continue
         s = merged([inputs[g] for g in group])
-        if s is not None and s != FALSEY:  # pragma: no branch
+        if s is not None and s != FALSEY:
             strats.append(
                 from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
             )
@@ -75,10 +75,7 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
         return st.one_of([merged_as_strategies([tmp, s]) for s in ao])
-    if "allOf" in schema:  # pragma: no cover
-        # This is no-cover because `canonicalish` merges these into the base
-        # schema in every known or generated test case, but we keep this
-        # fallback logic to use partial merging for any remaining cases.
+    if "allOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("allOf")
         return merged_as_strategies([tmp] + ao)
@@ -319,7 +316,7 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         # Unknown "format" specifiers should be ignored for validation.
         # See https://json-schema.org/latest/json-schema-validation.html#format
         strategy = STRING_FORMATS[schema["format"]]
-        if "pattern" in schema:  # pragma: no cover
+        if "pattern" in schema:
             # This isn't really supported, but we'll do our best.
             strategy = strategy.filter(
                 lambda s: re.search(schema["pattern"], string=s) is not None
@@ -443,11 +440,10 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 if key not in out:
                     break
             else:
-                for k in dep_names:
-                    if k in out:  # pragma: no cover  # flaky coverage :-/
-                        key = next((n for n in dep_names[k] if n not in out), None)
-                        if key is not None:
-                            break
+                for k in set(dep_names).intersection(out):
+                    key = next((n for n in dep_names[k] if n not in out), None)
+                    if key is not None:
+                        break
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))
 
@@ -461,19 +457,16 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
 
             if pattern_schemas:
                 out[key] = draw(merged_as_strategies(pattern_schemas))
-            elif additional_allowed:
-                out[key] = draw(from_schema(additional))
             else:
-                elements.reject()
+                out[key] = draw(from_schema(additional))
 
             for k, v in dep_schemas.items():
                 if k in out and not is_valid(out, v):
                     out.pop(key)
                     elements.reject()
 
-        for k in dep_names:
-            if k in out:
-                assume(all(n in out for n in dep_names[k]))  # pragma: no branch
+        for k in set(dep_names).intersection(out):
+            assume(set(out).issuperset(dep_names[k]))
         return out
 
     return from_object_schema()

@@ -153,6 +153,10 @@ def test_merged(group, result):
             {"patternProperties": {".": {}}},
             {"patternProperties": {"ab": {"type": "boolean"}}},
         ],
+        [
+            {"properties": {"a": {"patternProperties": {".": {}}}}},
+            {"properties": {"a": {"patternProperties": {"ab": {"type": "boolean"}}}}},
+        ],
     ],
 )
 def test_unable_to_merge(group):

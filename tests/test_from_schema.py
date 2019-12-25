@@ -180,4 +180,7 @@ UNIQUE_NUMERIC_ARRAY_SCHEMA = {
 
 @given(from_schema(UNIQUE_NUMERIC_ARRAY_SCHEMA))
 def test_numeric_uniqueness(value):
+    # NOTE: this kind of test should usually be embedded in corpus-reported.json,
+    # but in this case the type of the enum elements matter and we don't want to
+    # allow a flexible JSON loader to mess things up.
     jsonschema.validate(value, UNIQUE_NUMERIC_ARRAY_SCHEMA)
