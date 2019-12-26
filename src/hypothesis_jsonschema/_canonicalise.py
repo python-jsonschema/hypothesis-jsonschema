@@ -310,7 +310,20 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Canonicalise "required" schemas to remove redundancy
     if "required" in schema:
         assert isinstance(schema["required"], list)
-        schema["required"] = sorted(set(schema["required"]))
+        reqs = set(schema["required"])
+        if schema.get("dependencies"):
+            # When the presence of a required property requires other properties via
+            # dependencies, those properties can be moved to the base required keys.
+            dep_names = {
+                k: v for k, v in schema["dependencies"].items() if isinstance(v, list)
+            }
+            while reqs.intersection(dep_names):
+                for r in reqs.intersection(dep_names):
+                    reqs.update(dep_names.pop(r))
+            for k, v in list(schema["dependencies"].items()):
+                if isinstance(v, list) and k not in dep_names:
+                    schema["dependencies"].pop(k)
+        schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
         if len(schema["required"]) > max_:

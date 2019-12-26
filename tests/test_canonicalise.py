@@ -112,6 +112,10 @@ def test_canonicalises_to_empty(schema):
             {"type": "integer", "maximum": 1, "multipleOf": 2},
             {"type": "integer", "maximum": 0, "multipleOf": 2},
         ),
+        (
+            {"required": ["a"], "dependencies": {"a": ["b"], "b": ["c"], "x": ["y"]}},
+            {"required": ["a", "b", "c"], "dependencies": {"x": ["y"]}},
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
