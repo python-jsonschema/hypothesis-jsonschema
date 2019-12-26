@@ -44,6 +44,14 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+#### 0.10.0 - 2019-12-26
+- Improved handling of numeric schemas, especially integer schemas with `multipleOf`.
+- Bump the minimum version of Hypothesis to ensure that all users have the unique
+  array bugfix from `0.9.12`.
+- Fixed a bug where array schemas with an array of `items`, `additionalItems: false`,
+  and a `maxItems` larger than the number of allowed items would resolve to an
+  invalid strategy.
+
 #### 0.9.13 - 2019-12-18
 - Improved internal handling of schemas for arrays which must always be length-zero.
 
