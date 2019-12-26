@@ -44,6 +44,9 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+#### 0.10.1 - TBA
+- Improved handling of `not` in many common cases
+
 #### 0.10.0 - 2019-12-26
 - Improved handling of numeric schemas, especially integer schemas with `multipleOf`.
 - Bump the minimum version of Hypothesis to ensure that all users have the unique

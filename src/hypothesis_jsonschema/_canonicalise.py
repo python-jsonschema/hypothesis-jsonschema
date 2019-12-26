@@ -332,13 +332,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             continue
         for k in kw.split():
             schema.pop(k, None)
-    assert isinstance(type_, list), type_
-    if len(type_) == 1:
-        schema["type"] = type_[0]
-    elif type_ == get_type({}):
-        schema.pop("type")
-    else:
-        schema["type"] = type_
     # Remove no-op requires
     if "required" in schema and not schema["required"]:
         schema.pop("required")
@@ -350,9 +343,32 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             # TODO: more sensitive detection of cases where the not-clause
             # excludes everything in the schema.
             return FALSEY
+        type_keys = {k: set(v.split()) for k, v in TYPE_SPECIFIC_KEYS}
+        type_constraints = {"type"}
+        for v in type_keys.values():
+            type_constraints |= v
+        if set(not_).issubset(type_constraints):
+            not_["type"] = get_type(not_)
+            for t in set(type_).intersection(not_["type"]):
+                # If some type is allowed and totally unconstrained byt the "not"
+                # schema, it cannot be allowed
+                if t == "integer" and "number" in type_:
+                    continue
+                if not type_keys.get(t, set()).intersection(not_):
+                    type_.remove(t)
+                    if t not in ("integer", "number"):
+                        not_["type"].remove(t)
+            not_ = canonicalish(not_)
         if not_ != FALSEY:
             # If the "not" key rejects nothing, discard it
             schema["not"] = not_
+    assert isinstance(type_, list), type_
+    if len(type_) == 1:
+        schema["type"] = type_[0]
+    elif type_ == get_type({}):
+        schema.pop("type", None)
+    else:
+        schema["type"] = type_
     # Canonicalise "xxxOf" lists; in each case canonicalising and sorting the
     # sub-schemas then handling any key-specific logic.
     if "anyOf" in schema:
@@ -388,11 +404,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             m = merged([schema, oneOf[0]])
             if m is not None:  # pragma: no branch
                 return m
-        if (
-            (not oneOf)
-            or oneOf.count(TRUTHY) > 1
-            or len(oneOf) > len({encode_canonical_json(s) for s in oneOf})
-        ):
+        if (not oneOf) or oneOf.count(TRUTHY) > 1:
             return FALSEY
         schema["oneOf"] = oneOf
     # if/then/else schemas are ignored unless if and another are present
