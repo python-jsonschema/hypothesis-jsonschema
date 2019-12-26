@@ -4,6 +4,7 @@ import itertools
 import math
 import operator
 import re
+from fractions import Fraction
 from functools import partial
 from typing import Any, Callable, Dict, List, Set
 
@@ -12,7 +13,6 @@ import hypothesis.provisional as prov
 import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
-from hypothesis.internal.floats import next_down, next_up
 
 from ._canonicalise import (
     FALSEY,
@@ -23,6 +23,8 @@ from ._canonicalise import (
     Schema,
     canonicalish,
     encode_canonical_json,
+    get_integer_bounds,
+    get_number_bounds,
     get_type,
     is_valid,
     merged,
@@ -105,8 +107,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     map_: Dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = {
         "null": lambda _: st.none(),
         "boolean": lambda _: st.booleans(),
-        "number": numeric_schema,
-        "integer": numeric_schema,
+        "number": number_schema,
+        "integer": integer_schema,
         "string": string_schema,
         "array": array_schema,
         "object": object_schema,
@@ -115,82 +117,49 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     return st.one_of([map_[t](schema) for t in get_type(schema)])
 
 
-def numeric_schema(schema: dict) -> st.SearchStrategy[float]:
-    """Handle numeric schemata."""
-    lower = schema.get("minimum")
-    upper = schema.get("maximum")
-    type_ = get_type(schema) or ["integer", "number"]
-
-    exmin = schema.get("exclusiveMinimum")
-    if exmin is True and "integer" in type_:
-        assert lower is not None, "boolean exclusiveMinimum implies numeric minimum"
-        lower += 1
-        exmin = False
-    elif exmin is not False and exmin is not None:
-        lo = exmin + 1 if int(exmin) == exmin else math.ceil(exmin)
-        if lower is None:
-            lower = lo if "integer" in type_ else exmin
-        else:
-            lower = max(lower, lo if "integer" in type_ else exmin)
-        exmin = False
-
-    exmax = schema.get("exclusiveMaximum")
-    if exmax is True and "integer" in type_:
-        assert upper is not None, "boolean exclusiveMaximum implies numeric maximum"
-        upper -= 1
-        exmax = False
-    elif exmax is not False and exmax is not None:
-        hi = exmax - 1 if int(exmax) == exmax else math.floor(exmax)
-        if upper is None:
-            upper = hi if "integer" in type_ else exmax
-        else:
-            upper = min(upper, hi if "integer" in type_ else exmax)
-        exmax = False
+def integer_schema(schema: dict) -> st.SearchStrategy[float]:
+    """Handle integer schemata."""
+    # TODO: possibly generate value as a float if float(x) == x
+    min_value, max_value = get_integer_bounds(schema)
 
     if "multipleOf" in schema:
         multiple_of = schema["multipleOf"]
         assert isinstance(multiple_of, (int, float))
-        if lower is not None:
-            lo = math.ceil(lower / multiple_of)
-            assert lo * multiple_of >= lower, (lower, lo)
-            lower = lo
-        if upper is not None:
-            hi = math.floor(upper / multiple_of)
-            assert hi * multiple_of <= upper, (upper, hi)
-            upper = hi
-        strat = st.integers(lower, upper).map(partial(operator.mul, multiple_of))
+        if min_value is not None:
+            min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
+        if max_value is not None:
+            max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
+        strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
         # check for and filter out float bounds, inexact multiplication, etc.
         return strat.filter(partial(is_valid, schema=schema))
 
-    strat = st.nothing()
-    if "integer" in type_:
-        lo = lower if lower is None else math.ceil(lower)
-        hi = upper if upper is None else math.floor(upper)
-        if lo is None or hi is None or lo <= hi:
-            strat = st.integers(lo, hi)
-    if "number" in type_:
+    return st.integers(min_value, max_value)
+
+
+def number_schema(schema: dict) -> st.SearchStrategy[float]:
+    """Handle numeric schemata."""
+    min_value, max_value, exclude_min, exclude_max = get_number_bounds(schema)
+
+    if "multipleOf" in schema:
+        multiple_of = schema["multipleOf"]
+        assert isinstance(multiple_of, (int, float))
+        if min_value is not None:
+            min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
+        if max_value is not None:
+            max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
+        strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
+        # check for and filter out float bounds, inexact multiplication, etc.
+        return strat.filter(partial(is_valid, schema=schema))
+
+    return st.floats(
+        min_value=min_value,
+        max_value=max_value,
+        allow_nan=False,
+        allow_infinity=False,
+        exclude_min=exclude_min,
+        exclude_max=exclude_max,
         # Filter out negative-zero as it does not exist in JSON
-        lo = exmin if lower is None else lower
-        if lo is not None:
-            lower = float(lo)
-            if lower < lo:
-                lower = next_up(lower)  # scary floats magic
-            assert lower >= lo
-        hi = exmax if upper is None else upper
-        if hi is not None:
-            upper = float(hi)
-            if upper > hi:
-                upper = next_down(upper)  # scary floats magic
-            assert upper <= hi
-        strat |= st.floats(
-            min_value=lower,
-            max_value=upper,
-            allow_nan=False,
-            allow_infinity=False,
-            exclude_min=exmin is not None,
-            exclude_max=exmax is not None,
-        ).filter(lambda n: n != 0 or math.copysign(1, n) == 1)
-    return strat
+    ).filter(lambda n: n != 0 or math.copysign(1, n) == 1)
 
 
 RFC3339_FORMATS = (

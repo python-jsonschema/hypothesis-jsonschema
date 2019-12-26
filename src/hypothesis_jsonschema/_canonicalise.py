@@ -16,11 +16,12 @@ between "I'd like it to be faster" and "doesn't finish at all".
 import json
 import math
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hypothesis.strategies as st
 import jsonschema
 from hypothesis.errors import InvalidArgument
+from hypothesis.internal.floats import next_down, next_up
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
@@ -128,6 +129,70 @@ def upper_bound_instances(schema: Schema) -> float:
     return math.inf
 
 
+def get_number_bounds(
+    schema: Schema, *, _for_integer: bool = False,
+) -> Tuple[Optional[float], Optional[float], bool, bool]:
+    """Get the min and max allowed floats, and whether they are exclusive."""
+    assert "number" in get_type(schema) or _for_integer
+
+    lower = schema.get("minimum")
+    upper = schema.get("maximum")
+    exmin = schema.get("exclusiveMinimum", False)
+    exmax = schema.get("exclusiveMaximum", False)
+    assert lower is None or isinstance(lower, (int, float))
+    assert upper is None or isinstance(upper, (int, float))
+    assert isinstance(exmin, (bool, int, float))
+    assert isinstance(exmax, (bool, int, float))
+
+    # Canonicalise to number-and-boolean representation
+    if exmin is not True and exmin is not False:
+        if lower is None or exmin >= lower:
+            lower, exmin = exmin, True
+        else:
+            exmin = False
+    if exmax is not True and exmax is not False:
+        if upper is None or exmax <= upper:
+            upper, exmax = exmax, True
+        else:
+            exmax = False
+    assert isinstance(exmin, bool)
+    assert isinstance(exmax, bool)
+
+    # Adjust bounds and cast to float
+    if lower is not None and not _for_integer:
+        lo = float(lower)
+        if lo < lower:
+            lo = next_up(lo)
+            exmin = False
+        lower = lo
+    if upper is not None and not _for_integer:
+        hi = float(upper)
+        if hi > upper:
+            hi = next_down(hi)
+            exmax = False
+        upper = hi
+
+    return lower, upper, exmin, exmax
+
+
+def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
+    """Get the min and max allowed integers."""
+    assert "integer" in get_type(schema)
+    lower, upper, exmin, exmax = get_number_bounds(schema, _for_integer=True)
+    # Adjust bounds and cast to int
+    if lower is not None:
+        lo = math.ceil(lower)
+        if exmin and lo == lower:
+            lo += 1
+        lower = lo
+    if upper is not None:
+        hi = math.floor(upper)
+        if exmax and hi == upper:
+            hi -= 1
+        upper = hi
+    return lower, upper
+
+
 def canonicalish(schema: JSONType) -> Dict[str, Any]:
     """Convert a schema into a more-canonical form.
 
@@ -173,6 +238,33 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             }
 
     type_ = get_type(schema)
+    if "number" in type_:
+        lo, hi, exmin, exmax = get_number_bounds(schema)
+        if (
+            lo is not None
+            and hi is not None
+            and (lo > hi or (lo == hi and (exmin or exmax)))
+        ):
+            type_.remove("number")
+    if "integer" in type_:
+        lo, hi = get_integer_bounds(schema)
+        mul = schema.get("multipleOf")
+        if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):
+            lo += mul - (lo % mul)
+        if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
+            hi -= hi % mul
+
+        if "number" not in type_:
+            if lo is not None:
+                schema["minimum"] = lo
+                schema.pop("exclusiveMinimum", None)
+            if hi is not None:
+                schema["maximum"] = hi
+                schema.pop("exclusiveMaximum", None)
+
+        if lo is not None and hi is not None and lo > hi:
+            type_.remove("integer")
+
     if "array" in type_ and "contains" in schema:
         if schema["contains"] == FALSEY:
             type_.remove("array")

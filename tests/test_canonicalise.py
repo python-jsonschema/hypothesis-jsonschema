@@ -69,13 +69,9 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "minItems": 4,
         },
         {"type": "array", "items": [True, False], "minItems": 2},
-        pytest.param(
-            {"type": "integer", "minimum": 2, "maximum": 1}, marks=pytest.mark.xfail
-        ),
-        pytest.param(
-            {"type": "integer", "minimum": 1, "maximum": 2, "multipleOf": 3},
-            marks=pytest.mark.xfail,
-        ),
+        {"type": "integer", "minimum": 2, "maximum": 1},
+        {"type": "integer", "minimum": 1, "maximum": 2, "multipleOf": 3},
+        {"type": "number", "exclusiveMinimum": 0, "maximum": 0},
         pytest.param(
             {
                 "type": "number",
@@ -99,6 +95,22 @@ def test_canonicalises_to_empty(schema):
         (
             {"type": "array", "items": [True, False, True]},
             {"type": "array", "items": [{}], "maxItems": 1},
+        ),
+        (
+            {"type": "integer", "minimum": 1, "exclusiveMinimum": 0},
+            {"type": "integer", "minimum": 1},
+        ),
+        (
+            {"type": "integer", "maximum": 0, "exclusiveMaximum": 1},
+            {"type": "integer", "maximum": 0},
+        ),
+        (
+            {"type": "integer", "minimum": 1, "multipleOf": 2},
+            {"type": "integer", "minimum": 2, "multipleOf": 2},
+        ),
+        (
+            {"type": "integer", "maximum": 1, "multipleOf": 2},
+            {"type": "integer", "maximum": 0, "multipleOf": 2},
         ),
     ],
 )
