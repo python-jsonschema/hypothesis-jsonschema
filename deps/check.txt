@@ -26,15 +26,15 @@ isort==4.3.21
 mccabe==0.6.1             # via flake8
 more-itertools==8.0.2     # via zipp
 mypy-extensions==0.4.3    # via mypy
-mypy==0.760
-pathspec==0.6.0           # via black
+mypy==0.761
+pathspec==0.7.0           # via black
 pbr==5.4.4                # via stevedore
 pycodestyle==2.5.0        # via flake8, flake8-bandit
 pydocstyle==5.0.1         # via flake8-docstrings
 pyflakes==2.1.1           # via autoflake, flake8
 pyupgrade==1.25.2
 pyyaml==5.2               # via bandit
-regex==2019.12.19         # via black
+regex==2019.12.20         # via black
 six==1.13.0               # via bandit, stevedore
 smmap2==2.0.5             # via gitdb2
 snowballstemmer==2.0.0    # via pydocstyle
