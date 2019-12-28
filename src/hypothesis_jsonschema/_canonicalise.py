@@ -240,10 +240,15 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     type_ = get_type(schema)
     if "number" in type_:
         lo, hi, exmin, exmax = get_number_bounds(schema)
+        mul = schema.get("multipleOf")
         if (
             lo is not None
             and hi is not None
-            and (lo > hi or (lo == hi and (exmin or exmax)))
+            and (
+                lo > hi
+                or (lo == hi and (exmin or exmax))
+                or (mul and not has_divisibles(lo, hi, mul, exmin, exmax))
+            )
         ):
             type_.remove("number")
     if "integer" in type_:
@@ -540,3 +545,19 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
             return FALSEY
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
+
+
+def has_divisibles(
+    start: Union[int, float],
+    end: Union[int, float],
+    divisor: Union[int, float],
+    exmin: bool,
+    exmax: bool,
+) -> bool:
+    """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
+    divisible_num = end // divisor - start // divisor
+    if not exmin and not start % divisor:
+        divisible_num += 1
+    if exmax and not end % divisor:
+        divisible_num -= 1
+    return divisible_num >= 1
