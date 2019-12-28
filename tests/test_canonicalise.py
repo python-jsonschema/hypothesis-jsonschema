@@ -79,6 +79,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "exclusiveMaximum": 3,
             "multipleOf": 3,
         },
+        {"not": {"type": ["integer", "number"]}, "type": "number"},
     ],
 )
 def test_canonicalises_to_empty(schema):

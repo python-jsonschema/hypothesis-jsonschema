@@ -336,16 +336,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         propnames = schema.get("propertyNames", {})
         if not all(is_valid(name, propnames) for name in schema["required"]):
             type_.remove("object")
-    if not type_:
-        assert type_ == []
-        return FALSEY
-    if type_ == ["null"]:
-        return {"const": None}
-    if type_ == ["boolean"]:
-        return {"enum": [False, True]}
-    if type_ == ["null", "boolean"]:
-        return {"enum": [None, False, True]}
-    schema["type"] = type_
 
     for t, kw in TYPE_SPECIFIC_KEYS:
         numeric = ["number", "integer"]
@@ -384,6 +374,15 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             # If the "not" key rejects nothing, discard it
             schema["not"] = not_
     assert isinstance(type_, list), type_
+    if not type_:
+        assert type_ == []
+        return FALSEY
+    if type_ == ["null"]:
+        return {"const": None}
+    if type_ == ["boolean"]:
+        return {"enum": [False, True]}
+    if type_ == ["null", "boolean"]:
+        return {"enum": [None, False, True]}
     if len(type_) == 1:
         schema["type"] = type_[0]
     elif type_ == get_type({}):

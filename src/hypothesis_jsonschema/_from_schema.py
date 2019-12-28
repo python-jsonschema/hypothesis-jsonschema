@@ -72,7 +72,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic
     if "not" in schema:
-        return JSON_STRATEGY.filter(partial(is_valid, schema=schema))
+        not_ = schema.pop("not")
+        return from_schema(schema).filter(lambda v: not is_valid(v, not_))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
