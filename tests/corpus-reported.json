@@ -132,6 +132,12 @@
         ],
         "type": "object"
     },
+    "non-integer numbers only": {
+        "not": {
+            "type": "integer"
+        },
+        "type": "number"
+    },
     "object with dependencies and size limits so only one key is allowed": {
         "additionalProperties": false,
         "dependencies": {
