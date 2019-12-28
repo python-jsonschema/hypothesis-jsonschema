@@ -333,6 +333,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         assert isinstance(max_, (int, float))
         if len(schema["required"]) > max_:
             type_.remove("object")
+        propnames = schema.get("propertyNames", {})
+        if not all(is_valid(name, propnames) for name in schema["required"]):
+            type_.remove("object")
     if not type_:
         assert type_ == []
         return FALSEY

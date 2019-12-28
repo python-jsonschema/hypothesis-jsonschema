@@ -47,6 +47,7 @@ support, roadmap input, and prioritized feature development.
 #### 0.10.1 - TBA
 - Improved handling of `not` in many common cases
 - Improved handling of object schemas with `dependencies` on required keys
+- Fixed cases where `propertyNames` bans a `required` key
 
 #### 0.10.0 - 2019-12-26
 - Improved handling of numeric schemas, especially integer schemas with `multipleOf`.
