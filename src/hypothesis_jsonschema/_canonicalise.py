@@ -551,11 +551,7 @@ def merged(schemas: List[Any]) -> Union[None, Schema]:
 
 
 def has_divisibles(
-    start: Union[int, float],
-    end: Union[int, float],
-    divisor: Union[int, float],
-    exmin: bool,
-    exmax: bool,
+    start: float, end: float, divisor: float, exmin: bool, exmax: bool
 ) -> bool:
     """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
     divisible_num = end // divisor - start // divisor
