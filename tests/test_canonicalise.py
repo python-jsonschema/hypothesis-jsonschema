@@ -115,6 +115,10 @@ def test_canonicalises_to_empty(schema):
             {"required": ["a"], "dependencies": {"a": ["b"], "b": ["c"], "x": ["y"]}},
             {"required": ["a", "b", "c"], "dependencies": {"x": ["y"]}},
         ),
+        (
+            {"type": "number", "minimum": 0, "exclusiveMaximum": 6, "multipleOf": 3},
+            {"type": "number", "minimum": 0, "exclusiveMaximum": 6, "multipleOf": 3},
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
