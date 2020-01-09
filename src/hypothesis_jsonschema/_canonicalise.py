@@ -100,6 +100,22 @@ def encode_canonical_json(value: JSONType) -> str:
     return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
+def sort_key(value: JSONType) -> Tuple[int, float, Union[float, str]]:
+    """Return a sort key (type, guess, tiebreak) that can compare any JSON value.
+
+    Sorts scalar types before collections, and within each type tries for a
+    sensible ordering similar to Hypothesis' idea of simplicity.
+    """
+    if value is None:
+        return (0, 0, 0)
+    if isinstance(value, bool):
+        return (1, int(value), 0)
+    if isinstance(value, (int, float)):
+        return (2 if int(value) == value else 3, abs(value), value >= 0)
+    type_key = {str: 4, list: 5, dict: 6}[type(value)]
+    return (type_key, len(value), encode_canonical_json(value))
+
+
 def get_type(schema: Schema) -> List[str]:
     """Return a canonical value for the "type" key.
 
@@ -216,7 +232,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             return FALSEY
         return {"const": schema["const"]}
     if "enum" in schema:
-        enum_ = [v for v in schema["enum"] if is_valid(v, schema)]
+        enum_ = sorted((v for v in schema["enum"] if is_valid(v, schema)), key=sort_key)
         if not enum_:
             return FALSEY
         elif len(enum_) == 1:
