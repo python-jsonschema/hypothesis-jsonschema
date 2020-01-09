@@ -80,6 +80,9 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "multipleOf": 3,
         },
         {"not": {"type": ["integer", "number"]}, "type": "number"},
+        {"oneOf": []},
+        {"oneOf": [{}, {}]},
+        {"oneOf": [True, False, {}]},
     ],
 )
 def test_canonicalises_to_empty(schema):
@@ -144,6 +147,16 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             {"properties": {"foo": {"maximum": 20, "minimum": 10}}},
         ),
+    ]
+    + [
+        ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
+        for lo, hi in [
+            ("minimum", "maximum"),
+            ("exclusiveMinimum", "exclusiveMaximum"),
+            ("minLength", "maxLength"),
+            ("minItems", "maxItems"),
+            ("minProperties", "maxProperties"),
+        ]
     ],
 )
 def test_merged(group, result):

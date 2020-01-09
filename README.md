@@ -44,9 +44,10 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
-#### 0.10.2 - soonish
+#### 0.10.2 - 2020-01-09
 - `enum` schema now shrink to a minimal example rather than the first value listed.
   This also makes the internals more efficient in certain rare cases.
+- Improved handling of bounded numeric sub-schemas
 
 #### 0.10.1 - 2019-12-28
 - Improved handling of non-integer numeric schemas with `multipleOf`
