@@ -16,7 +16,6 @@ from hypothesis import assume
 
 from ._canonicalise import (
     FALSEY,
-    JSON_STRATEGY,
     TRUTHY,
     TYPE_STRINGS,
     JSONType,
@@ -28,6 +27,16 @@ from ._canonicalise import (
     get_type,
     is_valid,
     merged,
+)
+
+JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
+    st.none()
+    | st.booleans()
+    | st.integers()
+    | st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0)
+    | st.text(),
+    lambda strategy: st.lists(strategy, max_size=3)
+    | st.dictionaries(st.text(), strategy, max_size=3),
 )
 
 

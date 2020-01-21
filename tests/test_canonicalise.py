@@ -11,13 +11,13 @@ from gen_schemas import json_schemata, schema_strategy_params
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
-    JSON_STRATEGY,
     canonicalish,
     encode_canonical_json,
     get_type,
     is_valid,
     merged,
 )
+from hypothesis_jsonschema._from_schema import JSON_STRATEGY
 
 
 @given(JSON_STRATEGY)

@@ -18,7 +18,6 @@ import math
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import hypothesis.strategies as st
 import jsonschema
 from hypothesis.errors import InvalidArgument
 from hypothesis.internal.floats import next_down, next_up
@@ -27,16 +26,6 @@ from hypothesis.internal.floats import next_down, next_up
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
 JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 Schema = Dict[str, JSONType]
-
-JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
-    st.none()
-    | st.booleans()
-    | st.integers()
-    | st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0)
-    | st.text(),
-    lambda strategy: st.lists(strategy, max_size=3)
-    | st.dictionaries(st.text(), strategy, max_size=3),
-)
 
 # Canonical type strings, in order.
 TYPE_STRINGS = ("null", "boolean", "integer", "number", "string", "array", "object")

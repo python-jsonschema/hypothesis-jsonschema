@@ -8,14 +8,10 @@ import jsonschema
 import pytest
 from hypothesis import assume
 
-from hypothesis_jsonschema._canonicalise import (
-    JSON_STRATEGY,
-    JSONType,
-    Schema,
-    encode_canonical_json,
-)
+from hypothesis_jsonschema._canonicalise import JSONType, Schema, encode_canonical_json
 from hypothesis_jsonschema._from_schema import (
     JSON_SCHEMA_STRING_FORMATS,
+    JSON_STRATEGY,
     REGEX_PATTERNS,
     from_schema,
 )
