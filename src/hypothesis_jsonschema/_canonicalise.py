@@ -336,15 +336,19 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
+        propnames = schema.get("propertyNames", {})
         if len(schema["required"]) > max_:
             type_.remove("object")
-        propnames = schema.get("propertyNames", {})
-        if not all(is_valid(name, propnames) for name in schema["required"]):
+        elif not all(is_valid(name, propnames) for name in schema["required"]):
             type_.remove("object")
+    if "object" in type_ and schema.get("minProperties", 0) > schema.get(
+        "maxProperties", math.inf
+    ):
+        type_.remove("object")
 
     for t, kw in TYPE_SPECIFIC_KEYS:
-        numeric = ["number", "integer"]
-        if t in type_ or t in numeric and t in type_ + numeric:
+        numeric = {"number", "integer"}
+        if t in type_ or (t in numeric and numeric.intersection(type_)):
             continue
         for k in kw.split():
             schema.pop(k, None)

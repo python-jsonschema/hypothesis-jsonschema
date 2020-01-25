@@ -83,6 +83,13 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
         {"oneOf": []},
         {"oneOf": [{}, {}]},
         {"oneOf": [True, False, {}]},
+        {"type": "object", "maxProperties": 2, "minProperties": 3},
+        {
+            "type": "object",
+            "maxProperties": 1,
+            "required": ["", "0"],
+            "propertyNames": {"minLength": 2},
+        },
     ],
 )
 def test_canonicalises_to_empty(schema):

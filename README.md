@@ -44,6 +44,9 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+#### 0.10.3 - TBA
+- Improved canonicalisation of conflicting `minProperties` and `maxProperties`
+
 #### 0.10.2 - 2020-01-09
 - `enum` schema now shrink to a minimal example rather than the first value listed.
   This also makes the internals more efficient in certain rare cases.
