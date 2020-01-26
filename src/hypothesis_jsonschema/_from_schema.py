@@ -6,7 +6,7 @@ import operator
 import re
 from fractions import Fraction
 from functools import partial
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Callable, Dict, List, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
 import hypothesis.provisional as prov
@@ -63,7 +63,7 @@ def merged_as_strategies(schemas: List[Schema]) -> st.SearchStrategy[JSONType]:
     return st.one_of(strats)
 
 
-def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
+def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
     Schema reuse with "definitions" and "$ref" is not yet supported, but
@@ -85,18 +85,22 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Applying subschemata with boolean logic
     if "not" in schema:
         not_ = schema.pop("not")
+        assert isinstance(not_, dict)
         return from_schema(schema).filter(lambda v: not is_valid(v, not_))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
+        assert isinstance(ao, list)
         return st.one_of([merged_as_strategies([tmp, s]) for s in ao])
     if "allOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("allOf")
+        assert isinstance(ao, list)
         return merged_as_strategies([tmp] + ao)
     if "oneOf" in schema:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
+        assert isinstance(oo, list)
         schemas = [merged([tmp, s]) for s in oo]
         return st.one_of([from_schema(s) for s in schemas if s is not None]).filter(
             partial(is_valid, schema=schema)
@@ -107,6 +111,9 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
         if_ = tmp.pop("if")
         then = tmp.pop("then", {})
         else_ = tmp.pop("else", {})
+        assert isinstance(if_, (bool, dict))
+        assert isinstance(then, (bool, dict))
+        assert isinstance(else_, (bool, dict))
         return st.one_of([from_schema(s) for s in (then, else_, if_, tmp)]).filter(
             partial(is_valid, schema=schema)
         )
