@@ -44,6 +44,16 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+#### 0.11.0 - 2020-01-26
+- Resolve local, non-recursive references via the `$ref` keyword.
+
+This is the largest feature in a while, and for some schemata it is a breaking
+change.  It's also a fundamental part of the spec, so I'm OK with that!
+
+Note that `hypothesis-jsonschema` will raise an explicit error rather than fetching
+a remote resource via URI.  If think your tests *really should* hit the network,
+get in touch and we can discuss adding an off-by-default option for this.
+
 #### 0.10.3 - 2020-01-26
 - Improved canonicalisation of conflicting `minProperties` and `maxProperties`
 - Explictly reject draft-03 schemata, which are not supported

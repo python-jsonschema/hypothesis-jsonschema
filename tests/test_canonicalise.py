@@ -6,6 +6,7 @@ import hypothesis.strategies as st
 import jsonschema
 import pytest
 from hypothesis import HealthCheck, assume, given, note, settings
+from hypothesis.errors import InvalidArgument
 
 from gen_schemas import json_schemata, schema_strategy_params
 from hypothesis_jsonschema import from_schema
@@ -16,6 +17,7 @@ from hypothesis_jsonschema._canonicalise import (
     get_type,
     is_valid,
     merged,
+    resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import JSON_STRATEGY
 
@@ -249,3 +251,8 @@ def test_merge_should_notice_required_disallowed_properties():
         {"type": "object", "properties": {"id": True}, "additionalProperties": False},
     ]
     assert merged(schemas) == FALSEY
+
+
+def test_resolution_checks_resolver_is_valid():
+    with pytest.raises(InvalidArgument):
+        resolve_all_refs({}, resolver="not a resolver")

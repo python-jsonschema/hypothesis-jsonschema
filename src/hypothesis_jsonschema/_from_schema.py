@@ -28,6 +28,7 @@ from ._canonicalise import (
     get_type,
     is_valid,
     merged,
+    resolve_all_refs,
 )
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
@@ -80,6 +81,13 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
         jsonschema.validators.validator_for(schema).check_schema(schema)
         if schema["$schema"] == "http://json-schema.org/draft-03/schema#":
             raise InvalidArgument("Draft-03 schemas are not supported")
+
+    try:
+        schema = resolve_all_refs(schema)
+    except RecursionError:
+        raise jsonschema.exceptions.RefResolutionError(
+            f"Could not resolve recursive references in schema={schema!r}"
+        ) from None
 
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic

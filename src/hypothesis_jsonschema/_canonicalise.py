@@ -15,8 +15,9 @@ between "I'd like it to be faster" and "doesn't finish at all".
 
 import json
 import math
+from copy import deepcopy
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
@@ -457,6 +458,64 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
 TRUTHY = canonicalish(True)
 FALSEY = canonicalish(False)
+
+
+class LocalResolver(jsonschema.RefResolver):
+    def resolve_remote(self, uri: str) -> NoReturn:
+        raise jsonschema.exceptions.RefResolutionError(
+            f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
+        )
+
+
+def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schema:
+    """
+    Resolve all references in the given schema.
+
+    This handles nested definitions, but not recursive definitions.
+    The latter require special handling to convert to strategies and are much
+    less common, so we just ignore them (and error out) for now.
+    """
+    if resolver is None:
+        resolver = LocalResolver.from_schema(deepcopy(schema))
+    if not isinstance(resolver, jsonschema.RefResolver):
+        raise InvalidArgument(
+            f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
+        )
+
+    def res_one(s: Schema) -> Schema:
+        if "$ref" not in s:
+            return s
+        assert isinstance(resolver, jsonschema.RefResolver)
+        s = dict(s)
+        ref = s.pop("$ref")
+        with resolver.resolving(ref) as got:
+            if s == {}:
+                return resolve_all_refs(got, resolver=resolver)
+            m = merged([s, got])
+            if m is None:
+                msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
+                raise jsonschema.exceptions.RefResolutionError(msg)
+            return resolve_all_refs(m, resolver=resolver)
+
+    if "$ref" in schema:
+        schema = res_one(schema)
+    for key in SCHEMA_KEYS:
+        val = schema.get(key, False)
+        if isinstance(val, list):
+            schema[key] = [res_one(v) if isinstance(v, dict) else v for v in val]
+        elif isinstance(val, dict):
+            schema[key] = res_one(val)
+        else:
+            assert isinstance(val, bool)
+    for key in SCHEMA_OBJECT_KEYS:  # values are keys-to-schema-dicts, not schemas
+        if key in schema:
+            s = schema[key]
+            assert isinstance(s, dict)
+            schema[key] = {
+                k: res_one(v) if isinstance(v, dict) else v for k, v in s.items()
+            }
+    assert isinstance(schema, dict)
+    return schema
 
 
 def merged(schemas: List[Any]) -> Union[None, Schema]:
