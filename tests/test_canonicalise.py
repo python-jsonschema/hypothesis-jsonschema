@@ -85,6 +85,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
         {"oneOf": []},
         {"oneOf": [{}, {}]},
         {"oneOf": [True, False, {}]},
+        {"anyOf": [False, {"not": {}}]},
         {"type": "object", "maxProperties": 2, "minProperties": 3},
         {
             "type": "object",
