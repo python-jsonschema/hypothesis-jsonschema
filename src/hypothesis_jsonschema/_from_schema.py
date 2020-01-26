@@ -429,7 +429,9 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 if key not in out:
                     break
             else:
-                for k in set(dep_names).intersection(out):
+                for k in set(dep_names).intersection(out):  # pragma: no cover
+                    # nocover because some of these conditionals are rare enough
+                    # that not all test runs hit them, but are still essential.
                     key = next((n for n in dep_names[k] if n not in out), None)
                     if key is not None:
                         break

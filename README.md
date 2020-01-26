@@ -48,6 +48,7 @@ support, roadmap input, and prioritized feature development.
 - Improved canonicalisation of conflicting `minProperties` and `maxProperties`
 - Explictly reject draft-03 schemata, which are not supported
 - More specific type annotations for `from_schema`
+- Better performance for certain object schemata
 
 #### 0.10.2 - 2020-01-09
 - `enum` schema now shrink to a minimal example rather than the first value listed.

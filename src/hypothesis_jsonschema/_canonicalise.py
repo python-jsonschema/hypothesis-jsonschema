@@ -317,15 +317,29 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema.pop("items", None)
         schema.pop("uniqueItems", None)
         schema.pop("additionalItems", None)
+    if (
+        "properties" in schema
+        and not schema.get("patternProperties")
+        and schema.get("additionalProperties") == FALSEY
+    ):
+        schema["maxProperties"] = min(
+            schema.get("maxProperties", math.inf), len(schema["properties"])
+        )
+    if "object" in type_ and schema.get("minProperties", 0) > schema.get(
+        "maxProperties", math.inf
+    ):
+        type_.remove("object")
     # Canonicalise "required" schemas to remove redundancy
-    if "required" in schema:
+    if "object" in type_ and "required" in schema:
         assert isinstance(schema["required"], list)
         reqs = set(schema["required"])
         if schema.get("dependencies"):
             # When the presence of a required property requires other properties via
             # dependencies, those properties can be moved to the base required keys.
             dep_names = {
-                k: v for k, v in schema["dependencies"].items() if isinstance(v, list)
+                k: sorted(v)
+                for k, v in schema["dependencies"].items()
+                if isinstance(v, list)
             }
             while reqs.intersection(dep_names):
                 for r in reqs.intersection(dep_names):
@@ -341,10 +355,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             type_.remove("object")
         elif not all(is_valid(name, propnames) for name in schema["required"]):
             type_.remove("object")
-    if "object" in type_ and schema.get("minProperties", 0) > schema.get(
-        "maxProperties", math.inf
-    ):
-        type_.remove("object")
 
     for t, kw in TYPE_SPECIFIC_KEYS:
         numeric = {"number", "integer"}
