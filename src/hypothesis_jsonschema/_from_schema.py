@@ -13,6 +13,7 @@ import hypothesis.provisional as prov
 import hypothesis.strategies as st
 import jsonschema
 from hypothesis import assume
+from hypothesis.errors import InvalidArgument
 
 from ._canonicalise import (
     FALSEY,
@@ -77,6 +78,8 @@ def from_schema(schema: dict) -> st.SearchStrategy[JSONType]:
     # Only check if declared, lest we error on inner non-latest-draft schemata.
     if "$schema" in schema:
         jsonschema.validators.validator_for(schema).check_schema(schema)
+        if schema["$schema"] == "http://json-schema.org/draft-03/schema#":
+            raise InvalidArgument("Draft-03 schemas are not supported")
 
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic
