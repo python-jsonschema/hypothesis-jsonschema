@@ -44,7 +44,7 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
-#### 0.10.3 - TBA
+#### 0.10.3 - 2020-01-26
 - Improved canonicalisation of conflicting `minProperties` and `maxProperties`
 - Explictly reject draft-03 schemata, which are not supported
 - More specific type annotations for `from_schema`
