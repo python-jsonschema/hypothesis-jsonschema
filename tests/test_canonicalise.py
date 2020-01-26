@@ -221,9 +221,23 @@ def test_merge_semantics(data, s1, s2):
     ic = data.draw(from_schema(combined), label="combined")
     i1 = data.draw(from_schema(s1), label="s1")
     i2 = data.draw(from_schema(s2), label="s2")
-    assert is_valid(ic, s1) and is_valid(ic, s2)
+    assert is_valid(ic, s1)
+    assert is_valid(ic, s2)
     assert is_valid(i1, s2) == is_valid(i1, combined)
     assert is_valid(i2, s1) == is_valid(i2, combined)
+
+
+@pytest.mark.xfail
+def test_merge_semantics_regressions():
+    # TODO: broken because of missing interaction between
+    # properties and additionalProperties - merged should return None for this.
+    s1 = {"properties": {"": {"type": "string"}}, "required": [""], "type": "object"}
+    s2 = {"additionalProperties": {"type": "null"}, "type": "object"}
+    instance = {"": ""}
+    combined = merged([s1, s2])
+    assert is_valid(instance, combined) == (
+        is_valid(instance, s1) and is_valid(instance, s2)
+    )
 
 
 @pytest.mark.xfail
