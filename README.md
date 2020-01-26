@@ -10,8 +10,8 @@ that matches some [JSON schema](https://json-schema.org/).
 The public API consists of just one function: `hypothesis_jsonschema.from_schema`,
 which takes a JSON schema and returns a strategy for allowed JSON objects.
 
-Schema reuse with "definitions" and "$ref" is not yet supported, but everything
-else in drafts 04, 05, and 07 is fully tested and working.
+JSONSchema drafts 04, 05, and 07 are fully tested and working.
+As of version 0.11, this includes resolving non-recursive references!
 
 For details on how to use this strategy in your tests,
 [see the Hypothesis docs](https://hypothesis.readthedocs.io/).
@@ -31,15 +31,6 @@ of generating values that don't quite match.
 
 You can [sponsor me](https://github.com/sponsors/Zac-HD) to get priority
 support, roadmap input, and prioritized feature development.
-
-Hypothesis is part of the [Tidelift Subscription][sub_link].
-Tidelift gives software development teams a single source for purchasing and
-maintaining their software, with professional grade assurances from the experts
-who know it best.
-You can also [sponsor me](https://github.com/sponsors/Zac-HD) to get priority
-support, roadmap input, and prioritized feature development.
-
-[sub_link]: https://tidelift.com/subscription/pkg/pypi-hypothesis-jsonschema?utm_source=pypi-hypothesis-jsonschema&utm_medium=referral&utm_campaign=readme
 
 
 ### Changelog:
