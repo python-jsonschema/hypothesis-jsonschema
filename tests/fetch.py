@@ -45,7 +45,7 @@ with concurrent.futures.ThreadPoolExecutor() as ex:
         try:
             name, schema = future.result()
         except Exception as e:
-            print(f"Error: {name!r} ({e})")
+            print(f"Error: {name!r} ({e})")  # noqa: T001
         else:
             schemata[name] = schema
 

@@ -174,7 +174,7 @@ OVERLAPPING_PATTERNS_SCHEMA = {
 
 
 @given(from_schema(OVERLAPPING_PATTERNS_SCHEMA))
-def test_handles_overlapping_patternProperties(value):
+def test_handles_overlapping_patternproperties(value):
     jsonschema.validate(value, OVERLAPPING_PATTERNS_SCHEMA)
     assert "ab" not in value
 

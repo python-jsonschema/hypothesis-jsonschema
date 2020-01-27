@@ -436,17 +436,17 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 # that `schema` is a dict otherwise. Needs minimal report upstream.
                 assert isinstance(schema, dict)
     if "oneOf" in schema:
-        oneOf = schema.pop("oneOf")
-        assert isinstance(oneOf, list)
-        oneOf = sorted(oneOf, key=encode_canonical_json)
-        oneOf = [s for s in oneOf if s != FALSEY]
-        if len(oneOf) == 1:
-            m = merged([schema, oneOf[0]])
+        one_of = schema.pop("oneOf")
+        assert isinstance(one_of, list)
+        one_of = sorted(one_of, key=encode_canonical_json)
+        one_of = [s for s in one_of if s != FALSEY]
+        if len(one_of) == 1:
+            m = merged([schema, one_of[0]])
             if m is not None:  # pragma: no branch
                 return m
-        if (not oneOf) or oneOf.count(TRUTHY) > 1:
+        if (not one_of) or one_of.count(TRUTHY) > 1:
             return FALSEY
-        schema["oneOf"] = oneOf
+        schema["oneOf"] = one_of
     # if/then/else schemas are ignored unless if and another are present
     if "if" not in schema:
         schema.pop("then", None)
