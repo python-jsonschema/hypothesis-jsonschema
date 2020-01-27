@@ -157,6 +157,13 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             {"properties": {"foo": {"maximum": 20, "minimum": 10}}},
         ),
+        (
+            [
+                {"contains": {}, "items": {}, "type": "array"},
+                {"items": False, "type": "array"},
+            ],
+            {"not": {}},
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})

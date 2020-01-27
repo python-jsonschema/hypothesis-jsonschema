@@ -291,8 +291,8 @@ STRING_FORMATS = {
     "idn-email": st.emails(),
     "hostname": prov.domains(),
     "idn-hostname": prov.domains(),
-    "ipv4": prov.ip4_addr_strings(),
-    "ipv6": prov.ip6_addr_strings(),
+    "ipv4": st.ip_addresses(v=4).map(str),
+    "ipv6": st.ip_addresses(v=6).map(str),
     **{
         name: prov.domains().map("https://{}".format)
         for name in ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]

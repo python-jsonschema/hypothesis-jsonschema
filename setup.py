@@ -30,7 +30,7 @@ setuptools.setup(
     license="MPL 2.0",
     description="Generate test data from JSON schemata with Hypothesis",
     zip_safe=False,
-    install_requires=["hypothesis>=4.50.4", "jsonschema>=3.0.2"],
+    install_requires=["hypothesis>=5.3.0", "jsonschema>=3.0.2"],
     python_requires=">=3.6",
     classifiers=[
         "Development Status :: 4 - Beta",

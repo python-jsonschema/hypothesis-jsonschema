@@ -283,6 +283,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             schema["minItems"] = max(schema.get("minItems", 0), 1)
         if schema["contains"] == TRUTHY:
             schema.pop("contains")
+    if "array" in type_ and schema.get("minItems", 0) > schema.get(
+        "maxItems", math.inf
+    ):
+        type_.remove("array")
     if (
         "array" in type_
         and "minItems" in schema

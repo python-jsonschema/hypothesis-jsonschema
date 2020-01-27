@@ -35,6 +35,10 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+#### 0.11.1 - 2020-01-27
+- Requires Hypothesis >= 5.3.0, for improved IP address strategies
+- Better canoncialisation of array schemata
+
 #### 0.11.0 - 2020-01-26
 - Resolve local, non-recursive references via the `$ref` keyword.
 
