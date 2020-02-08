@@ -59,7 +59,11 @@ def _json_schemata(draw: Any, recur: bool = True) -> Any:
 def gen_enum() -> st.SearchStrategy[Dict[str, List[JSONType]]]:
     """Return a strategy for enum schema."""
     return st.fixed_dictionaries(
-        {"enum": st.lists(JSON_STRATEGY, 1, 10, unique_by=encode_canonical_json)}
+        {
+            "enum": st.lists(
+                JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
+            )
+        }
     )
 
 

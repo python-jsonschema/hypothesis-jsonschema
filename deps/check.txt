@@ -13,7 +13,7 @@ click==7.0                # via black
 colorama==0.4.3           # via bandit
 entrypoints==0.3          # via flake8
 flake8-bandit==2.1.2
-flake8-bugbear==20.1.2
+flake8-bugbear==20.1.4
 flake8-builtins==1.4.2
 flake8-comprehensions==3.2.2
 flake8-docstrings==1.5.0
@@ -21,8 +21,8 @@ flake8-polyfill==1.0.2    # via flake8-bandit, pep8-naming
 flake8-print==3.1.4
 flake8==3.7.9
 gitdb2==2.0.6             # via gitpython
-gitpython==3.0.5          # via bandit
-importlib-metadata==1.4.0  # via flake8-comprehensions
+gitpython==3.0.7          # via bandit
+importlib-metadata==1.5.0  # via flake8-comprehensions
 isort==4.3.21
 mccabe==0.6.1             # via flake8
 mypy-extensions==0.4.3    # via mypy
@@ -44,4 +44,4 @@ tokenize-rt==3.2.0        # via pyupgrade
 toml==0.10.0              # via black
 typed-ast==1.4.1          # via black, mypy
 typing-extensions==3.7.4.1  # via mypy
-zipp==2.1.0               # via importlib-metadata
+zipp==2.2.0               # via importlib-metadata
