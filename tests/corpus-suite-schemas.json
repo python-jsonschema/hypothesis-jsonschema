@@ -616,7 +616,10 @@
         "draft7/const validation": {
             "const": 2
         },
-        "draft7/const with 0 does not match false": {
+        "draft7/const with -2.0 matches integer and float types": {
+            "const": -2.0
+        },
+        "draft7/const with 0 does not match other zero-like types": {
             "const": 0
         },
         "draft7/const with 1 does not match true": {
@@ -696,11 +699,6 @@
                 }
             }
         },
-        "draft7/empty array of dependencies": {
-            "dependencies": {
-                "foo": []
-            }
-        },
         "draft7/enum with 0 does not match false": {
             "enum": [
                 0
@@ -772,6 +770,9 @@
         },
         "draft7/exclusiveMinimum validation": {
             "exclusiveMinimum": 1.1
+        },
+        "draft7/float and integers are equal up to 64-bit representation limits": {
+            "const": 9007199254740992
         },
         "draft7/forbidden property": {
             "properties": {
@@ -916,6 +917,9 @@
         },
         "draft7/maximum validation": {
             "maximum": 3.0
+        },
+        "draft7/maximum validation with unsigned integer": {
+            "maximum": 300
         },
         "draft7/minItems validation": {
             "minItems": 1
