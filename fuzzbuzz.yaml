@@ -1,0 +1,24 @@
+base: ubuntu:16.04
+language: "python"
+version: "3.6"
+setup:
+  - python -m pip install --user --upgrade pip setuptools
+  - python -m pip install -r deps/test.txt
+  - python -m pip install --user --no-deps .
+targets:
+    - name: fuzz_canonical_equivalent_fixpoint
+      harness:
+        function: fuzz_canonicalises_to_equivalent_fixpoint
+        file: tests/test_canonicalise.py
+    - name: fuzz_canonical_json_encoding
+      harness:
+        function: fuzz_canonical_json_encoding
+        file: tests/test_canonicalise.py
+    - name: fuzz_merge_semantics
+      harness:
+        function: fuzz_merge_semantics
+        file: tests/test_canonicalise.py
+    - name: fuzz_self_merge_eq_canonicalish
+      harness:
+        function: fuzz_self_merge_eq_canonicalish
+        file: tests/test_canonicalise.py

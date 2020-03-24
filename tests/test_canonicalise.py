@@ -264,3 +264,27 @@ def test_merge_should_notice_required_disallowed_properties():
 def test_resolution_checks_resolver_is_valid():
     with pytest.raises(InvalidArgument):
         resolve_all_refs({}, resolver="not a resolver")
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@given(data=st.data())
+def _canonicalises_to_equivalent_fixpoint(data):
+    # This function isn't executed by pytest, only by FuzzBuzz - we want to parametrize
+    # over schemas for differnt types there, but have to supply *all* args here.
+    schema = data.draw(json_schemata(), label="schema")
+    cc = canonicalish(schema)
+    assert cc == canonicalish(cc)
+    instance = data.draw(JSON_STRATEGY | from_schema(cc), label="instance")
+    assert is_valid(instance, schema) == is_valid(instance, cc)
+    jsonschema.validators.validator_for(schema).check_schema(schema)
+
+
+# Expose fuzz targets in a form that FuzzBuzz can understand (no dotted names)
+fuzz_canonical_json_encoding = test_canonical_json_encoding.hypothesis.fuzz_one_input
+fuzz_merge_semantics = test_merge_semantics.hypothesis.fuzz_one_input
+fuzz_self_merge_eq_canonicalish = (
+    test_self_merge_eq_canonicalish.hypothesis.fuzz_one_input
+)
+fuzz_canonicalises_to_equivalent_fixpoint = (
+    _canonicalises_to_equivalent_fixpoint.hypothesis.fuzz_one_input
+)
