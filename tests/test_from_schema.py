@@ -270,9 +270,13 @@ def test_ref_in_array_additional_items(value):
 
 REF_IN_ARRAY_CONTAINS = {
     "type": "object",
-    "definition": {"type": "string"},
+    "definition": {"type": "string", "pattern": "\\d"},
     "properties": {
-        "something": {"type": "array", "contains": {"$ref": "#/definition"}}
+        "something": {
+            "type": "array",
+            "items": {"type": "string"},
+            "contains": {"$ref": "#/definition"},
+        }
     },
     "additionalProperties": False,
 }
