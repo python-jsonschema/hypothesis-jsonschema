@@ -77,6 +77,11 @@ FLAKY_SCHEMAS = {
     # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
     "Drone CI configuration file",
     "PHP Composer configuration file",
+    # Missing/external definitions
+    "Cirrus CI configuration files",
+    # Not currently handled by RefResolver
+    "draft4/Location-independent identifier",
+    "draft7/Location-independent identifier",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
@@ -112,13 +117,25 @@ def to_name_params(corpus):
             yield n
 
 
+EXPECTED_REF_FAIL_MESSAGES = [
+    "unknown url type",
+    "hypothesis-jsonschema does not fetch remote references",
+    "Could not resolve recursive references in schema",
+    # these are worth looking into (avro)
+    "had incompatible base schema",
+]
+
+
 def xfail_on_reference_resolve_error(f):
     @proxies(f)
     def inner(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except jsonschema.exceptions.RefResolutionError:
-            pytest.xfail("Could not resolve a reference")
+        except jsonschema.exceptions.RefResolutionError as err:
+            err_str = str(err)
+            if any(expected in err_str for expected in EXPECTED_REF_FAIL_MESSAGES):
+                pytest.xfail(err_str[:64])
+            raise err
 
     return inner
 
@@ -264,3 +281,20 @@ REF_IN_ARRAY_CONTAINS = {
 @given(from_schema(REF_IN_ARRAY_CONTAINS))
 def test_ref_in_array_contains(value):
     jsonschema.validate(value, REF_IN_ARRAY_CONTAINS)
+
+
+REF_IN_OBJECT_NESTED = {
+    "definitions": {"another": {"type": "object"}},
+    "properties": {
+        "something": {
+            "type": "object",
+            "properties": {"another": {"$ref": "#/definitions/another"}},
+        }
+    },
+    "additionalProperties": False,
+}
+
+
+@given(from_schema(REF_IN_OBJECT_NESTED))
+def test_ref_in_object_nested(value):
+    jsonschema.validate(value, REF_IN_OBJECT_NESTED)

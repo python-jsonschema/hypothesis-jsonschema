@@ -153,12 +153,20 @@ def gen_array(draw: Any) -> Schema:
     else:
         if draw(st.booleans()):
             out["uniqueItems"] = True
+            if isinstance(items, dict):
+                for min_ in ["minimum", "exclusiveMinimum"]:
+                    for max_ in ["maximum", "exclusiveMaximum"]:
+                        if min_ not in items or max_ not in items:
+                            continue
+                        if items[min_] == items[max_]:
+                            assume(min_size < 2)
         if items == {}:
             out["contains"] = draw(_json_schemata(recur=False))
     if min_size is not None:
         out["minItems"] = min_size
     if max_size is not None:
         out["maxItems"] = max_size
+
     return out
 
 
