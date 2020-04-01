@@ -227,9 +227,41 @@ REF_IN_ARRAY_ITEMS = {
 }
 
 
-@pytest.mark.xfail(
-    strict=True, reason="https://github.com/Zac-HD/hypothesis-jsonschema/issues/32"
-)
 @given(from_schema(REF_IN_ARRAY_ITEMS))
 def test_ref_in_array_items(value):
     jsonschema.validate(value, REF_IN_ARRAY_ITEMS)
+
+
+REF_IN_ARRAY_ADDITIONAL_ITEMS = {
+    "type": "object",
+    "definition": {"type": "string"},
+    "properties": {
+        "something-else": {
+            "type": "array",
+            "items": [{"type": "number"}],
+            "additionalItems": {"$ref": "#/definition"}
+        }
+    },
+    "additionalProperties": False,
+}
+
+@given(from_schema(REF_IN_ARRAY_ADDITIONAL_ITEMS))
+def test_ref_in_array_additional_items(value):
+    jsonschema.validate(value, REF_IN_ARRAY_ADDITIONAL_ITEMS)
+
+
+REF_IN_ARRAY_CONTAINS = {
+    "type": "object",
+    "definition": {"type": "string"},
+    "properties": {
+        "something": {
+            "type": "array",
+            "contains": {"$ref": "#/definition"}
+        }
+    },
+    "additionalProperties": False,
+}
+
+@given(from_schema(REF_IN_ARRAY_CONTAINS))
+def test_ref_in_array_contains(value):
+    jsonschema.validate(value, REF_IN_ARRAY_CONTAINS)

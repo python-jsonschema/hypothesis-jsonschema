@@ -50,6 +50,8 @@ SCHEMA_KEYS = tuple(
 # Note that in some cases ("dependencies"), the value may be a list of strings.
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
+# Names of schema keys that might need extra $ref discovery
+SCHEMA_NESTED_REF_KEYS = ("items", "additionalItems", "contains")
 
 def is_valid(instance: JSONType, schema: Schema) -> bool:
     try:
@@ -487,6 +489,13 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
         )
 
     def res_one(s: Schema) -> Schema:
+        for n in SCHEMA_NESTED_REF_KEYS:
+            it = s.get(n)
+            if isinstance(it, list):
+                s[n] = [resolve_all_refs(i, resolver=resolver) for i in it]
+            elif isinstance(it, dict):
+                s[n] = resolve_all_refs(it, resolver=resolver)
+
         if "$ref" not in s:
             return s
         assert isinstance(resolver, jsonschema.RefResolver)
