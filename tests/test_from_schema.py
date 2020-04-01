@@ -239,11 +239,12 @@ REF_IN_ARRAY_ADDITIONAL_ITEMS = {
         "something-else": {
             "type": "array",
             "items": [{"type": "number"}],
-            "additionalItems": {"$ref": "#/definition"}
+            "additionalItems": {"$ref": "#/definition"},
         }
     },
     "additionalProperties": False,
 }
+
 
 @given(from_schema(REF_IN_ARRAY_ADDITIONAL_ITEMS))
 def test_ref_in_array_additional_items(value):
@@ -254,13 +255,11 @@ REF_IN_ARRAY_CONTAINS = {
     "type": "object",
     "definition": {"type": "string"},
     "properties": {
-        "something": {
-            "type": "array",
-            "contains": {"$ref": "#/definition"}
-        }
+        "something": {"type": "array", "contains": {"$ref": "#/definition"}}
     },
     "additionalProperties": False,
 }
+
 
 @given(from_schema(REF_IN_ARRAY_CONTAINS))
 def test_ref_in_array_contains(value):

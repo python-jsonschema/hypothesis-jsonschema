@@ -53,6 +53,7 @@ SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 # Names of schema keys that might need extra $ref discovery
 SCHEMA_NESTED_REF_KEYS = ("items", "additionalItems", "contains")
 
+
 def is_valid(instance: JSONType, schema: Schema) -> bool:
     try:
         jsonschema.validate(instance, schema)
