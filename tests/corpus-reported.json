@@ -153,6 +153,78 @@
         },
         "type": "object"
     },
+    "ref in array additionalItems": {
+        "additionalProperties": false,
+        "definition": {
+            "type": "string"
+        },
+        "properties": {
+            "something-else": {
+                "additionalItems": {
+                    "$ref": "#/definition"
+                },
+                "items": [
+                    {
+                        "type": "number"
+                    }
+                ],
+                "type": "array"
+            }
+        },
+        "type": "object"
+    },
+    "ref in array contains": {
+        "additionalProperties": false,
+        "definition": {
+            "pattern": "\\d",
+            "type": "string"
+        },
+        "properties": {
+            "something": {
+                "contains": {
+                    "$ref": "#/definition"
+                },
+                "items": {
+                    "type": "string"
+                },
+                "type": "array"
+            }
+        },
+        "type": "object"
+    },
+    "ref in array items": {
+        "additionalProperties": false,
+        "definition": {
+            "type": "string"
+        },
+        "properties": {
+            "something": {
+                "items": {
+                    "$ref": "#/definition"
+                },
+                "type": "array"
+            }
+        },
+        "type": "object"
+    },
+    "ref in nested object properties": {
+        "additionalProperties": false,
+        "definitions": {
+            "another": {
+                "type": "object"
+            }
+        },
+        "properties": {
+            "something": {
+                "properties": {
+                    "another": {
+                        "$ref": "#/definitions/another"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
     "string with format and pattern": {
         "format": "email",
         "pattern": "^\\w+@",

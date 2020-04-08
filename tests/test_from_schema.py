@@ -235,19 +235,3 @@ def test_numeric_uniqueness(value):
 def test_draft03_not_supported():
     with pytest.raises(InvalidArgument):
         from_schema({"$schema": "http://json-schema.org/draft-03/schema#"})
-
-
-REF_IN_ARRAY_ITEMS = {
-    "type": "object",
-    "definition": {"type": "string"},
-    "properties": {"something": {"type": "array", "items": {"$ref": "#/definition"}}},
-    "additionalProperties": False,
-}
-
-
-@pytest.mark.xfail(
-    strict=True, reason="https://github.com/Zac-HD/hypothesis-jsonschema/issues/32"
-)
-@given(from_schema(REF_IN_ARRAY_ITEMS))
-def test_ref_in_array_items(value):
-    jsonschema.validate(value, REF_IN_ARRAY_ITEMS)
