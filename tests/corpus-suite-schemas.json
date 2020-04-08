@@ -974,6 +974,17 @@
                 "string"
             ]
         },
+        "draft7/nested allOf, to check validation semantics": {
+            "allOf": [
+                {
+                    "allOf": [
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            ]
+        },
         "draft7/nested anyOf, to check validation semantics": {
             "anyOf": [
                 {
@@ -999,6 +1010,17 @@
                 "type": "array"
             },
             "type": "array"
+        },
+        "draft7/nested oneOf, to check validation semantics": {
+            "oneOf": [
+                {
+                    "oneOf": [
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            ]
         },
         "draft7/nested refs": {
             "$ref": "#/definitions/c",
