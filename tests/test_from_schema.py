@@ -12,7 +12,10 @@ from hypothesis.errors import InvalidArgument
 from hypothesis.internal.reflection import proxies
 
 from gen_schemas import schema_strategy_params
-from hypothesis_jsonschema._canonicalise import canonicalish
+from hypothesis_jsonschema._canonicalise import (
+    HypothesisRefResolutionError,
+    canonicalish,
+)
 from hypothesis_jsonschema._from_schema import from_schema, rfc3339
 
 
@@ -77,6 +80,16 @@ FLAKY_SCHEMAS = {
     # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
     "Drone CI configuration file",
     "PHP Composer configuration file",
+    # This schema is missing the "definitions" key which means they're not resolvable.
+    "Cirrus CI configuration files",
+    # These schemas use remote references without a URL schema, which is invalid
+    "A JSON schema for a Dolittle bounded context's resource configurations",
+    "A JSON schema for Dolittle application's bounded context configuration",
+    # The following schemas refer to an `$id` rather than a JSON pointer.
+    # This is valid, but not supported by the Python library - see e.g.
+    # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
+    "draft4/Location-independent identifier",
+    "draft7/Location-independent identifier",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
@@ -117,8 +130,13 @@ def xfail_on_reference_resolve_error(f):
     def inner(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except jsonschema.exceptions.RefResolutionError:
-            pytest.xfail("Could not resolve a reference")
+        except jsonschema.exceptions.RefResolutionError as err:
+            # Currently: could be recursive, remote, or incompatible base schema
+            if isinstance(err, HypothesisRefResolutionError) or isinstance(
+                err._cause, HypothesisRefResolutionError
+            ):
+                pytest.xfail("Could not resolve a reference")
+            raise
 
     return inner
 

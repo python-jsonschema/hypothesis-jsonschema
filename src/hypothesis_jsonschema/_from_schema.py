@@ -19,6 +19,7 @@ from ._canonicalise import (
     FALSEY,
     TRUTHY,
     TYPE_STRINGS,
+    HypothesisRefResolutionError,
     JSONType,
     Schema,
     canonicalish,
@@ -85,7 +86,7 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     try:
         schema = resolve_all_refs(schema)
     except RecursionError:
-        raise jsonschema.exceptions.RefResolutionError(
+        raise HypothesisRefResolutionError(
             f"Could not resolve recursive references in schema={schema!r}"
         ) from None
 

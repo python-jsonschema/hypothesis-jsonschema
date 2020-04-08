@@ -85,6 +85,10 @@ class CanonicalisingJsonEncoder(json.JSONEncoder):
         )(o, 0)
 
 
+class HypothesisRefResolutionError(jsonschema.exceptions.RefResolutionError):
+    pass
+
+
 def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
     return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
@@ -466,7 +470,7 @@ FALSEY = canonicalish(False)
 
 class LocalResolver(jsonschema.RefResolver):
     def resolve_remote(self, uri: str) -> NoReturn:
-        raise jsonschema.exceptions.RefResolutionError(
+        raise HypothesisRefResolutionError(
             f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
         )
 
@@ -498,7 +502,7 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
             m = merged([s, got])
             if m is None:
                 msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
-                raise jsonschema.exceptions.RefResolutionError(msg)
+                raise HypothesisRefResolutionError(msg)
             return resolve_all_refs(m, resolver=resolver)
 
     if "$ref" in schema:
