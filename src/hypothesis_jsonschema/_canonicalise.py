@@ -287,6 +287,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             schema["minItems"] = max(schema.get("minItems", 0), 1)
         if schema["contains"] == TRUTHY:
             schema.pop("contains")
+            schema["minItems"] = max(schema.get("minItems", 1), 1)
     if "array" in type_ and schema.get("minItems", 0) > schema.get(
         "maxItems", math.inf
     ):
@@ -326,6 +327,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema.pop("items", None)
         schema.pop("uniqueItems", None)
         schema.pop("additionalItems", None)
+    if "array" in type_ and schema.get("items", TRUTHY) == TRUTHY:
+        schema.pop("items", None)
     if (
         "properties" in schema
         and not schema.get("patternProperties")
@@ -419,6 +422,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema["type"] = type_
     # Canonicalise "xxxOf" lists; in each case canonicalising and sorting the
     # sub-schemas then handling any key-specific logic.
+    if TRUTHY in schema.get("anyOf", ()):
+        schema.pop("anyOf", None)
     if "anyOf" in schema:
         schema["anyOf"] = sorted(schema["anyOf"], key=encode_canonical_json)
         schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
