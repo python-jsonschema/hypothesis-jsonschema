@@ -490,11 +490,8 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
             f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
         )
 
-    def res_one(s: Schema) -> Schema:
-        if "$ref" not in s:
-            return s
-        assert isinstance(resolver, jsonschema.RefResolver)
-        s = dict(s)
+    if "$ref" in schema:
+        s = dict(schema)
         ref = s.pop("$ref")
         with resolver.resolving(ref) as got:
             if s == {}:
@@ -504,29 +501,32 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
                 msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
                 raise HypothesisRefResolutionError(msg)
             return resolve_all_refs(m, resolver=resolver)
+    assert "$ref" not in schema
 
-    if "$ref" in schema:
-        schema = res_one(schema)
     for key in SCHEMA_KEYS:
         val = schema.get(key, False)
         if isinstance(val, list):
-            schema[key] = [res_one(v) if isinstance(v, dict) else v for v in val]
+            schema[key] = [
+                resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
+                for v in val
+            ]
         elif isinstance(val, dict):
-            schema[key] = res_one(val)
+            schema[key] = resolve_all_refs(val, resolver=resolver)
         else:
             assert isinstance(val, bool)
     for key in SCHEMA_OBJECT_KEYS:  # values are keys-to-schema-dicts, not schemas
         if key in schema:
-            s = schema[key]
-            assert isinstance(s, dict)
+            subschema = schema[key]
+            assert isinstance(subschema, dict)
             schema[key] = {
-                k: res_one(v) if isinstance(v, dict) else v for k, v in s.items()
+                k: resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
+                for k, v in subschema.items()
             }
     assert isinstance(schema, dict)
     return schema
 
 
-def merged(schemas: List[Any]) -> Union[None, Schema]:
+def merged(schemas: List[Any]) -> Optional[Schema]:
     """Merge *n* schemas into a single schema, or None if result is invalid.
 
     Takes the logical intersection, so any object that validates against the returned
