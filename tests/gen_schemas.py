@@ -10,9 +10,9 @@ from hypothesis import assume
 
 from hypothesis_jsonschema._canonicalise import JSONType, Schema, encode_canonical_json
 from hypothesis_jsonschema._from_schema import (
-    JSON_SCHEMA_STRING_FORMATS,
     JSON_STRATEGY,
     REGEX_PATTERNS,
+    STRING_FORMATS,
     from_schema,
 )
 
@@ -112,7 +112,7 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
     pattern = draw(st.none() | REGEX_PATTERNS)
-    format_ = draw(st.none() | st.sampled_from(JSON_SCHEMA_STRING_FORMATS))
+    format_ = draw(st.none() | st.sampled_from(sorted(STRING_FORMATS)))
     out: Dict[str, Union[str, int]] = {"type": "string"}
     if pattern is not None:
         out["pattern"] = pattern

@@ -191,39 +191,6 @@ def number_schema(schema: dict) -> st.SearchStrategy[float]:
     ).filter(lambda n: n != 0 or math.copysign(1, n) == 1)
 
 
-RFC3339_FORMATS = (
-    "date-fullyear",
-    "date-month",
-    "date-mday",
-    "time-hour",
-    "time-minute",
-    "time-second",
-    "time-secfrac",
-    "time-numoffset",
-    "time-offset",
-    "partial-time",
-    "full-date",
-    "full-time",
-    "date-time",
-)
-JSON_SCHEMA_STRING_FORMATS = RFC3339_FORMATS + (
-    "email",
-    "idn-email",
-    "hostname",
-    "idn-hostname",
-    "ipv4",
-    "ipv6",
-    "uri",
-    "uri-reference",
-    "iri",
-    "iri-reference",
-    "uri-template",
-    "json-pointer",
-    "relative-json-pointer",
-    "regex",
-)
-
-
 def rfc3339(name: str) -> st.SearchStrategy[str]:
     """Get a strategy for date or time strings in the given RFC3339 format.
 
@@ -255,9 +222,9 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
         return st.one_of(st.just("Z"), rfc3339("time-numoffset"))
     if name == "partial-time":
         return st.times().map(str)
-    if name == "full-date":
+    if name == "date" or name == "full-date":
         return st.dates().map(str)
-    if name == "full-time":
+    if name == "time" or name == "full-time":
         return st.tuples(rfc3339("partial-time"), rfc3339("time-offset")).map("".join)
     assert name == "date-time"
     return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)
@@ -284,10 +251,47 @@ def regex_patterns(draw: Any) -> str:
 
 REGEX_PATTERNS = regex_patterns()
 
+# Via the `webcolors` package, to match the logic `jsonschema`
+# uses to check it's (non-standard?) "color" format.
+_WEBCOLOR_REGEX = "^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$"
+_CSS21_COLOR_NAMES = (
+    "aqua",
+    "black",
+    "blue",
+    "fuchsia",
+    "green",
+    "gray",
+    "lime",
+    "maroon",
+    "navy",
+    "olive",
+    "orange",
+    "purple",
+    "red",
+    "silver",
+    "teal",
+    "white",
+    "yellow",
+)
+
+RFC3339_FORMATS = (
+    "date-fullyear",
+    "date-month",
+    "date-mday",
+    "time-hour",
+    "time-minute",
+    "time-second",
+    "time-secfrac",
+    "time-numoffset",
+    "time-offset",
+    "partial-time",
+    "full-date",
+    "full-time",
+    "date-time",
+)
 STRING_FORMATS = {
     **{name: rfc3339(name) for name in RFC3339_FORMATS},
-    "date": rfc3339("full-date"),
-    "time": rfc3339("full-time"),
+    "color": st.from_regex(_WEBCOLOR_REGEX) | st.sampled_from(_CSS21_COLOR_NAMES),
     "email": st.emails(),
     "idn-email": st.emails(),
     "hostname": prov.domains(),
