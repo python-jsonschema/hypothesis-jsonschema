@@ -386,6 +386,11 @@ def test_multiple_contains_behind_allof(value):
     jsonschema.validate(value, ALLOF_CONTAINS)
 
 
+@given(from_schema({"type": "integer"}).filter(lambda i: isinstance(i, float)))
+def test_integer_schema_can_generate_float_values(val):
+    assert val == int(val)
+
+
 @jsonschema.FormatChecker.cls_checks("card-test")
 def validate_card_format(string):
     # For the real thing, you'd want use the Luhn algorithm; this is enough for tests.

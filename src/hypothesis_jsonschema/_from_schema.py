@@ -229,12 +229,28 @@ def _numeric_with_multiplier(
     )
 
 
+def _as_float_if_eq(i: int) -> float:
+    """Convert `i` to a float, or leave as int on loss of precision."""
+    # This is useful because {"type": "integer"} allows values of
+    # Python type float so long as they represent a whole number.
+    try:
+        f = float(i)
+    except OverflowError:
+        return i
+    else:
+        if i == f:
+            return f
+        return i
+
+
 def integer_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle integer schemata."""
     min_value, max_value = get_integer_bounds(schema)
     if "multipleOf" in schema:
-        return _numeric_with_multiplier(min_value, max_value, schema)
-    return st.integers(min_value, max_value)
+        strat = _numeric_with_multiplier(min_value, max_value, schema)
+    else:
+        strat = st.integers(min_value, max_value)
+    return strat | strat.map(_as_float_if_eq)
 
 
 def number_schema(schema: dict) -> st.SearchStrategy[float]:
