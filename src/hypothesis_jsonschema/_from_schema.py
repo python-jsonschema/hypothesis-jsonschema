@@ -312,8 +312,8 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
-    max_size = schema.get("maxLength", float("inf"))
-    strategy = st.text(min_size=min_size, max_size=schema.get("maxLength"))
+    max_size = schema.get("maxLength")
+    strategy = st.text(min_size=min_size, max_size=max_size)
     if schema.get("format") in STRING_FORMATS:
         # Unknown "format" specifiers should be ignored for validation.
         # See https://json-schema.org/latest/json-schema-validation.html#format
@@ -330,7 +330,14 @@ def string_schema(schema: dict) -> st.SearchStrategy[str]:
         except re.error:
             # Patterns that are invalid in Python, or just malformed
             return st.nothing()
-    return strategy.filter(lambda s: min_size <= len(s) <= max_size)
+    # If we have size bounds but we're generating strings from a regex or pattern,
+    # apply a filter to ensure our size bounds are respected.
+    if ("format" in schema or "pattern" in schema) and (
+        min_size != 0 or max_size is not None
+    ):
+        max_size = math.inf if max_size is None else max_size
+        strategy = strategy.filter(lambda s: min_size <= len(s) <= max_size)
+    return strategy
 
 
 def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
