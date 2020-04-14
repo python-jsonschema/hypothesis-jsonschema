@@ -1,5 +1,11 @@
 # Changelog
 
+#### 0.17.0 - 2020-07-16
+- Adds a `custom_formats` keyword argument to `from_schema()`, so that you can
+  specify a strategy to generate strings for custom formats like credit card numbers.
+  Thanks to Dmitry Dygalo, whose [sponsorship](https://github.com/sponsors/Zac-HD)
+  motivated me to add the feature!
+
 #### 0.16.2 - 2020-07-12
 - Substantial performance gains for some schemas, via improved handling of the
   `contains`, `not`, `anyOf`, and `if/then/else` keywords

@@ -14,12 +14,24 @@ which takes a JSON schema and returns a strategy for allowed JSON objects.
 from hypothesis import given
 from hypothesis_jsonschema import from_schema
 
+
 @given(from_schema(
     {"type": "integer", "minimum": 1, "exclusiveMaximum": 10}
 ))
-def test(value):
+def test_integers(value):
     assert isinstance(value, int)
     assert 1 <= value < 10
+
+
+@given(from_schema(
+    {"type": "string", "format": "card"},
+    # Standard formats work out of the box.  Custom formats are ignored
+    # by default, but you can pass custom strategies for them - e.g.
+    custom_formats={"card": st.sampled_from(EXAMPLE_CARD_NUMBERS)}
+))
+def test_card_numbers(value):
+    assert isinstance(value, str)
+    assert re.match(r"^\d{4} \d{4} \d{4} \d{4}$", value)
 ```
 
 For more details on property-based testing and how to use or customise

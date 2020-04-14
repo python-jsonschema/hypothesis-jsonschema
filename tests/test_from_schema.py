@@ -1,6 +1,7 @@
 """Tests for the hypothesis-jsonschema library."""
 
 import json
+import re
 from pathlib import Path
 
 import jsonschema
@@ -383,3 +384,46 @@ def test_multiple_contains_behind_allof(value):
     # By placing *multiple* contains elements behind "allOf" we've disabled the
     # mixed-generation logic, and so we can't generate any valid instances at all.
     jsonschema.validate(value, ALLOF_CONTAINS)
+
+
+@jsonschema.FormatChecker.cls_checks("card-test")
+def validate_card_format(string):
+    # For the real thing, you'd want use the Luhn algorithm; this is enough for tests.
+    return bool(re.match(r"^\d{4} \d{4} \d{4} \d{4}$", string))
+
+
+@pytest.mark.parametrize(
+    "kw",
+    [
+        {"foo": "not a strategy"},
+        {5: st.just("name is not a string")},
+        {"full-date": st.just("2000-01-01")},  # can't override a standard format
+        {"card-test": st.just("not a valid card")},
+    ],
+)
+@given(data=st.data())
+def test_custom_formats_validation(data, kw):
+    s = from_schema({"type": "string", "format": "card-test"}, custom_formats=kw)
+    with pytest.raises(InvalidArgument):
+        data.draw(s)
+
+
+@given(
+    num=from_schema(
+        {"type": "string", "format": "card-test"},
+        custom_formats={"card-test": st.just("4111 1111 1111 1111")},
+    )
+)
+def test_allowed_custom_format(num):
+    assert num == "4111 1111 1111 1111"
+
+
+@given(
+    string=from_schema(
+        {"type": "string", "format": "not registered"},
+        custom_formats={"not registered": st.just("hello world")},
+    )
+)
+def test_allowed_unknown_custom_format(string):
+    assert string == "hello world"
+    assert "not registered" not in jsonschema.FormatChecker().checkers
