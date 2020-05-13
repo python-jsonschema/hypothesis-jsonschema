@@ -275,6 +275,16 @@
                 }
             }
         },
+        "draft7/Proper UTF-16 surrogate pair handling: pattern": {
+            "pattern": "^\ud83d\udc32*$"
+        },
+        "draft7/Proper UTF-16 surrogate pair handling: patternProperties": {
+            "patternProperties": {
+                "^\ud83d\udc32*$": {
+                    "type": "integer"
+                }
+            }
+        },
         "draft7/Recursive references between schemas": {
             "$id": "http://localhost:1234/tree",
             "definitions": {
@@ -796,6 +806,12 @@
                 {
                     "foo": 12
                 }
+            ]
+        },
+        "draft7/heterogeneous enum-with-null validation": {
+            "enum": [
+                6,
+                null
             ]
         },
         "draft7/if and else without then": {
@@ -1409,9 +1425,6 @@
                 3
             ]
         },
-        "draft7/some languages do not distinguish between different types of numeric value": {
-            "type": "integer"
-        },
         "draft7/string type matches strings": {
             "type": "string"
         },
@@ -1458,6 +1471,32 @@
                 }
             ],
             "uniqueItems": true
+        },
+        "draft7/uniqueItems=false validation": {
+            "uniqueItems": false
+        },
+        "draft7/uniqueItems=false with an array of items": {
+            "items": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "boolean"
+                }
+            ],
+            "uniqueItems": false
+        },
+        "draft7/uniqueItems=false with an array of items and additionalItems=false": {
+            "additionalItems": false,
+            "items": [
+                {
+                    "type": "boolean"
+                },
+                {
+                    "type": "boolean"
+                }
+            ],
+            "uniqueItems": false
         },
         "draft7/valid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"

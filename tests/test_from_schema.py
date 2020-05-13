@@ -90,6 +90,8 @@ FLAKY_SCHEMAS = {
     # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
     "draft4/Location-independent identifier",
     "draft7/Location-independent identifier",
+    # Bad reference forgot the leading "#"
+    "Microsoft Briefcase configuration file",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
