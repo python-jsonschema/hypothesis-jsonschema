@@ -138,6 +138,7 @@ def test_canonicalises_to_empty(schema):
             {"minItems": 1, "type": "array"},
         ),
         ({"anyOf": [{}, {"type": "null"}]}, {}),
+        ({"uniqueItems": False}, {}),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):

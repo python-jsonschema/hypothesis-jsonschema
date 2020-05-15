@@ -35,6 +35,8 @@ support, roadmap input, and prioritized feature development.
 
 ### Changelog:
 
+- Improved canonicalisation of `uniqueItems: false` case
+
 #### 0.12.1 - 2020-04-14
 - Added a strategy for the `"color"` format
 - Only apply string length filter when needed (small performance improvement)
