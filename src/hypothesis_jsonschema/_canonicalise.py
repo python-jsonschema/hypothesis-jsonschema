@@ -466,6 +466,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema.pop("else", None)
     if "then" not in schema and "else" not in schema:
         schema.pop("if", None)
+    if schema.get("uniqueItems") is False:
+        del schema["uniqueItems"]
     return schema
 
 
