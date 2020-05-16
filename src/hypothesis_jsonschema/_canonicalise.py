@@ -302,7 +302,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if (
         "array" in type_
         and "minItems" in schema
-        # TODO: could add logic for unsatisfiable list-of-items case
         and isinstance(schema.get("items", []), (bool, dict))
     ):
         count = upper_bound_instances(schema["items"])
