@@ -28,7 +28,7 @@ so here's the workflow for a new contributor:
    Note that you *don't need to be finished* - if you're stuck, please open a
    work-in-progress PR and ask for suggestions.
 
-6. Zac will review your code, and either ask for some changes (go to step 3),
+6. Zac will review your code, and either ask for some changes (go to step 4),
    or merge if it looks finished and passes all the tests.  Congratulations!
 
 
@@ -70,11 +70,6 @@ strategy.
 
 ### Code style and documentation
 
-Documentation is pretty easy: there's only one function - `from_schema()` -
-in the public API, and it's explained in the README.  Nothing else is exposed
-to users, so it's *commented* for the benefit of contributors who are reading
-the code and need to understand implementation details.
-
 We have a fairly strict code style, but *absolutely no need for opinions*.
 `tox -e check` fixes as many style issues as possible, using `black` among
 other tools, and then runs `flake8` and `mypy` to detect any remaining style
@@ -83,6 +78,11 @@ issues.  Once the tools are happy, we're happy.
 This highly automated approach makes it easy to focus on design issues like
 "how should I break this feature up into functions" or "does this name help
 readers understand the code" rather than style issues like formatting.
+
+The public API of this package consists of a single function, `from_schema()`,
+which is explained in the README.  We therefore have very little user-facing
+documentation, but encourage the use of comments for the benefit of contributors
+who are reading the code and need to understand implementation details.
 
 
 ### About the tests
