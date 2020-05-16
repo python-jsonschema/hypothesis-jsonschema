@@ -15,11 +15,15 @@ from hypothesis_jsonschema._canonicalise import (
     canonicalish,
     encode_canonical_json,
     get_type,
-    is_valid,
+    make_validator,
     merged,
     resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import JSON_STRATEGY
+
+
+def is_valid(instance, schema):
+    return make_validator(schema).is_valid(instance)
 
 
 @given(JSON_STRATEGY)

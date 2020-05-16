@@ -51,14 +51,6 @@ SCHEMA_KEYS = tuple(
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
 
-def is_valid(instance: JSONType, schema: Schema) -> bool:
-    try:
-        jsonschema.validate(instance, schema)
-        return True
-    except jsonschema.ValidationError:
-        return False
-
-
 def make_validator(
     schema: Schema,
 ) -> Union[
@@ -234,7 +226,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Make a copy, so we don't mutate the existing schema in place.
     schema = dict(schema)
     if "const" in schema:
-        if not is_valid(schema["const"], schema):
+        if not make_validator(schema).is_valid(schema["const"]):
             return FALSEY
         return {"const": schema["const"]}
     if "enum" in schema:
@@ -568,8 +560,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         s = canonicalish(s)
         # If we have a const or enum, this is fairly easy by filtering:
         if "const" in s:
-            validator = make_validator(out)
-            if validator.is_valid(s["const"], out):
+            if make_validator(out).is_valid(s["const"]):
                 out = s
                 continue
             return FALSEY
