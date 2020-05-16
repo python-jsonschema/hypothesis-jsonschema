@@ -13,16 +13,16 @@ so here's the workflow for a new contributor:
    [issues tagged `good first issue`](https://github.com/Zac-HD/hypothesis-jsonschema/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 2. Fork the repo, clone it to your local machine, and create your branch from `master`.
-   (if this sounds scary, [check out GitHub's *Hello World* guide](https://guides.github.com/activities/hello-world/))
+   (If this sounds scary, [check out GitHub's *Hello World* guide](https://guides.github.com/activities/hello-world/))
 
-3. Check that everything is working by running the tests.  We use
+3. Check that everything is working by running the tests.  We
    [manage our tests and dependencies with `tox`](https://tox.readthedocs.io/en/latest/index.html),
    so you can just type `tox` to install and run everything.  Later, you can run
    `tox -e check` if you just want to run the linters and auto-formatting tools
    without waiting for all the tests.
 
 4. Add your new feature!  Add a test for your new feature!
-   (and keep running `tox` to make sure nothing else broke)
+   (and keep running `tox` to make sure nothing else broke).
 
 5. When you're ready, push your changes to GitHub and open a pull request!
    Note that you *don't need to be finished* - if you're stuck, please open a
