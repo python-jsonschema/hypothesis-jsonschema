@@ -33,8 +33,17 @@ You can [sponsor me](https://github.com/sponsors/Zac-HD) to get priority
 support, roadmap input, and prioritized feature development.
 
 
+## Contributing to `hypothesis-jsonschema`
+
+We love external contributions - and try to make them both easy and fun.
+You can [read more details in our contributing guide](https://github.com/Zac-HD/hypothesis-jsonschema/blob/master/CONTRIBUTING.md),
+and [see everyone who has contributed on GitHub](https://github.com/Zac-HD/hypothesis-jsonschema/graphs/contributors).
+Thanks, everyone!
+
+
 ### Changelog:
 
+#### 0.13.0 - future release
 - Improved canonicalisation of `uniqueItems: false` case
 - Reuse `jsonschema` validators during canonicalisation (performance improvement)
 
