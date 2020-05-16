@@ -77,6 +77,7 @@ FLAKY_SCHEMAS = {
     # Occasionally really slow
     "snapcraft project  (https://snapcraft.io)",
     "batect configuration file",
+    "UI5 Tooling Configuration File (ui5.yaml)",
     # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
     "Drone CI configuration file",
     "PHP Composer configuration file",
