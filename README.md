@@ -36,6 +36,7 @@ support, roadmap input, and prioritized feature development.
 ### Changelog:
 
 - Improved canonicalisation of `uniqueItems: false` case
+- Reuse `jsonschema` validators during canonicalisation (performance improvement)
 
 #### 0.12.1 - 2020-04-14
 - Added a strategy for the `"color"` format

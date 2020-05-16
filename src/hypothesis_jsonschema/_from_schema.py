@@ -5,7 +5,6 @@ import math
 import operator
 import re
 from fractions import Fraction
-from functools import partial
 from typing import Any, Callable, Dict, List, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
@@ -27,7 +26,7 @@ from ._canonicalise import (
     get_integer_bounds,
     get_number_bounds,
     get_type,
-    is_valid,
+    make_validator,
     merged,
     resolve_all_refs,
 )
@@ -58,8 +57,11 @@ def merged_as_strategies(schemas: List[Schema]) -> st.SearchStrategy[JSONType]:
             continue
         s = merged([inputs[g] for g in group])
         if s is not None and s != FALSEY:
+            validators = [make_validator(s) for s in schemas]
             strats.append(
-                from_schema(s).filter(lambda v: all(is_valid(v, s) for s in schemas))
+                from_schema(s).filter(
+                    lambda obj: all(v.is_valid(obj) for v in validators)
+                )
             )
             combined.update(group)
     return st.one_of(strats)
@@ -95,7 +97,8 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     if "not" in schema:
         not_ = schema.pop("not")
         assert isinstance(not_, dict)
-        return from_schema(schema).filter(lambda v: not is_valid(v, not_))
+        validator = make_validator(not_).is_valid
+        return from_schema(schema).filter(lambda v: not validator(v))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
@@ -112,7 +115,7 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
         assert isinstance(oo, list)
         schemas = [merged([tmp, s]) for s in oo]
         return st.one_of([from_schema(s) for s in schemas if s is not None]).filter(
-            partial(is_valid, schema=schema)
+            make_validator(schema).is_valid
         )
     # Conditional application of subschemata
     if "if" in schema:
@@ -124,7 +127,7 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
         assert isinstance(then, (bool, dict))
         assert isinstance(else_, (bool, dict))
         return st.one_of([from_schema(s) for s in (then, else_, if_, tmp)]).filter(
-            partial(is_valid, schema=schema)
+            make_validator(schema).is_valid
         )
     # Simple special cases
     if "enum" in schema:
@@ -160,7 +163,7 @@ def integer_schema(schema: dict) -> st.SearchStrategy[float]:
             max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
         strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
         # check for and filter out float bounds, inexact multiplication, etc.
-        return strat.filter(partial(is_valid, schema=schema))
+        return strat.filter(make_validator(schema).is_valid)
 
     return st.integers(min_value, max_value)
 
@@ -178,7 +181,7 @@ def number_schema(schema: dict) -> st.SearchStrategy[float]:
             max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
         strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
         # check for and filter out float bounds, inexact multiplication, etc.
-        return strat.filter(partial(is_valid, schema=schema))
+        return strat.filter(make_validator(schema).is_valid)
 
     return st.floats(
         min_value=min_value,
@@ -389,7 +392,8 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         )
     if "contains" not in schema:
         return strat
-    return strat.filter(lambda val: any(is_valid(x, schema["contains"]) for x in val))
+    contains = make_validator(schema["contains"]).is_valid
+    return strat.filter(lambda val: any(contains(x) for x in val))
 
 
 def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
@@ -424,7 +428,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
-        partial(is_valid, schema=names)
+        make_validator(names).is_valid
     )
 
     @st.composite  # type: ignore
@@ -472,7 +476,7 @@ def object_schema(schema: dict) -> st.SearchStrategy[Dict[str, JSONType]]:
                 out[key] = draw(from_schema(additional))
 
             for k, v in dep_schemas.items():
-                if k in out and not is_valid(out, v):
+                if k in out and not make_validator(v).is_valid(out):
                     out.pop(key)
                     elements.reject()
 

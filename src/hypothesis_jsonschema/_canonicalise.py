@@ -51,12 +51,16 @@ SCHEMA_KEYS = tuple(
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 
 
-def is_valid(instance: JSONType, schema: Schema) -> bool:
-    try:
-        jsonschema.validate(instance, schema)
-        return True
-    except jsonschema.ValidationError:
-        return False
+def make_validator(
+    schema: Schema,
+) -> Union[
+    jsonschema.validators.Draft3Validator,
+    jsonschema.validators.Draft4Validator,
+    jsonschema.validators.Draft6Validator,
+    jsonschema.validators.Draft7Validator,
+]:
+    validator_cls = jsonschema.validators.validator_for(schema)
+    return validator_cls(schema)
 
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
@@ -222,11 +226,14 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Make a copy, so we don't mutate the existing schema in place.
     schema = dict(schema)
     if "const" in schema:
-        if not is_valid(schema["const"], schema):
+        if not make_validator(schema).is_valid(schema["const"]):
             return FALSEY
         return {"const": schema["const"]}
     if "enum" in schema:
-        enum_ = sorted((v for v in schema["enum"] if is_valid(v, schema)), key=sort_key)
+        validator = make_validator(schema)
+        enum_ = sorted(
+            (v for v in schema["enum"] if validator.is_valid(v)), key=sort_key
+        )
         if not enum_:
             return FALSEY
         elif len(enum_) == 1:
@@ -365,8 +372,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         propnames = schema.get("propertyNames", {})
         if len(schema["required"]) > max_:
             type_.remove("object")
-        elif not all(is_valid(name, propnames) for name in schema["required"]):
-            type_.remove("object")
+        else:
+            validator = make_validator(propnames)
+            if not all(validator.is_valid(name) for name in schema["required"]):
+                type_.remove("object")
 
     for t, kw in TYPE_SPECIFIC_KEYS:
         numeric = {"number", "integer"}
@@ -551,12 +560,13 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         s = canonicalish(s)
         # If we have a const or enum, this is fairly easy by filtering:
         if "const" in s:
-            if is_valid(s["const"], out):
+            if make_validator(out).is_valid(s["const"]):
                 out = s
                 continue
             return FALSEY
         if "enum" in s:
-            enum_ = [v for v in s["enum"] if is_valid(v, out)]
+            validator = make_validator(out)
+            enum_ = [v for v in s["enum"] if validator.is_valid(v)]
             if not enum_:
                 return FALSEY
             elif len(enum_) == 1:

@@ -15,11 +15,15 @@ from hypothesis_jsonschema._canonicalise import (
     canonicalish,
     encode_canonical_json,
     get_type,
-    is_valid,
+    make_validator,
     merged,
     resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import JSON_STRATEGY
+
+
+def is_valid(instance, schema):
+    return make_validator(schema).is_valid(instance)
 
 
 @given(JSON_STRATEGY)
@@ -39,7 +43,12 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     schema = data.draw(schema_strategy, label="schema")
     cc = canonicalish(schema)
     assert cc == canonicalish(cc)
-    instance = data.draw(JSON_STRATEGY | from_schema(cc), label="instance")
+    try:
+        strat = from_schema(cc)
+    except InvalidArgument:
+        # e.g. array of unique {type: integers}, with too few allowed integers
+        assume(False)
+    instance = data.draw(JSON_STRATEGY | strat, label="instance")
     assert is_valid(instance, schema) == is_valid(instance, cc)
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
@@ -93,6 +102,15 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "required": ["", "0"],
             "propertyNames": {"minLength": 2},
         },
+        pytest.param(
+            {
+                "type": "array",
+                "items": {"type": "integer", "minimum": 0, "maximum": 0},
+                "uniqueItems": True,
+                "minItems": 2,
+            },
+            marks=pytest.mark.xfail,
+        ),
     ],
 )
 def test_canonicalises_to_empty(schema):
@@ -280,7 +298,12 @@ def _canonicalises_to_equivalent_fixpoint(data):
     schema = data.draw(json_schemata(), label="schema")
     cc = canonicalish(schema)
     assert cc == canonicalish(cc)
-    instance = data.draw(JSON_STRATEGY | from_schema(cc), label="instance")
+    try:
+        strat = from_schema(cc)
+    except InvalidArgument:
+        # e.g. array of unique {type: integers}, with too few allowed integers
+        assume(False)
+    instance = data.draw(JSON_STRATEGY | strat, label="instance")
     assert is_valid(instance, schema) == is_valid(instance, cc)
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
