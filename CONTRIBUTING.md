@@ -17,9 +17,9 @@ so here's the workflow for a new contributor:
 
 3. Check that everything is working by running the tests.  We
    [manage our tests and dependencies with `tox`](https://tox.readthedocs.io/en/latest/index.html),
-   so you can just type `tox` to install and run everything.  Later, you can run
-   `tox -e check` if you just want to run the linters and auto-formatting tools
-   without waiting for all the tests.
+   so after you `pip install tox`, you can just type `tox` to install and run
+   everything else.  Later, you can run `tox -e check` if you just want to run
+   the linters and auto-formatting tools without waiting for all the tests.
 
 4. Add your new feature!  Add a test for your new feature!
    (and keep running `tox` to make sure nothing else broke).
