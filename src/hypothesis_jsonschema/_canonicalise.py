@@ -140,6 +140,15 @@ def upper_bound_instances(schema: Schema) -> float:
         return len(schema["enum"])
     # TODO: could handle lots more cases here...
     # Converting known cases to enums would also be a good approach.
+    if get_type(schema) == ["integer"]:
+        lower, upper = get_integer_bounds(schema)
+        mul = schema.get("multipleOf")
+        if lower is not None and upper is not None and mul is None:
+            return 1 + (upper - lower)
+        elif lower is not None and upper is not None and mul is not None:
+            mul_lower = lower + (mul - (lower % mul))
+            mul_upper = upper - (upper % mul)
+            return ((mul_upper - mul_lower) / mul) + 1
     return math.inf
 
 
