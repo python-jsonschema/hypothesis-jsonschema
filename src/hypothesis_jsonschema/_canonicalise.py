@@ -333,13 +333,16 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema["items"] = schema["items"][: schema.get("maxItems")]
         for idx, s in enumerate(schema["items"]):
             if s == FALSEY:
-                if schema.get("minItems", 0) > idx:
-                    type_.remove("array")
-                    break
                 schema["items"] = schema["items"][:idx]
                 schema["maxItems"] = idx
                 schema.pop("additionalItems", None)
                 break
+        if schema.get("minItems", 0) > min(
+            len(schema["items"])
+            + upper_bound_instances(schema.get("additionalItems", TRUTHY)),
+            schema.get("maxItems", math.inf),
+        ):
+            type_.remove("array")
     if (
         "array" in type_
         and isinstance(schema.get("items"), list)

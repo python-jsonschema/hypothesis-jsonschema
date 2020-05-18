@@ -81,6 +81,13 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "minItems": 4,
         },
         {"type": "array", "items": [True, False], "minItems": 2},
+        {"type": "array", "items": [True], "minItems": 2, "additionalItems": False},
+        {
+            "type": "array",
+            "items": [True, False, True],
+            "minItems": 3,
+            "additionalItems": {"type": "null"},
+        },
         {"type": "integer", "minimum": 2, "maximum": 1},
         {"type": "integer", "minimum": 1, "maximum": 2, "multipleOf": 3},
         {"type": "number", "exclusiveMinimum": 0, "maximum": 0},
@@ -154,6 +161,20 @@ def test_canonicalises_to_empty(schema):
         ),
         ({"anyOf": [{}, {"type": "null"}]}, {}),
         ({"uniqueItems": False}, {}),
+        (
+            {
+                "type": "array",
+                "items": [True, True],
+                "minItems": 3,
+                "additionalItems": {"type": "null"},
+            },
+            {
+                "type": "array",
+                "items": [{}, {}],
+                "minItems": 3,
+                "additionalItems": {"const": None},
+            },
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
