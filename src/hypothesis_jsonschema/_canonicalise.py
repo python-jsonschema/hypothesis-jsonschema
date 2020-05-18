@@ -223,14 +223,18 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         return {}
     elif schema is False:
         return {"not": {}}
+
+    # Make a copy, so we don't mutate the existing schema in place.
+    # Using the canonical encoding makes all integer-valued floats into ints.
+    schema = json.loads(encode_canonical_json(schema))
+
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
         raise InvalidArgument(
             f"Got schema={schema} of type {type(schema).__name__}, "
             "but expected a dict."
         )
-    # Make a copy, so we don't mutate the existing schema in place.
-    schema = dict(schema)
+
     if "const" in schema:
         if not make_validator(schema).is_valid(schema["const"]):
             return FALSEY
