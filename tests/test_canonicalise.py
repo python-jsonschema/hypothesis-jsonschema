@@ -145,7 +145,7 @@ def test_canonicalises_to_empty(schema):
         ),
         (
             {"type": "number", "minimum": 0, "exclusiveMaximum": 6, "multipleOf": 3},
-            {"type": "number", "minimum": 0, "exclusiveMaximum": 6, "multipleOf": 3},
+            {"type": "integer", "minimum": 0, "maximum": 3, "multipleOf": 3},
         ),
         ({"enum": ["aa", 2, "z", None, 1]}, {"enum": [None, 1, 2, "z", "aa"]}),
         (

@@ -126,7 +126,10 @@ def get_type(schema: Schema) -> List[str]:
         assert type_ in TYPE_STRINGS
         return [type_]
     assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS), type_
-    return [t for t in TYPE_STRINGS if t in type_]
+    type_ = [t for t in TYPE_STRINGS if t in type_]
+    if "number" in type_ and "integer" in type_:
+        type_.remove("integer")  # all integers are numbers, so this is redundant
+    return type_
 
 
 def upper_bound_instances(schema: Schema) -> float:
@@ -278,6 +281,11 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             )
         ):
             type_.remove("number")
+        elif isinstance(mul, int):
+            # Numbers which are a multiple of an integer?  That's the integer type.
+            type_.remove("number")
+            type_ = [t for t in TYPE_STRINGS if t in type_ or t == "integer"]
+
     if "integer" in type_:
         lo, hi = get_integer_bounds(schema)
         mul = schema.get("multipleOf")
@@ -286,13 +294,12 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
             hi -= hi % mul
 
-        if "number" not in type_:
-            if lo is not None:
-                schema["minimum"] = lo
-                schema.pop("exclusiveMinimum", None)
-            if hi is not None:
-                schema["maximum"] = hi
-                schema.pop("exclusiveMaximum", None)
+        if lo is not None:
+            schema["minimum"] = lo
+            schema.pop("exclusiveMinimum", None)
+        if hi is not None:
+            schema["maximum"] = hi
+            schema.pop("exclusiveMaximum", None)
 
         if lo is not None and hi is not None and lo > hi:
             type_.remove("integer")
@@ -410,10 +417,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if set(not_).issubset(type_constraints):
             not_["type"] = get_type(not_)
             for t in set(type_).intersection(not_["type"]):
-                # If some type is allowed and totally unconstrained byt the "not"
-                # schema, it cannot be allowed
-                if t == "integer" and "number" in type_:
-                    continue
                 if not type_keys.get(t, set()).intersection(not_):
                     type_.remove(t)
                     if t not in ("integer", "number"):
