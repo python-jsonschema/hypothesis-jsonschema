@@ -83,7 +83,9 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     upper = draw(st.none() | st.integers(-max_int_float, max_int_float))
     if lower is not None and upper is not None and lower > upper:
         lower, upper = upper, lower
-    multiple_of = draw(st.none() | st.integers(2, 100))
+    multiple_of = draw(
+        st.none() | st.integers(2, 100) | st.floats(1 / 1024, 100, exclude_min=True)
+    )
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     assert kind in ("integer", "number")
     out: Dict[str, Union[str, float]] = {"type": kind}

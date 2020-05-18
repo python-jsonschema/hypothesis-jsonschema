@@ -269,15 +269,18 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
     type_ = get_type(schema)
     if "number" in type_:
+        if schema.get("exclusiveMinimum") is False:
+            del schema["exclusiveMinimum"]
+        if schema.get("exclusiveMaximum") is False:
+            del schema["exclusiveMaximum"]
         lo, hi, exmin, exmax = get_number_bounds(schema)
         mul = schema.get("multipleOf")
         if (
             lo is not None
             and hi is not None
             and (
-                lo > hi
-                or (lo == hi and (exmin or exmax))
-                or (mul and not has_divisibles(lo, hi, mul, exmin, exmax))
+                (mul and not has_divisibles(lo, hi, mul, exmin, exmax))
+                or (next_up(lo) if exmin else lo) > (next_down(hi) if exmax else hi)
             )
         ):
             type_.remove("number")
