@@ -147,12 +147,10 @@ def upper_bound_instances(schema: Schema) -> float:
     return math.inf
 
 
-def get_number_bounds(
-    schema: Schema, *, _for_integer: bool = False,
+def _get_numeric_bounds(
+    schema: Schema,
 ) -> Tuple[Optional[float], Optional[float], bool, bool]:
-    """Get the min and max allowed floats, and whether they are exclusive."""
-    assert "number" in get_type(schema) or _for_integer
-
+    """Get the min and max allowed numbers, and whether they are exclusive."""
     lower = schema.get("minimum")
     upper = schema.get("maximum")
     exmin = schema.get("exclusiveMinimum", False)
@@ -175,28 +173,32 @@ def get_number_bounds(
             exmax = False
     assert isinstance(exmin, bool)
     assert isinstance(exmax, bool)
+    return lower, upper, exmin, exmax
 
-    # Adjust bounds and cast to float
-    if lower is not None and not _for_integer:
+
+def get_number_bounds(
+    schema: Schema,
+) -> Tuple[Optional[float], Optional[float], bool, bool]:
+    """Get the min and max allowed floats, and whether they are exclusive."""
+    lower, upper, exmin, exmax = _get_numeric_bounds(schema)
+    if lower is not None:
         lo = float(lower)
         if lo < lower:
             lo = next_up(lo)
             exmin = False
         lower = lo
-    if upper is not None and not _for_integer:
+    if upper is not None:
         hi = float(upper)
         if hi > upper:
             hi = next_down(hi)
             exmax = False
         upper = hi
-
     return lower, upper, exmin, exmax
 
 
 def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
     """Get the min and max allowed integers."""
-    assert "integer" in get_type(schema)
-    lower, upper, exmin, exmax = get_number_bounds(schema, _for_integer=True)
+    lower, upper, exmin, exmax = _get_numeric_bounds(schema)
     # Adjust bounds and cast to int
     if lower is not None:
         lo = math.ceil(lower)
