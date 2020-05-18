@@ -665,7 +665,20 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         ):
             out[key] = max([out[key], s.pop(key)])
         # TODO: Handle remaining mergable keys.
-
+        if "multipleOf" in out and "multipleOf" in s:
+            all_prime_factors=prime_fac(out["multipleOf"])+prime_fac(s["multipleOf"])
+            prime_product=1
+            for x in all_prime_factors:
+                prime_product *= x
+            union=[]
+            for x in prime_fac(out["multipleOf"]):
+                for y in prime_fac(s["multipleOf"])
+                    if x == y: union.append(x)
+            union_product=1
+            for x in union:
+                union_product *= x
+            out["multipleOf"] = primes_product//union_product
+            
         for k, v in s.items():
             if k not in out:
                 out[k] = v
@@ -676,7 +689,20 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             return FALSEY
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
-
+# Find the prime factors for an integer number
+def prime_fac(n:int) -> [int]:
+    prime_factors=[]
+    while (n%2 == 0)
+        prime_factors.append(2)
+        n = n//2
+    for d in range(3, int(math.sqrt(n))+2):
+        while (n%d == 0):
+            prime_factors.append(d)
+            n = n//d
+        d+=2
+    if (n>1):
+        prime_factors.append(n)
+    return prime_factors
 
 def has_divisibles(
     start: float, end: float, divisor: float, exmin: bool, exmax: bool
