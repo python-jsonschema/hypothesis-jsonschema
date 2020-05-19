@@ -672,7 +672,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 prime_product *= x
             union=[]
             for x in prime_fac(out["multipleOf"]):
-                for y in prime_fac(s["multipleOf"])
+                for y in prime_fac(s["multipleOf"]):
                     if x == y: union.append(x)
             union_product=1
             for x in union:
