@@ -666,21 +666,21 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             out[key] = max([out[key], s.pop(key)])
         # TODO: Handle remaining mergable keys.
         if "multipleOf" in out and "multipleOf" in s:
-            all_prime_factors = prime_fac(out["multipleOf"]) + prime_fac(
-                s["multipleOf"]
-            )
-            prime_product = 1
-            for x in all_prime_factors:
-                prime_product *= x
-            union = []
-            for x in prime_fac(out["multipleOf"]):
-                for y in prime_fac(s["multipleOf"]):
-                    if x == y:
+            if type(out["multipleOf"]) == int and type(s["multipleOf"]) == int:
+                all_prime_factors = prime_fac(out["multipleOf"]) + prime_fac(
+                    s["multipleOf"]
+                )
+                prime_product = 1
+                for x in all_prime_factors:
+                    prime_product *= x
+                union = []
+                for x in prime_fac(out["multipleOf"]):
+                    if x in prime_fac(s["multipleOf"]):
                         union.append(x)
-            union_product = 1
-            for x in union:
-                union_product *= x
-            out["multipleOf"] = prime_product // union_product
+                union_product = 1
+                for x in union:
+                    union_product *= x
+                out["multipleOf"] = prime_product // union_product
 
         for k, v in s.items():
             if k not in out:
