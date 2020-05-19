@@ -695,7 +695,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
 
 # Find the prime factors for an integer number
-def prime_fac(n: int) -> [int]:
+def prime_fac(n: int) -> List[int]:
     prime_factors = []
     while n % 2 == 0:
         prime_factors.append(2)
