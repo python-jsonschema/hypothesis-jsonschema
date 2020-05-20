@@ -238,3 +238,14 @@ def test_numeric_uniqueness(value):
 def test_draft03_not_supported():
     with pytest.raises(InvalidArgument):
         from_schema({"$schema": "http://json-schema.org/draft-03/schema#"})
+
+
+@pytest.mark.parametrize("type_", ["integer", "number"])
+def test_impossible_multiplier(type_):
+    # Covering test for a failsafe branch, which explicitly returns nothing()
+    # if scaling the bounds and taking their ceil/floor also inverts them.
+    schema = {"maximum": -1, "minimum": -1, "multipleOf": 0.0009765625000000002}
+    schema["type"] = type_
+    strategy = from_schema(schema)
+    strategy.validate()
+    assert strategy.is_empty

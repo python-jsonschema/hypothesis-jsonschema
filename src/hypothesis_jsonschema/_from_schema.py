@@ -5,7 +5,7 @@ import math
 import operator
 import re
 from fractions import Fraction
-from typing import Any, Callable, Dict, List, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
 import hypothesis.provisional as prov
@@ -149,40 +149,42 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     return st.one_of([map_[t](schema) for t in get_type(schema)])
 
 
+def _numeric_with_multiplier(
+    min_value: Optional[float], max_value: Optional[float], schema: Schema
+) -> st.SearchStrategy[float]:
+    """Handle numeric schemata containing the multipleOf key."""
+    multiple_of = schema["multipleOf"]
+    assert isinstance(multiple_of, (int, float))
+    if min_value is not None:
+        min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
+    if max_value is not None:
+        max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
+    if min_value is not None and max_value is not None and min_value > max_value:
+        # You would think that this is impossible, but it can happen if multipleOf
+        # is very small and the bounds are very close togther.  It would be nicer
+        # to deal with this when canonicalising, but suffice to say we can't without
+        # diverging from the floating-point behaviour of the upstream validator.
+        return st.nothing()
+    return (
+        st.integers(min_value, max_value)
+        .map(lambda x: x * multiple_of)
+        .filter(make_validator(schema).is_valid)
+    )
+
+
 def integer_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle integer schemata."""
-    # TODO: possibly generate value as a float if float(x) == x
     min_value, max_value = get_integer_bounds(schema)
-
     if "multipleOf" in schema:
-        multiple_of = schema["multipleOf"]
-        assert isinstance(multiple_of, (int, float))
-        if min_value is not None:
-            min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
-        if max_value is not None:
-            max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
-        strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
-        # check for and filter out float bounds, inexact multiplication, etc.
-        return strat.filter(make_validator(schema).is_valid)
-
+        return _numeric_with_multiplier(min_value, max_value, schema)
     return st.integers(min_value, max_value)
 
 
 def number_schema(schema: dict) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
     min_value, max_value, exclude_min, exclude_max = get_number_bounds(schema)
-
     if "multipleOf" in schema:
-        multiple_of = schema["multipleOf"]
-        assert isinstance(multiple_of, (int, float))
-        if min_value is not None:
-            min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
-        if max_value is not None:
-            max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
-        strat = st.integers(min_value, max_value).map(lambda x: x * multiple_of)
-        # check for and filter out float bounds, inexact multiplication, etc.
-        return strat.filter(make_validator(schema).is_valid)
-
+        return _numeric_with_multiplier(min_value, max_value, schema)
     return st.floats(
         min_value=min_value,
         max_value=max_value,
