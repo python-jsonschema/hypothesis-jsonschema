@@ -8,7 +8,7 @@ import pytest
 from hypothesis import HealthCheck, assume, given, note, settings
 from hypothesis.errors import InvalidArgument
 
-from gen_schemas import json_schemata, schema_strategy_params
+from gen_schemas import gen_number, json_schemata, schema_strategy_params
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
@@ -269,13 +269,7 @@ def test_self_merge_eq_canonicalish(schema):
     assert m == canonicalish(schema)
 
 
-@settings(suppress_health_check=HealthCheck.all(), deadline=None)
-@given(st.data(), json_schemata(), json_schemata())
-def test_merge_semantics(data, s1, s2):
-    assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
-    combined = merged([s1, s2])
-    assume(combined is not None)
-    assume(combined != FALSEY)
+def _merge_semantics_helper(data, s1, s2, combined):
     note(combined)
     ic = data.draw(from_schema(combined), label="combined")
     i1 = data.draw(from_schema(s1), label="s1")
@@ -284,6 +278,31 @@ def test_merge_semantics(data, s1, s2):
     assert is_valid(ic, s2)
     assert is_valid(i1, s2) == is_valid(i1, combined)
     assert is_valid(i2, s1) == is_valid(i2, combined)
+
+
+@settings(suppress_health_check=HealthCheck.all(), deadline=None)
+@given(st.data(), json_schemata(), json_schemata())
+def test_merge_semantics(data, s1, s2):
+    assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
+    combined = merged([s1, s2])
+    assume(combined is not None)
+    assume(combined != FALSEY)
+    _merge_semantics_helper(data, s1, s2, combined)
+
+
+@settings(suppress_health_check=HealthCheck.all(), deadline=None)
+@given(st.data(), gen_number(kind="integer"), gen_number(kind="integer"))
+def test_can_almost_always_merge_numeric_schemas(data, s1, s2):
+    assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
+    combined = merged([s1, s2])
+    if combined is None:
+        # The ONLY case in which we can't merge numeric schemas is when
+        # they both contain multipleOf keys with distinct non-integer values.
+        mul1, mul2 = s1["multipleOf"], s2["multipleOf"]
+        assert isinstance(mul1, float) or isinstance(mul2, float)
+        assert mul1 != mul2
+    elif combined != FALSEY:
+        _merge_semantics_helper(data, s1, s2, combined)
 
 
 @pytest.mark.xfail
