@@ -664,7 +664,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             & set(out)
         ):
             out[key] = max([out[key], s.pop(key)])
-        # TODO: Handle remaining mergable keys.
+        if isinstance(out.get("multipleOf"), int) and isinstance(
+            s.get("multipleOf"), int
+        ):
+            x, y = s.pop("multipleOf"), out["multipleOf"]
+            out["multipleOf"] = x * y // math.gcd(x, y)
 
         for k, v in s.items():
             if k not in out:
