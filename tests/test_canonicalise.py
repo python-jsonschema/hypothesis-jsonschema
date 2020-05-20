@@ -194,10 +194,10 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         (
             [
-                {"type": "integer", "mutlipleOf": 3},
+                {"type": "integer", "multipleOf": 4},
                 {"type": "integer", "multipleOf": 6},
             ],
-            {"type": "integer", "multipleOf": 6},
+            {"type": "integer", "multipleOf": 12},
         ),
         (
             [
