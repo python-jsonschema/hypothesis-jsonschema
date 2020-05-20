@@ -43,7 +43,7 @@ Thanks, everyone!
 
 ### Changelog:
 
-#### 0.13.0 - future release
+#### 0.13.0 - 2020-05-20
 - Improved canonicalisation of `uniqueItems: false` case
 - Improved canonicalisation of numeric schemas
 - Reuse `jsonschema` validators during canonicalisation (performance improvement)
