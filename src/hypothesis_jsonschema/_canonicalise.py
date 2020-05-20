@@ -683,22 +683,6 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
     return out
 
 
-# Find the prime factors for an integer number
-def prime_fac(n: int) -> List[int]:
-    prime_factors = []
-    while n % 2 == 0:
-        prime_factors.append(2)
-        n = n // 2
-    for d in range(3, int(math.sqrt(n)) + 2):
-        while n % d == 0:
-            prime_factors.append(d)
-            n = n // d
-        d += 2
-    if n > 1:
-        prime_factors.append(n)
-    return prime_factors
-
-
 def has_divisibles(
     start: float, end: float, divisor: float, exmin: bool, exmax: bool
 ) -> bool:

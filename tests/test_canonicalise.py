@@ -193,8 +193,11 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         (
-            [{"type": "integer"}, {"multipleOf": 5}],
-            {"type": "integer", "multipleOf": 5},
+            [
+                {"type": "integer", "mutlipleOf": 3},
+                {"type": "integer", "multipleOf": 6},
+            ],
+            {"type": "integer", "multipleOf": 6},
         ),
         (
             [
