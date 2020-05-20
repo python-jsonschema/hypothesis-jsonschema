@@ -193,6 +193,10 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         (
+            [{"type": "integer"}, {"multipleOf": 5}],
+            {"type": "integer", "multipleOf": 5},
+        ),
+        (
             [
                 {"properties": {"foo": {"maximum": 20}}},
                 {"properties": {"foo": {"minimum": 10}}},
