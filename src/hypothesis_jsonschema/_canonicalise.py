@@ -664,7 +664,6 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             & set(out)
         ):
             out[key] = max([out[key], s.pop(key)])
-        # TODO: Handle remaining mergable keys.
         if isinstance(out.get("multipleOf"), int) and isinstance(
             s.get("multipleOf"), int
         ):
