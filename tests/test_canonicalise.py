@@ -190,6 +190,7 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "integer"}, {"type": "string"}], {"not": {}}),
         ([{"type": "null"}, {"type": "boolean"}], {"not": {}}),
         ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),
+        ([{"type": "string"}, {"enum": ["abc", True]}], {"const": "abc"}),
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         ([{"type": "integer"}, {"type": "number"}], {"type": "integer"}),

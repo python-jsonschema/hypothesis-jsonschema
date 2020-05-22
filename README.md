@@ -43,6 +43,9 @@ Thanks, everyone!
 
 ### Changelog:
 
+#### 0.13.1 - 2020-05-22
+- Performance improvement in calculating schema intersections
+
 #### 0.13.0 - 2020-05-20
 - Improved canonicalisation of `uniqueItems: false` case
 - Improved canonicalisation of numeric schemas

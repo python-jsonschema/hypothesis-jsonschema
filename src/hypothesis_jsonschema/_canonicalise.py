@@ -585,18 +585,19 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
     It's currently also used for keys that could be merged but aren't yet.
     """
     assert schemas, "internal error: must pass at least one schema to merge"
-    out = canonicalish(schemas[0])
+    schemas = sorted((canonicalish(s) for s in schemas), key=upper_bound_instances)
+    if any(s == FALSEY for s in schemas):
+        return FALSEY
+    out = schemas[0]
     for s in schemas[1:]:
-        s = canonicalish(s)
         # If we have a const or enum, this is fairly easy by filtering:
-        if "const" in s:
-            if make_validator(out).is_valid(s["const"]):
-                out = s
+        if "const" in out:
+            if make_validator(s).is_valid(out["const"]):
                 continue
             return FALSEY
-        if "enum" in s:
-            validator = make_validator(out)
-            enum_ = [v for v in s["enum"] if validator.is_valid(v)]
+        if "enum" in out:
+            validator = make_validator(s)
+            enum_ = [v for v in out["enum"] if validator.is_valid(v)]
             if not enum_:
                 return FALSEY
             elif len(enum_) == 1:
@@ -692,6 +693,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         out = canonicalish(out)
         if out == FALSEY:
             return FALSEY
+    assert isinstance(out, dict)
     jsonschema.validators.validator_for(out).check_schema(out)
     return out
 
