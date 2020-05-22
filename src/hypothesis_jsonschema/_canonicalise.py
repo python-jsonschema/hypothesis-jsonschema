@@ -381,6 +381,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         "maxProperties", math.inf
     ):
         type_.remove("object")
+    # Remove no-op requires
+    if "required" in schema and not schema["required"]:
+        schema.pop("required")
     # Canonicalise "required" schemas to remove redundancy
     if "object" in type_ and "required" in schema:
         assert isinstance(schema["required"], list)
@@ -402,10 +405,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
-        propnames = schema.get("propertyNames", {})
         if len(schema["required"]) > max_:
             type_.remove("object")
         else:
+            propnames = schema.get("propertyNames", {})
             validator = make_validator(propnames)
             if not all(validator.is_valid(name) for name in schema["required"]):
                 type_.remove("object")
@@ -416,9 +419,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             continue
         for k in kw.split():
             schema.pop(k, None)
-    # Remove no-op requires
-    if "required" in schema and not schema["required"]:
-        schema.pop("required")
+
     # Canonicalise "not" subschemas
     if "not" in schema:
         not_ = schema.pop("not")
