@@ -607,7 +607,9 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
         if "type" in out and "type" in s:
             tt = s.pop("type")
-            out["type"] = [t for t in get_type(out) if t in tt]
+            out["type"] = [
+                t for t in get_type(out) if t in tt or t == "integer" and "number" in tt
+            ]
             if not get_type(out):
                 return FALSEY
             for t, kw in TYPE_SPECIFIC_KEYS:

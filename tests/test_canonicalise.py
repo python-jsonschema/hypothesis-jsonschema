@@ -192,6 +192,7 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "null"}, {"enum": [None, True]}], {"const": None}),
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
+        ([{"type": "integer"}, {"type": "number"}], {"type": "integer"}),
         (
             [
                 {"type": "integer", "multipleOf": 4},
@@ -291,7 +292,11 @@ def test_merge_semantics(data, s1, s2):
 
 
 @settings(suppress_health_check=HealthCheck.all(), deadline=None)
-@given(st.data(), gen_number(kind="integer"), gen_number(kind="integer"))
+@given(
+    st.data(),
+    gen_number(kind="integer") | gen_number(kind="number"),
+    gen_number(kind="integer") | gen_number(kind="number"),
+)
 def test_can_almost_always_merge_numeric_schemas(data, s1, s2):
     assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
     combined = merged([s1, s2])
