@@ -19,7 +19,10 @@ from hypothesis_jsonschema._canonicalise import (
 from hypothesis_jsonschema._from_schema import from_schema, rfc3339
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much],
+    deadline=None,
+)
 @given(data=st.data())
 @schema_strategy_params
 def test_generated_data_matches_schema(schema_strategy, data):

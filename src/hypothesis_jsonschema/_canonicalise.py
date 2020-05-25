@@ -21,7 +21,7 @@ from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
-from hypothesis.internal.floats import next_down, next_up
+from hypothesis.internal.floats import next_down as ieee_next_down, next_up
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
@@ -49,6 +49,15 @@ SCHEMA_KEYS = tuple(
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
+
+
+def next_down(val: float) -> float:
+    """Compensate for JSONschema's lack of negative zero with an extra step."""
+    out = ieee_next_down(val)
+    if out == 0 and math.copysign(1, out) == -1:
+        out = ieee_next_down(out)
+    assert isinstance(out, float)
+    return out
 
 
 def make_validator(
