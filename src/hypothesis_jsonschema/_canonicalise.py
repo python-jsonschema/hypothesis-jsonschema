@@ -284,19 +284,19 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             del schema["exclusiveMaximum"]
         lo, hi, exmin, exmax = get_number_bounds(schema)
         mul = schema.get("multipleOf")
-        if (
-            lo is not None
-            and hi is not None
-            and (
-                (mul and not has_divisibles(lo, hi, mul, exmin, exmax))
-                or (next_up(lo) if exmin else lo) > (next_down(hi) if exmax else hi)
-            )
-        ):
-            type_.remove("number")
-        elif isinstance(mul, int):
+        if isinstance(mul, int):
             # Numbers which are a multiple of an integer?  That's the integer type.
             type_.remove("number")
             type_ = [t for t in TYPE_STRINGS if t in type_ or t == "integer"]
+        elif lo is not None and hi is not None:
+            lobound = next_up(lo) if exmin else lo
+            hibound = next_down(hi) if exmax else hi
+            if (
+                mul and not has_divisibles(lo, hi, mul, exmin, exmax)
+            ) or lobound > hibound:
+                type_.remove("number")
+            elif type_ == ["number"] and lobound == hibound:
+                return {"const": lobound}
 
     if "integer" in type_:
         lo, hi = get_integer_bounds(schema)
