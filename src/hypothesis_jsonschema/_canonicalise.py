@@ -328,6 +328,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             type_.remove("integer")
 
     if "array" in type_ and "contains" in schema:
+        # TODO: replace contains with merged([contains, items]) if mergeable.
         if schema["contains"] == FALSEY:
             type_.remove("array")
         else:
@@ -693,6 +694,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         ):
             x, y = s.pop("multipleOf"), out["multipleOf"]
             out["multipleOf"] = x * y // math.gcd(x, y)
+
+        # TODO: when merging distinct "contains", both should be placed into an allOf,
+        # "minItems" incremented, and the schema matching *fewer* instances also kept
+        # in the base schema as an aid to generation logic.  Note that there may
+        # already be such an allOf, possibly including non-contains logic in it.
 
         for k, v in s.items():
             if k not in out:

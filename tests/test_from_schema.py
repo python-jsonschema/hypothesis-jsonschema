@@ -283,3 +283,19 @@ RELATIVE_JSONPOINTERS = {
 def test_relative_json_pointers(_):
     # TODO: update the relative-json-pointer format strategy as above
     pass
+
+
+RARE_CONTAINS = {
+    "type": "array",
+    "items": {"type": "string"},
+    "contains": {"const": "A"},
+}
+
+
+@pytest.mark.xfail(raises=FailedHealthCheck)
+@given(from_schema(RARE_CONTAINS))
+def test_rarely_satisfied_contains(value):
+    # It is very unlikely that the "contains" schema will be satsified if we
+    # generate directly from items; but if we generate from a *mixture* of
+    # items and contains then it will pass.
+    jsonschema.validate(value, RARE_CONTAINS)

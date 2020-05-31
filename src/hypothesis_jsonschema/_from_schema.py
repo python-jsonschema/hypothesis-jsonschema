@@ -386,6 +386,9 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
             )
             strat = st.builds(operator.add, fixed_items, extra_items)
     else:
+        # TODO: here, and maybe above, also try generating from the contains
+        # schema if there is one; filter by items validator if not already
+        # merged.  Can also do this for list-items, though it's trickier.
         strat = st.lists(
             from_schema(items),
             min_size=min_size,
