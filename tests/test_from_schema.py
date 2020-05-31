@@ -299,3 +299,18 @@ def test_rarely_satisfied_contains(value):
     # generate directly from items; but if we generate from a *mixture* of
     # items and contains then it will pass.
     jsonschema.validate(value, RARE_CONTAINS)
+
+
+ALLOF_CONTAINS = {
+    "type": "array",
+    "items": {"type": "string"},
+    "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}],
+}
+
+
+@pytest.mark.xfail(raises=FailedHealthCheck)
+@given(from_schema(ALLOF_CONTAINS))
+def test_multiple_contains_behind_allof(value):
+    # By placing *multiple* contains elements behind "allOf" we've disabled the
+    # mixed-generation logic, and so we can't generate any valid instances at all.
+    jsonschema.validate(value, ALLOF_CONTAINS)
