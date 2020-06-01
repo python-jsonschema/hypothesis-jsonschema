@@ -306,17 +306,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
             hi -= hi % mul
 
-        # TODO: this step leads to validation errors in the upstream jsonschema
-        #       library, due to floating-point imprecision.  Can we fix that?
-        #
-        # if "multipleOf" in schema:
-        #     mul = Fraction(schema["multipleOf"]).numerator
-        #     if lo is not None and mul > 1 and (lo % mul):
-        #         lo += mul - (lo % mul)
-        #     if hi is not None and mul > 1 and (hi % mul):
-        #         hi -= hi % mul
-        #     schema["multipleOf"] = mul
-
         if lo is not None:
             schema["minimum"] = lo
             schema.pop("exclusiveMinimum", None)
@@ -343,7 +332,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if (
         "array" in type_
         and "minItems" in schema
-        and isinstance(schema.get("items", []), (bool, dict))
+        and isinstance(schema.get("items", []), dict)
     ):
         count = upper_bound_instances(schema["items"])
         if (count == 0 and schema["minItems"] > 0) or (
