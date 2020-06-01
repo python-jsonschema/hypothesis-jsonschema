@@ -234,6 +234,14 @@
         "format": "Unknown formats should be treated as annotations and pass validation",
         "type": "string"
     },
+    "custom jsonpointer strategy is valid": {
+        "type": "string",
+        "format": "json-pointer"
+    },
+    "relative jsonpointer strategy is valid": {
+        "type": "string",
+        "format": "relative-json-pointer"
+    },
     "unmergable allOf schema can still be resolved": {
         "allOf": [
             {
