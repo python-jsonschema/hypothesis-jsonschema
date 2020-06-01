@@ -621,11 +621,12 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             out["type"] = [
                 t for t in get_type(out) if t in tt or t == "integer" and "number" in tt
             ]
-            if not get_type(out):
+            out_type = get_type(out)
+            if not out_type:
                 return FALSEY
             for t, kw in TYPE_SPECIFIC_KEYS:
                 numeric = ["number", "integer"]
-                if t in get_type(out) or t in numeric and t in get_type(out) + numeric:
+                if t in out_type or t in numeric and t in out_type + numeric:
                     continue
                 for k in kw.split():
                     s.pop(k, None)
