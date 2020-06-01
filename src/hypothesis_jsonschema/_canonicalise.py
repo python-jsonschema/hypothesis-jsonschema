@@ -474,7 +474,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if len(schema) == len(schema["anyOf"]) == 1:
             return schema["anyOf"][0]  # type: ignore
     if "allOf" in schema:
-        schema["allOf"] = sorted(schema["allOf"], key=encode_canonical_json)
+        schema["allOf"] = [
+            json.loads(enc)
+            for enc in sorted(set(map(encode_canonical_json, schema["allOf"])))
+        ]
         if any(s == FALSEY for s in schema["allOf"]):
             return FALSEY
         if all(s == TRUTHY for s in schema["allOf"]):
@@ -678,6 +681,9 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             contains.sort(key=upper_bound_instances)
             out["contains"], _ = contains
             out["allOf"] = out.get("allOf", []) + [{"contains": c} for c in contains]
+        if "allOf" in out and "allOf" in s:
+            # All our allOf schemas will be de-duplicated by canonicalise
+            out["allOf"] += s.pop("allOf")
         if "required" in out and "required" in s:
             out["required"] = sorted(set(out["required"] + s.pop("required")))
         for key in (
