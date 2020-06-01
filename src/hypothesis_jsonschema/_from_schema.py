@@ -375,6 +375,21 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
         min_size = max(0, min_size - len(items))
         if max_size is not None:
             max_size -= len(items)
+
+        items_strats = [from_schema(s) for s in items]
+        additional_items_strat = from_schema(additional_items)
+
+        # If we have a contains schema to satisfy, we try generating from it when
+        # allowed to do so.  We'll skip the None (unmergable / no contains) cases
+        # below, and let Hypothesis ignore the FALSEY cases for us.
+        if "contains" in schema:
+            for i, mrgd in enumerate(merged([schema["contains"], s]) for s in items):
+                if mrgd is not None:
+                    items_strats[i] |= from_schema(mrgd)
+            contains_additional = merged([schema["contains"], additional_items])
+            if contains_additional is not None:
+                additional_items_strat |= from_schema(contains_additional)
+
         if unique:
 
             @st.composite  # type: ignore
@@ -385,11 +400,11 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
                 def not_seen(elem: JSONType) -> bool:
                     return encode_canonical_json(elem) not in seen
 
-                for s in items:
-                    elems.append(draw(from_schema(s).filter(not_seen)))
+                for strat in items_strats:
+                    elems.append(draw(strat.filter(not_seen)))
                     seen.add(encode_canonical_json(elems[-1]))
                 extra_items = st.lists(
-                    from_schema(additional_items).filter(not_seen),
+                    additional_items_strat.filter(not_seen),
                     min_size=min_size,
                     max_size=max_size,
                     unique_by=encode_canonical_json,
@@ -399,17 +414,25 @@ def array_schema(schema: dict) -> st.SearchStrategy[List[JSONType]]:
 
             strat = compose_lists_with_filter()
         else:
-            fixed_items = st.tuples(*map(from_schema, items)).map(list)
-            extra_items = st.lists(
-                from_schema(additional_items), min_size=min_size, max_size=max_size
+            strat = st.builds(
+                operator.add,
+                st.tuples(*items_strats).map(list),
+                st.lists(additional_items_strat, min_size=min_size, max_size=max_size),
             )
-            strat = st.builds(operator.add, fixed_items, extra_items)
     else:
-        # TODO: here, and maybe above, also try generating from the contains
-        # schema if there is one; filter by items validator if not already
-        # merged.  Can also do this for list-items, though it's trickier.
+        items_strat = from_schema(items)
+        if "contains" in schema:
+            contains_strat = from_schema(schema["contains"])
+            if merged([items, schema["contains"]]) != schema["contains"]:
+                # We only need this filter if we couldn't merge items in when
+                # canonicalising.  Note that for list-items, above, we just skip
+                # the mixed generation in this case (because they tend to be
+                # heterogeneous) and hope it works out anyway.
+                contains_strat = contains_strat.filter(make_validator(items).is_valid)
+            items_strat |= contains_strat
+
         strat = st.lists(
-            from_schema(items),
+            items_strat,
             min_size=min_size,
             max_size=max_size,
             unique_by=encode_canonical_json if unique else None,

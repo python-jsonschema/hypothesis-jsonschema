@@ -317,7 +317,11 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             type_.remove("integer")
 
     if "array" in type_ and "contains" in schema:
-        # TODO: replace contains with merged([contains, items]) if mergeable.
+        if isinstance(schema.get("items"), dict):
+            contains_items = merged([schema["contains"], schema["items"]])
+            if contains_items is not None:
+                schema["contains"] = contains_items
+
         if schema["contains"] == FALSEY:
             type_.remove("array")
         else:
@@ -665,6 +669,15 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     if v is None:
                         return None
                 op[k] = v
+
+        if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
+            # OK, this is a tricky bit of logic.  If we are merging schemas with
+            # unequal "contains" keys, then we want to keep the *more* restrictive
+            # of the two as the contains key, so we can leverage that for generation.
+            contains = [out["contains"], s["contains"]]
+            contains.sort(key=upper_bound_instances)
+            out["contains"], _ = contains
+            out["allOf"] = out.get("allOf", []) + [{"contains": c} for c in contains]
         if "required" in out and "required" in s:
             out["required"] = sorted(set(out["required"] + s.pop("required")))
         for key in (
@@ -684,11 +697,6 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         ):
             x, y = s.pop("multipleOf"), out["multipleOf"]
             out["multipleOf"] = x * y // math.gcd(x, y)
-
-        # TODO: when merging distinct "contains", both should be placed into an allOf,
-        # "minItems" incremented, and the schema matching *fewer* instances also kept
-        # in the base schema as an aid to generation logic.  Note that there may
-        # already be such an allOf, possibly including non-contains logic in it.
 
         for k, v in s.items():
             if k not in out:

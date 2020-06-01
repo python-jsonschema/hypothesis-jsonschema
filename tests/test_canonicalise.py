@@ -119,6 +119,7 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "uniqueItems": True,
             "minItems": 2,
         },
+        {"type": "array", "items": {"type": "integer"}, "contains": {"type": "string"}},
     ],
 )
 def test_canonicalises_to_empty(schema):
@@ -199,6 +200,19 @@ def test_canonicalises_to_empty(schema):
                 "items": [{}, {}],
                 "minItems": 3,
                 "additionalItems": {"const": None},
+            },
+        ),
+        (
+            {
+                "type": "array",
+                "items": {"type": "number", "multipleOf": 0.5},
+                "contains": {"type": "number", "multipleOf": 0.75},
+            },
+            {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "number", "multipleOf": 0.5},
+                "contains": {"type": "number", "multipleOf": 0.75},
             },
         ),
     ],
