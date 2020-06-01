@@ -3,6 +3,7 @@
 #### forthcoming
 - Improved strategy for `json-pointer` and `relative-json-pointer` string formats
 - Improved generation of arrays with rarely-satisfied `contains` constraints
+- Improved canonicalisation and merging of `allOf` schemas
 
 #### 0.13.1 - 2020-05-22
 - Performance improvement in calculating schema intersections

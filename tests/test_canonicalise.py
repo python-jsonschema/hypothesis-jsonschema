@@ -255,6 +255,19 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             {"not": {}},
         ),
+        (
+            [
+                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 0.75}]},
+                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 0.25}]},
+            ],
+            {
+                "allOf": [
+                    {"multipleOf": 0.25},
+                    {"multipleOf": 0.5},
+                    {"multipleOf": 0.75},
+                ]
+            },
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
