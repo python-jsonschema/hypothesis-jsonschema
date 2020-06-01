@@ -275,5 +275,42 @@
                 }
             }
         ]
+    },
+    "very rarely satisfied contains requires contains-aware instance generation": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        },
+        "contains": {
+            "const": "A"
+        }
+    },
+    "array where contains cannot be merged with items": {
+        "type": "array",
+        "items": {
+            "type": "string",
+            "pattern": ".."
+        },
+        "contains": {
+            "type": "string",
+            "pattern": "."
+        }
+    },
+    "array where contains cannot be merged with list-items": {
+        "type": "array",
+        "items": [
+            {
+                "type": "string",
+                "pattern": ".."
+            }
+        ],
+        "additionalItems": {
+            "type": "string",
+            "pattern": "..."
+        },
+        "contains": {
+            "type": "string",
+            "pattern": "."
+        }
     }
 }
