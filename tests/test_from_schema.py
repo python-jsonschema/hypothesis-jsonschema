@@ -33,9 +33,14 @@ def test_generated_data_matches_schema(schema_strategy, data):
         value = data.draw(from_schema(schema), "value from schema")
     except InvalidArgument:
         reject()
-    jsonschema.validate(value, schema)
-    # This checks that our canonicalisation is semantically equivalent.
-    jsonschema.validate(value, canonicalish(schema))
+    try:
+        jsonschema.validate(value, schema)
+        # This checks that our canonicalisation is semantically equivalent.
+        jsonschema.validate(value, canonicalish(schema))
+    except jsonschema.ValidationError as err:
+        if "'uniqueItems': True" in str(err):
+            pytest.xfail("https://github.com/Julian/jsonschema/issues/686")
+        raise
 
 
 @given(from_schema(True))
