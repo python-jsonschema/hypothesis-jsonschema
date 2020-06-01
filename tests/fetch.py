@@ -42,6 +42,7 @@ with concurrent.futures.ThreadPoolExecutor() as ex:
         else:
             add_future(s["description"], s["url"])
     for future in concurrent.futures.as_completed(futures, timeout=30):
+        name = "unknown schema"
         try:
             name, schema = future.result()
         except Exception as e:
