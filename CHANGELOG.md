@@ -1,6 +1,6 @@
 # Changelog
 
-#### forthcoming
+#### 0.14.0 - 2020-06-01
 - Improved strategy for `json-pointer` and `relative-json-pointer` string formats
 - Improved generation of arrays with rarely-satisfied `contains` constraints
 - Improved canonicalisation and merging of `allOf` schemas
