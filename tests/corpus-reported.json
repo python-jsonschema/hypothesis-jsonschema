@@ -242,6 +242,24 @@
         "type": "string",
         "format": "relative-json-pointer"
     },
+    "array of several unique jsonpointers": {
+        "type": "array",
+        "minItems": 2,
+        "uniqueItems": true,
+        "items": {
+            "type": "string",
+            "format": "json-pointer"
+        }
+    },
+    "array of several unique relative jsonpointers": {
+        "type": "array",
+        "minItems": 2,
+        "uniqueItems": true,
+        "items": {
+            "type": "string",
+            "format": "relative-json-pointer"
+        }
+    },
     "unmergable allOf schema can still be resolved": {
         "allOf": [
             {

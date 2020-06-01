@@ -43,6 +43,9 @@ Thanks, everyone!
 
 ### Changelog:
 
+#### forthcoming
+- Improved strategy for `json-pointer` and `relative-json-pointer` string formats
+
 #### 0.13.1 - 2020-05-22
 - Performance improvement in calculating schema intersections
 

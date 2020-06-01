@@ -256,6 +256,25 @@ def regex_patterns(draw: Any) -> str:
 
 REGEX_PATTERNS = regex_patterns()
 
+
+def json_pointers() -> st.SearchStrategy[str]:
+    """Return a strategy for strings in json-pointer format."""
+    return st.lists(
+        st.text(st.characters()).map(
+            lambda p: "/" + p.replace("~", "~0").replace("/", "~1")
+        )
+    ).map("".join)
+
+
+def relative_json_pointers() -> st.SearchStrategy[str]:
+    """Return a strategy for strings in relative-json-pointer format."""
+    return st.builds(
+        operator.add,
+        st.from_regex(r"0|[1-9][0-9]*", fullmatch=True),
+        st.just("#") | json_pointers(),
+    )
+
+
 # Via the `webcolors` package, to match the logic `jsonschema`
 # uses to check it's (non-standard?) "color" format.
 _WEBCOLOR_REGEX = "^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$"
@@ -307,8 +326,8 @@ STRING_FORMATS = {
         name: prov.domains().map("https://{}".format)
         for name in ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
     },
-    "json-pointer": st.just(""),
-    "relative-json-pointer": st.just(""),
+    "json-pointer": json_pointers(),
+    "relative-json-pointer": relative_json_pointers(),
     "regex": REGEX_PATTERNS,
 }
 

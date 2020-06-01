@@ -254,37 +254,6 @@ def test_impossible_multiplier(type_):
     assert strategy.is_empty
 
 
-SEVERAL_JSONPOINTERS = {
-    "type": "array",
-    "minItems": 2,
-    "uniqueItems": True,
-    "items": {"type": "string", "format": "json-pointer"},
-}
-
-
-@pytest.mark.xfail(raises=InvalidArgument)
-@given(from_schema(SEVERAL_JSONPOINTERS))
-def test_multiple_json_pointers(_):
-    # TODO: update the json-pointer format strategy to generate more than just ""
-    # and then move these test cases to the reported schemas file
-    pass
-
-
-RELATIVE_JSONPOINTERS = {
-    "type": "array",
-    "minItems": 2,
-    "uniqueItems": True,
-    "items": {"type": "string", "format": "relative-json-pointer"},
-}
-
-
-@pytest.mark.xfail(raises=InvalidArgument)
-@given(from_schema(RELATIVE_JSONPOINTERS))
-def test_relative_json_pointers(_):
-    # TODO: update the relative-json-pointer format strategy as above
-    pass
-
-
 RARE_CONTAINS = {
     "type": "array",
     "items": {"type": "string"},
