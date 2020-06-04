@@ -413,7 +413,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
+        properties = schema.get("properties", {})
         if len(schema["required"]) > max_:
+            type_.remove("object")
+        elif any(properties.get(name, {}) == FALSEY for name in schema["required"]):
             type_.remove("object")
         else:
             propnames = schema.get("propertyNames", {})
