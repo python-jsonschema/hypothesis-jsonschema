@@ -156,6 +156,7 @@ def upper_bound_instances(schema: Schema) -> float:
         assert isinstance(mul, (int, float))
         if lower is not None and upper is not None and isinstance(mul, int):
             return 1 + (upper - lower) % mul
+    # TODO: upper-bound array instances
     return math.inf
 
 
@@ -329,6 +330,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if schema["contains"] == TRUTHY:
             schema.pop("contains")
             schema["minItems"] = max(schema.get("minItems", 1), 1)
+    # TODO: upper_bound_instances on the items, and use that to set maxItems
+    # constraint for unique arrays.  Not worth handling list-items though...
     if "array" in type_ and schema.get("minItems", 0) > schema.get(
         "maxItems", math.inf
     ):
