@@ -152,10 +152,11 @@ def upper_bound_instances(schema: Schema) -> float:
         return len(schema["enum"])
     if get_type(schema) == ["integer"]:
         lower, upper = get_integer_bounds(schema)
-        mul = schema.get("multipleOf", 1)
-        assert isinstance(mul, (int, float))
-        if lower is not None and upper is not None and isinstance(mul, int):
-            return 1 + (upper - lower) % mul
+        if lower is not None and upper is not None:
+            mul = schema.get("multipleOf")
+            if isinstance(mul, int):
+                return 1 + (upper - lower) % mul
+            return 1 + (upper - lower)  # Non-integer mul can only reduce upper bound
     # TODO: upper-bound array instances
     return math.inf
 
