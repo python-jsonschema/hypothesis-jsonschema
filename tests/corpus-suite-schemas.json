@@ -400,6 +400,23 @@
                 }
             ]
         },
+        "draft7/allOf combined with anyOf, oneOf": {
+            "allOf": [
+                {
+                    "multipleOf": 2
+                }
+            ],
+            "anyOf": [
+                {
+                    "multipleOf": 3
+                }
+            ],
+            "oneOf": [
+                {
+                    "multipleOf": 5
+                }
+            ]
+        },
         "draft7/allOf simple types": {
             "allOf": [
                 {
@@ -764,14 +781,14 @@
                 "slash": {
                     "$ref": "#/slash~1field"
                 },
-                "tilda": {
-                    "$ref": "#/tilda~0field"
+                "tilde": {
+                    "$ref": "#/tilde~0field"
                 }
             },
             "slash/field": {
                 "type": "integer"
             },
-            "tilda~field": {
+            "tilde~field": {
                 "type": "integer"
             }
         },
@@ -830,6 +847,24 @@
                 "minimum": -10
             }
         },
+        "draft7/if with boolean schema false": {
+            "else": {
+                "const": "else"
+            },
+            "if": false,
+            "then": {
+                "const": "then"
+            }
+        },
+        "draft7/if with boolean schema true": {
+            "else": {
+                "const": "else"
+            },
+            "if": true,
+            "then": {
+                "const": "then"
+            }
+        },
         "draft7/ignore else without if": {
             "else": {
                 "const": 0
@@ -869,6 +904,14 @@
                     "default": [],
                     "type": "integer"
                 }
+            }
+        },
+        "draft7/items + contains": {
+            "contains": {
+                "multipleOf": 3
+            },
+            "items": {
+                "multipleOf": 2
             }
         },
         "draft7/items and subitems": {
@@ -927,6 +970,9 @@
         },
         "draft7/maxLength validation": {
             "maxLength": 2
+        },
+        "draft7/maxProperties = 0 means the object is empty": {
+            "maxProperties": 0
         },
         "draft7/maxProperties validation": {
             "maxProperties": 2
@@ -1102,6 +1148,11 @@
         },
         "draft7/not with boolean schema false": {
             "not": false
+        },
+        "draft7/nul characters in strings": {
+            "enum": [
+                "hello\u0000there"
+            ]
         },
         "draft7/null type matches only the null object": {
             "type": "null"
