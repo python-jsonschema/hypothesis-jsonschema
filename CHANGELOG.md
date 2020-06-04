@@ -1,5 +1,10 @@
 # Changelog
 
+#### 0.15.0 - 2020-06-04
+- Fixed several bugs related to interactions between `properties`, `patternProperties`,
+  and `additionalProperties`.  As a result some strategies will be more efficient than
+  before and others less; and further gains seem likely.
+
 #### 0.14.0 - 2020-06-01
 - Improved strategy for `json-pointer` and `relative-json-pointer` string formats
 - Improved generation of arrays with rarely-satisfied `contains` constraints

@@ -268,6 +268,34 @@ def test_canonicalises_to_expected(schema, expected):
                 ]
             },
         ),
+        (
+            [
+                {"additionalProperties": {"type": "null"}},
+                {"additionalProperties": {"type": "boolean"}},
+            ],
+            {"additionalProperties": {"not": {}}},
+        ),
+        (
+            [
+                {"additionalProperties": {"type": "null"}, "properties": {"foo": {}}},
+                {"additionalProperties": {"type": "boolean"}},
+            ],
+            {
+                "properties": {"foo": {"enum": [False, True]}},
+                "additionalProperties": {"not": {}},
+            },
+        ),
+        (
+            [
+                {
+                    "properties": {"": {"type": "string"}},
+                    "required": [""],
+                    "type": "object",
+                },
+                {"additionalProperties": {"type": "null"}, "type": "object"},
+            ],
+            {"not": {}},
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
@@ -290,14 +318,6 @@ def test_merged(group, result):
         [
             {"$schema": "http://json-schema.org/draft-04/schema#"},
             {"$schema": "http://json-schema.org/draft-07/schema#"},
-        ],
-        [
-            {"additionalProperties": {"type": "null"}},
-            {"additionalProperties": {"type": "boolean"}},
-        ],
-        [
-            {"additionalProperties": {"type": "null"}, "properties": {"foo": {}}},
-            {"additionalProperties": {"type": "boolean"}},
         ],
         [
             {"additionalProperties": {"patternProperties": {".": {}}}},
@@ -362,30 +382,6 @@ def test_can_almost_always_merge_numeric_schemas(data, s1, s2):
         assert mul1 != mul2
     elif combined != FALSEY:
         _merge_semantics_helper(data, s1, s2, combined)
-
-
-@pytest.mark.xfail
-def test_merge_semantics_regressions():
-    # TODO: broken because of missing interaction between
-    # properties and additionalProperties - merged should return None for this.
-    s1 = {"properties": {"": {"type": "string"}}, "required": [""], "type": "object"}
-    s2 = {"additionalProperties": {"type": "null"}, "type": "object"}
-    instance = {"": ""}
-    combined = merged([s1, s2])
-    assert is_valid(instance, combined) == (
-        is_valid(instance, s1) and is_valid(instance, s2)
-    )
-
-
-@pytest.mark.xfail
-def test_merge_should_notice_required_disallowed_properties():
-    # The required "name" property is banned by the additionalProperties: False
-    # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/30 for details.
-    schemas = [
-        {"type": "object", "properties": {"name": True}, "required": ["name"]},
-        {"type": "object", "properties": {"id": True}, "additionalProperties": False},
-    ]
-    assert merged(schemas) == FALSEY
 
 
 def test_resolution_checks_resolver_is_valid():

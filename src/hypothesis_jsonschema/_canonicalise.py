@@ -604,6 +604,8 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         return FALSEY
     out = schemas[0]
     for s in schemas[1:]:
+        if s == TRUTHY:
+            continue
         # If we have a const or enum, this is fairly easy by filtering:
         if "const" in out:
             if make_validator(s).is_valid(out["const"]):
@@ -635,51 +637,40 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 for k in kw.split():
                     s.pop(k, None)
                     out.pop(k, None)
-        # TODO: keeping track of which elements are affected by which schemata
-        # while merging properties, patternProperties, and additionalProperties
-        # is a nightmare, so I'm just not going to try for now.  e.g.:
-        #    {"patternProperties": {".": {"type": "null"}}}
-        #    {"type": "object", "additionalProperties": {"type": "boolean"}}
-        # The the former requries null values for all non-"" keys, while the
-        # latter requires all-bool values.  Merging them should output
-        #    {"enum": [{}, {"": None}]}
-        # but dealing with this in the general case is a nightmare.
 
-        def diff_in_out(k: str) -> bool:
-            sval = s.get(k, object())
-            return k in s and sval != out.get(k, sval)
-
-        def diff_keys(k: str) -> bool:
-            return set(out.get(k, [])) != set(s.get(k, []))
-
-        if diff_in_out("patternProperties"):
-            # Do I want to compute regex intersections with optional anchors? No.
-            return None
-
-        if "additionalProperties" in out and (
-            diff_keys("properties") or diff_keys("patternProperties")
+        if out.get("patternProperties") != s.get("patternProperties") and (
+            out.get("properties") != s.get("properties")
+            or out.get("additionalProperties") != s.get("additionalProperties")
         ):
-            # If the known names or regex patterns vary at all, we'd have to merge the
-            # additionalProperties schema into some and it's just not worth it.
             return None
-        if diff_in_out("additionalProperties"):
-            m = merged([out["additionalProperties"], s["additionalProperties"]])
+
+        # With patternProperties set aside for now, it's reasonably easy to merge
+        # objects: we take all property names known to either side, and merge them
+        # with either the corresponding property or additionalProperties schema
+        # (and discard the properties dict if there weren't any).  Then, we merge
+        # the two additionalProperties (again, if there were any) and we're done!
+        #
+        # TODO: to  add patternProperties support, we 'just' check for matching
+        # pattern schemas in the loop and merge all of them (or a.P. none match);
+        # then add a second loop to merge each pP with the matching pP or aP
+        # (i.e. looking like the loop we have now), and then we're done again.
+        out_add = out.get("additionalProperties", {})
+        s_add = s.pop("additionalProperties", {})
+        if "properties" in out or "properties" in s:
+            out_props = out.setdefault("properties", {})
+            s_props = s.pop("properties", {})
+            for prop_name in set(out_props) | set(s_props):
+                m = merged(
+                    [out_props.get(prop_name, out_add), s_props.get(prop_name, s_add)]
+                )
+                if m is None:
+                    return None
+                out_props[prop_name] = m
+        if out_add or s_add:
+            m = merged([out_add, s_add])
             if m is None:
                 return None
             out["additionalProperties"] = m
-
-        if diff_in_out("properties"):
-            # TODO: this doesn't account for cases where patternProperties in one
-            # overlap with properties in the other.  It would be nice to try merging
-            # them in that case, or correctly bail out if we can't merge them.
-            op = out["properties"]
-            sp = s.pop("properties")
-            for k, v in sp.items():
-                if v != op.get(k, v):
-                    v = merged([op[k], v])
-                    if v is None:
-                        return None
-                op[k] = v
 
         if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
             # OK, this is a tricky bit of logic.  If we are merging schemas with

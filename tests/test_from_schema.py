@@ -89,6 +89,7 @@ FLAKY_SCHEMAS = {
     # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
     "Drone CI configuration file",
     "PHP Composer configuration file",
+    "Pyrseas database schema versioning for Postgres databases, v0.8",
     # This schema is missing the "definitions" key which means they're not resolvable.
     "Cirrus CI configuration files",
     # These schemas use remote references without a URL schema, which is invalid
@@ -101,6 +102,12 @@ FLAKY_SCHEMAS = {
     "draft7/Location-independent identifier",
     # Bad reference forgot the leading "#"
     "Microsoft Briefcase configuration file",
+    # Includes a list where it should have a dict
+    "TypeScript Lint configuration file",
+    # These schemas got very, very slow after we fixed object properties merging
+    "Renovate config file (https://github.com/renovatebot/renovate)",
+    "Renovate config file (https://renovatebot.com/)",
+    "Jenkins X Pipeline YAML configuration files",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
