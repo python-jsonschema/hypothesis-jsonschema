@@ -318,6 +318,11 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if lo is not None and hi is not None and lo > hi:
             type_.remove("integer")
 
+        elif type_ == ["integer"] and upper_bound_instances(schema) <= 256:
+            mul = schema.get("multipleOf", 1)
+            allowed_values = list(range(lo, hi + 1, mul))
+            return {"enum": sorted(allowed_values, key=lambda n: (abs(n), n < 0))}
+
     if "array" in type_ and "contains" in schema:
         if isinstance(schema.get("items"), dict):
             contains_items = merged([schema["contains"], schema["items"]])
