@@ -15,6 +15,66 @@
             }
         ]
     },
+    "array of several unique jsonpointers": {
+        "items": {
+            "format": "json-pointer",
+            "type": "string"
+        },
+        "minItems": 2,
+        "type": "array",
+        "uniqueItems": true
+    },
+    "array of several unique relative jsonpointers": {
+        "items": {
+            "format": "relative-json-pointer",
+            "type": "string"
+        },
+        "minItems": 2,
+        "type": "array",
+        "uniqueItems": true
+    },
+    "array where contains can be merged with list-items": {
+        "additionalItems": {
+            "type": "string"
+        },
+        "contains": {
+            "const": "abc"
+        },
+        "items": [
+            {
+                "type": "string"
+            }
+        ],
+        "type": "array"
+    },
+    "array where contains cannot be merged with items": {
+        "contains": {
+            "pattern": ".",
+            "type": "string"
+        },
+        "items": {
+            "pattern": "..",
+            "type": "string"
+        },
+        "type": "array"
+    },
+    "array where contains cannot be merged with list-items": {
+        "additionalItems": {
+            "pattern": "...",
+            "type": "string"
+        },
+        "contains": {
+            "pattern": ".",
+            "type": "string"
+        },
+        "items": [
+            {
+                "pattern": "..",
+                "type": "string"
+            }
+        ],
+        "type": "array"
+    },
     "array with list items and too-high maxItems": {
         "additionalItems": false,
         "items": [
@@ -28,6 +88,10 @@
         "minimum": 0,
         "multipleOf": 2,
         "type": "integer"
+    },
+    "custom jsonpointer strategy is valid": {
+        "format": "json-pointer",
+        "type": "string"
     },
     "disallowed object but allows other type": {
         "maxProperties": 1,
@@ -225,6 +289,10 @@
             }
         }
     },
+    "relative jsonpointer strategy is valid": {
+        "format": "relative-json-pointer",
+        "type": "string"
+    },
     "string with format and pattern": {
         "format": "email",
         "pattern": "^\\w+@",
@@ -233,32 +301,6 @@
     "string with unknown format": {
         "format": "Unknown formats should be treated as annotations and pass validation",
         "type": "string"
-    },
-    "custom jsonpointer strategy is valid": {
-        "type": "string",
-        "format": "json-pointer"
-    },
-    "relative jsonpointer strategy is valid": {
-        "type": "string",
-        "format": "relative-json-pointer"
-    },
-    "array of several unique jsonpointers": {
-        "type": "array",
-        "minItems": 2,
-        "uniqueItems": true,
-        "items": {
-            "type": "string",
-            "format": "json-pointer"
-        }
-    },
-    "array of several unique relative jsonpointers": {
-        "type": "array",
-        "minItems": 2,
-        "uniqueItems": true,
-        "items": {
-            "type": "string",
-            "format": "relative-json-pointer"
-        }
     },
     "unmergable allOf schema can still be resolved": {
         "allOf": [
@@ -277,40 +319,12 @@
         ]
     },
     "very rarely satisfied contains requires contains-aware instance generation": {
-        "type": "array",
+        "contains": {
+            "const": "A"
+        },
         "items": {
             "type": "string"
         },
-        "contains": {
-            "const": "A"
-        }
-    },
-    "array where contains cannot be merged with items": {
-        "type": "array",
-        "items": {
-            "type": "string",
-            "pattern": ".."
-        },
-        "contains": {
-            "type": "string",
-            "pattern": "."
-        }
-    },
-    "array where contains cannot be merged with list-items": {
-        "type": "array",
-        "items": [
-            {
-                "type": "string",
-                "pattern": ".."
-            }
-        ],
-        "additionalItems": {
-            "type": "string",
-            "pattern": "..."
-        },
-        "contains": {
-            "type": "string",
-            "pattern": "."
-        }
+        "type": "array"
     }
 }
