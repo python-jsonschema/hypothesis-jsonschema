@@ -315,13 +315,17 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             schema["maximum"] = hi
             schema.pop("exclusiveMaximum", None)
 
-        if lo is not None and hi is not None and lo > hi:
-            type_.remove("integer")
-
-        elif type_ == ["integer"] and upper_bound_instances(schema) <= 256:
-            mul = schema.get("multipleOf", 1)
-            allowed_values = list(range(lo, hi + 1, mul))
-            return {"enum": sorted(allowed_values, key=lambda n: (abs(n), n < 0))}
+        if lo is not None and hi is not None:
+            if lo > hi:
+                type_.remove("integer")
+            elif hi - lo < 8 and type_ == ["integer"]:
+                # Why eight?  Making the list much longer has a detectable performance
+                # impact, and we get basically all the benefit from tiny ranges anyway.
+                if isinstance(mul, float):
+                    is_valid = make_validator(schema).is_valid
+                    allowed_values = [n for n in range(lo, hi + 1) if is_valid(n)]
+                    return canonicalish({"enum": allowed_values})
+                return canonicalish({"enum": list(range(lo, hi + 1, mul or 1))})
 
     if "array" in type_ and "contains" in schema:
         if isinstance(schema.get("items"), dict):
