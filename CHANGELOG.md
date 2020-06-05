@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.15.1 - 2020-06-05
+- Significantly improved efficiency of certain `patternProperties` schemas.
+
 #### 0.15.0 - 2020-06-04
 - Fixed several bugs related to interactions between `properties`, `patternProperties`,
   and `additionalProperties`.  As a result some strategies will be more efficient than

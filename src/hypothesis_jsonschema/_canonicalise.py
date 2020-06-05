@@ -15,6 +15,7 @@ between "I'd like it to be faster" and "doesn't finish at all".
 
 import json
 import math
+import re
 from copy import deepcopy
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
@@ -245,7 +246,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
         raise InvalidArgument(
-            f"Got schema={schema} of type {type(schema).__name__}, "
+            f"Got schema={schema!r} of type {type(schema).__name__}, "
             "but expected a dict."
         )
 
@@ -638,37 +639,59 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     s.pop(k, None)
                     out.pop(k, None)
 
-        if out.get("patternProperties") != s.get("patternProperties") and (
-            out.get("properties") != s.get("properties")
-            or out.get("additionalProperties") != s.get("additionalProperties")
-        ):
-            return None
-
-        # With patternProperties set aside for now, it's reasonably easy to merge
-        # objects: we take all property names known to either side, and merge them
-        # with either the corresponding property or additionalProperties schema
-        # (and discard the properties dict if there weren't any).  Then, we merge
-        # the two additionalProperties (again, if there were any) and we're done!
-        #
-        # TODO: to  add patternProperties support, we 'just' check for matching
-        # pattern schemas in the loop and merge all of them (or a.P. none match);
-        # then add a second loop to merge each pP with the matching pP or aP
-        # (i.e. looking like the loop we have now), and then we're done again.
+        # OK, this is a tricky bit, because we have three overlapping parts.
+        # First we'll deal with the `properties` keyword, containing schemas for
+        # the values associated with an exact key - we merge this with the exact
+        # match from the other schema *or* all of the matching patternProperties
+        # *or* the additionalProperties schema if there are no matches, in that
+        # order.
         out_add = out.get("additionalProperties", {})
         s_add = s.pop("additionalProperties", {})
+        out_pat = out.get("patternProperties", {})
+        s_pat = s.pop("patternProperties", {})
         if "properties" in out or "properties" in s:
+            # The get/pop/setdefault dance and if-statements ensure that we end up with
+            # none of these keys present in `s`, and avoid adding them to `out` which
+            # can cause an infinite loop of recursive merging.
             out_props = out.setdefault("properties", {})
             s_props = s.pop("properties", {})
             for prop_name in set(out_props) | set(s_props):
-                m = merged(
-                    [out_props.get(prop_name, out_add), s_props.get(prop_name, s_add)]
-                )
+                if prop_name in out_props:
+                    out_combined = out_props[prop_name]
+                else:
+                    out_combined = merged(
+                        [s for p, s in out_pat.items() if re.search(p, prop_name)]
+                        or [out_add]
+                    )
+                if prop_name in s_props:
+                    s_combined = s_props[prop_name]
+                else:
+                    s_combined = merged(
+                        [s for p, s in s_pat.items() if re.search(p, prop_name)]
+                        or [s_add]
+                    )
+                if out_combined is None or s_combined is None:  # pragma: no cover
+                    # Note that this can only be the case if we were actually going to
+                    # use the schema which we attempted to merge, i.e. prop_name was
+                    # not in the schema and there were unmergable pattern schemas.
+                    return None
+                m = merged([out_combined, s_combined])
                 if m is None:
                     return None
                 out_props[prop_name] = m
+        # With all the property names done, it's time to handle the patterns.  This is
+        # simpler as we merge with either an identical pattern, or additionalProperties.
+        if out_pat or s_pat:
+            for pattern in set(out_pat) | set(s_pat):
+                m = merged([out_pat.get(pattern, out_add), s_pat.get(pattern, s_add)])
+                if m is None:  # pragma: no cover
+                    return None
+                out_pat[pattern] = m
+            out["patternProperties"] = out_pat
+        # Finally, we merge togther the additionalProperties schemas.
         if out_add or s_add:
             m = merged([out_add, s_add])
-            if m is None:
+            if m is None:  # pragma: no cover
                 return None
             out["additionalProperties"] = m
 

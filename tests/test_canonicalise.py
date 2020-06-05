@@ -296,6 +296,23 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             {"not": {}},
         ),
+        (
+            [
+                {"additionalProperties": {"patternProperties": {".": {}}}},
+                {"additionalProperties": {"patternProperties": {"a": {}}}},
+            ],
+            {"additionalProperties": {"patternProperties": {".": {}, "a": {}}}},
+        ),
+        (
+            [
+                {"patternProperties": {".": {"enum": [None, True]}}},
+                {"properties": {"ab": {"type": "boolean"}}},
+            ],
+            {
+                "patternProperties": {".": {"enum": [None, True]}},
+                "properties": {"ab": {"const": True}},
+            },
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
@@ -312,29 +329,12 @@ def test_merged(group, result):
     assert merged(group) == result
 
 
-@pytest.mark.parametrize(
-    "group",
-    [
-        [
-            {"$schema": "http://json-schema.org/draft-04/schema#"},
-            {"$schema": "http://json-schema.org/draft-07/schema#"},
-        ],
-        [
-            {"additionalProperties": {"patternProperties": {".": {}}}},
-            {"additionalProperties": {"patternProperties": {"a": {}}}},
-        ],
-        [
-            {"patternProperties": {".": {}}},
-            {"patternProperties": {"ab": {"type": "boolean"}}},
-        ],
-        [
-            {"properties": {"a": {"patternProperties": {".": {}}}}},
-            {"properties": {"a": {"patternProperties": {"ab": {"type": "boolean"}}}}},
-        ],
-    ],
-)
-def test_unable_to_merge(group):
-    assert merged(group) is None
+def test_unable_to_merge_differnt_draft_versions():
+    different_drafts = [
+        {"$schema": "http://json-schema.org/draft-04/schema#"},
+        {"$schema": "http://json-schema.org/draft-07/schema#"},
+    ]
+    assert merged(different_drafts) is None
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)

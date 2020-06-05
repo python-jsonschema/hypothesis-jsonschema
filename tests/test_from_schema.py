@@ -108,6 +108,8 @@ FLAKY_SCHEMAS = {
     "Renovate config file (https://github.com/renovatebot/renovate)",
     "Renovate config file (https://renovatebot.com/)",
     "Jenkins X Pipeline YAML configuration files",
+    "TypeScript compiler configuration file",
+    "JSON Schema for GraphQL Mesh config file",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
