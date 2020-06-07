@@ -50,6 +50,10 @@ SCHEMA_KEYS = tuple(
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
+ALL_KEYWORDS = tuple(
+    ["$schema", *SCHEMA_KEYS, *SCHEMA_OBJECT_KEYS]
+    + sum((s.split() for _, s in TYPE_SPECIFIC_KEYS), [])
+)
 
 
 def next_down(val: float) -> float:
@@ -729,7 +733,9 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         for k, v in s.items():
             if k not in out:
                 out[k] = v
-            elif out[k] != v:
+            elif out[k] != v and k in ALL_KEYWORDS:
+                # If non-validation keys like `title` or `description` don't match,
+                # that doesn't really matter and we'll just go with first we saw.
                 return None
         out = canonicalish(out)
         if out == FALSEY:

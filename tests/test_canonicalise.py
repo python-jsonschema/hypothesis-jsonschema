@@ -345,7 +345,7 @@ def test_self_merge_eq_canonicalish(schema):
 
 
 def _merge_semantics_helper(data, s1, s2, combined):
-    note(combined)
+    note(f"combined={combined!r}")
     ic = data.draw(from_schema(combined), label="combined")
     i1 = data.draw(from_schema(s1), label="s1")
     i2 = data.draw(from_schema(s2), label="s2")
