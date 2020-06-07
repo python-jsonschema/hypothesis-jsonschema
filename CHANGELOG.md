@@ -1,5 +1,10 @@
 # Changelog
 
+#### 0.16.0 - 2020-06-07
+- Performance improvement for schemas with non-validation keys (such as `description`)
+- Errors from e.g. invalid schemas are deferred from import time to become failing tests
+- Improved handling for some schemas with overlapping non-integer `multipleOf` keys
+
 #### 0.15.1 - 2020-06-05
 - Significantly improved efficiency of certain `patternProperties` schemas.
 
