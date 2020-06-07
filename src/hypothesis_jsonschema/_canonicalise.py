@@ -162,7 +162,18 @@ def upper_bound_instances(schema: Schema) -> float:
             if isinstance(mul, int):
                 return 1 + (upper - lower) % mul
             return 1 + (upper - lower)  # Non-integer mul can only reduce upper bound
-    # TODO: upper-bound array instances
+    if (
+        get_type(schema) == ["array"]
+        and isinstance(schema.get("items"), dict)
+        and schema.get("maxItems", math.inf) < 100  # type: ignore
+    ):
+        # For simplicity, we use the upper bound with replacement; while we could
+        # tighten this by considering uniqueItems it's not worth the extra code.
+        items_bound = upper_bound_instances(schema["items"])  # type: ignore
+        if items_bound < 100:
+            lo, hi = schema.get("minItems", 0), schema["maxItems"]
+            assert isinstance(lo, int) and isinstance(hi, int)
+            return sum(items_bound ** n for n in range(lo, hi + 1))
     return math.inf
 
 

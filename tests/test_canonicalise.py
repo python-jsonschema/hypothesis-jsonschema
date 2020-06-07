@@ -120,6 +120,13 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "minItems": 2,
         },
         {"type": "array", "items": {"type": "integer"}, "contains": {"type": "string"}},
+        {
+            # only seven allowed elements: [], [1], [2], [1, 1], [1, 2], [2, 1], [2, 2]
+            "type": "array",
+            "items": {"type": "array", "items": {"enum": [1, 2]}, "maxItems": 2},
+            "minItems": 8,
+            "uniqueItems": True,
+        },
     ],
 )
 def test_canonicalises_to_empty(schema):
