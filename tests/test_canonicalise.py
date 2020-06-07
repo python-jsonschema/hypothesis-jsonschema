@@ -234,6 +234,8 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         ([{"type": "integer"}, {"type": "number"}], {"type": "integer"}),
+        ([{"multipleOf": 0.25}, {"multipleOf": 0.5}], {"multipleOf": 0.5}),
+        ([{"multipleOf": 0.5}, {"multipleOf": 1.5}], {"multipleOf": 1.5}),
         (
             [
                 {"type": "integer", "multipleOf": 4},
@@ -258,13 +260,13 @@ def test_canonicalises_to_expected(schema, expected):
         (
             [
                 {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 0.75}]},
-                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 0.25}]},
+                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 1.25}]},
             ],
             {
                 "allOf": [
-                    {"multipleOf": 0.25},
                     {"multipleOf": 0.5},
                     {"multipleOf": 0.75},
+                    {"multipleOf": 1.25},
                 ]
             },
         ),
@@ -380,6 +382,8 @@ def test_can_almost_always_merge_numeric_schemas(data, s1, s2):
         mul1, mul2 = s1["multipleOf"], s2["multipleOf"]
         assert isinstance(mul1, float) or isinstance(mul2, float)
         assert mul1 != mul2
+        ratio = max(mul1, mul2) / min(mul1, mul2)
+        assert ratio != int(ratio)  # i.e. x=0.5, y=2 (ratio=4.0) should work
     elif combined != FALSEY:
         _merge_semantics_helper(data, s1, s2, combined)
 

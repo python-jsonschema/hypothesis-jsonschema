@@ -724,11 +724,16 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             & set(out)
         ):
             out[key] = max([out[key], s.pop(key)])
-        if isinstance(out.get("multipleOf"), int) and isinstance(
-            s.get("multipleOf"), int
-        ):
+        if "multipleOf" in out and "multipleOf" in s:
             x, y = s.pop("multipleOf"), out["multipleOf"]
-            out["multipleOf"] = x * y // math.gcd(x, y)
+            if isinstance(x, int) and isinstance(y, int):
+                out["multipleOf"] = x * y // math.gcd(x, y)
+            elif x != y:
+                ratio = max(x, y) / min(x, y)
+                if ratio == int(ratio):  # e.g. x=0.5, y=2
+                    out["multipleOf"] = max(x, y)
+                else:
+                    return None
 
         for k, v in s.items():
             if k not in out:
