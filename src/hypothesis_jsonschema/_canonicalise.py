@@ -699,14 +699,6 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 return None
             out["additionalProperties"] = m
 
-        if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
-            # OK, this is a tricky bit of logic.  If we are merging schemas with
-            # unequal "contains" keys, then we want to keep the *more* restrictive
-            # of the two as the contains key, so we can leverage that for generation.
-            contains = [out["contains"], s["contains"]]
-            contains.sort(key=upper_bound_instances)
-            out["contains"], _ = contains
-            out["allOf"] = out.get("allOf", []) + [{"contains": c} for c in contains]
         if "allOf" in out and "allOf" in s:
             # All our allOf schemas will be de-duplicated by canonicalise
             out["allOf"] += s.pop("allOf")
@@ -741,6 +733,8 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             elif out[k] != v and k in ALL_KEYWORDS:
                 # If non-validation keys like `title` or `description` don't match,
                 # that doesn't really matter and we'll just go with first we saw.
+                known = "$ref $schema anyOf oneOf items if not pattern contains"
+                assert k in known.split(), (k, out[k], v)
                 return None
         out = canonicalish(out)
         if out == FALSEY:
