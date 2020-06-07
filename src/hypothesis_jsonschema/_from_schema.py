@@ -5,7 +5,7 @@ import math
 import operator
 import re
 from fractions import Fraction
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
 import hypothesis.internal.conjecture.utils as cu
 import hypothesis.provisional as prov
@@ -73,6 +73,18 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     Schema reuse with "definitions" and "$ref" is not yet supported, but
     everything else in drafts 04, 05, and 07 is fully tested and working.
     """
+    try:
+        return __from_schema(schema)
+    except Exception as err:
+        error = err
+
+        def error_raiser() -> NoReturn:
+            raise error
+
+        return st.builds(error_raiser)
+
+
+def __from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
     schema = canonicalish(schema)
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema == FALSEY:

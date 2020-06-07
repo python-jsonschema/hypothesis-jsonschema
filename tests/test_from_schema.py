@@ -253,8 +253,13 @@ def test_numeric_uniqueness(value):
 
 
 def test_draft03_not_supported():
+    # Also checks that errors are deferred from importtime to runtime
+    @given(from_schema({"$schema": "http://json-schema.org/draft-03/schema#"}))
+    def f(_):
+        raise AssertionError
+
     with pytest.raises(InvalidArgument):
-        from_schema({"$schema": "http://json-schema.org/draft-03/schema#"})
+        f()
 
 
 @pytest.mark.parametrize("type_", ["integer", "number"])
