@@ -551,7 +551,9 @@ class LocalResolver(jsonschema.RefResolver):
         )
 
 
-def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schema:
+def resolve_all_refs(
+    schema: Union[bool, Schema], *, resolver: LocalResolver = None
+) -> Schema:
     """
     Resolve all references in the given schema.
 
@@ -559,6 +561,8 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
     The latter require special handling to convert to strategies and are much
     less common, so we just ignore them (and error out) for now.
     """
+    if isinstance(schema, bool):
+        return canonicalish(schema)
     if resolver is None:
         resolver = LocalResolver.from_schema(deepcopy(schema))
     if not isinstance(resolver, jsonschema.RefResolver):
@@ -573,7 +577,7 @@ def resolve_all_refs(schema: Schema, *, resolver: LocalResolver = None) -> Schem
             if s == {}:
                 return resolve_all_refs(got, resolver=resolver)
             m = merged([s, got])
-            if m is None:
+            if m is None:  # pragma: no cover
                 msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
                 raise HypothesisRefResolutionError(msg)
             return resolve_all_refs(m, resolver=resolver)

@@ -85,6 +85,12 @@ def from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
 
 
 def __from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
+    try:
+        schema = resolve_all_refs(schema)
+    except RecursionError:
+        raise HypothesisRefResolutionError(
+            f"Could not resolve recursive references in schema={schema!r}"
+        ) from None
     schema = canonicalish(schema)
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema == FALSEY:
@@ -96,13 +102,6 @@ def __from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
         jsonschema.validators.validator_for(schema).check_schema(schema)
         if schema["$schema"] == "http://json-schema.org/draft-03/schema#":
             raise InvalidArgument("Draft-03 schemas are not supported")
-
-    try:
-        schema = resolve_all_refs(schema)
-    except RecursionError:
-        raise HypothesisRefResolutionError(
-            f"Could not resolve recursive references in schema={schema!r}"
-        ) from None
 
     # Now we handle as many validation keywords as we can...
     # Applying subschemata with boolean logic

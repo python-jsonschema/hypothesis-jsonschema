@@ -110,6 +110,10 @@ FLAKY_SCHEMAS = {
     "Jenkins X Pipeline YAML configuration files",
     "TypeScript compiler configuration file",
     "JSON Schema for GraphQL Mesh config file",
+    "Configuration file for stylelint",
+    "Travis CI configuration file",
+    "JSON schema for ESLint configuration files",
+    # TODO: work out how to use slow marker here
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
