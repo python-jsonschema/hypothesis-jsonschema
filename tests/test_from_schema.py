@@ -64,47 +64,53 @@ def test_invalid_schemas_raise(schema):
         from_schema(schema).example()
 
 
-FLAKY_SCHEMAS = {
-    # Yep, lists of lists of lists of lists of lists of integers are HealthCheck-slow
-    "draft4/nested items",
-    "draft7/nested items",
-    "draft4/oneOf with missing optional property",
-    "draft7/oneOf with missing optional property",
-    # Something weird about a null that should be a string??  TODO: debug that.
-    "Datalogic Scan2Deploy Android file",
-    "Datalogic Scan2Deploy CE file",
-    # Schema requires draft 03, which hypothesis-jsonschema doesn't support
-    "A JSON Schema for ninjs by the IPTC. News and publishing information. See https://iptc.org/standards/ninjs/-1.0",
-    # Just not handling this one correctly yet
-    "draft4/additionalProperties should not look in applicators",
-    "draft7/additionalProperties should not look in applicators",
-    "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
-    "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
-    # Reference-related
-    "draft4/remote ref, containing refs itself",
-    # Occasionally really slow
-    "snapcraft project  (https://snapcraft.io)",
-    "batect configuration file",
-    "UI5 Tooling Configuration File (ui5.yaml)",
-    # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
-    "Drone CI configuration file",
-    "PHP Composer configuration file",
-    "Pyrseas database schema versioning for Postgres databases, v0.8",
+INVALID_SCHEMAS = {
+    # Includes a list where it should have a dict
+    "TypeScript Lint configuration file",
     # This schema is missing the "definitions" key which means they're not resolvable.
     "Cirrus CI configuration files",
-    # These schemas use remote references without a URL schema, which is invalid
-    "A JSON schema for a Dolittle bounded context's resource configurations",
-    "A JSON schema for Dolittle application's bounded context configuration",
+    # Empty list for requires, which is invalid
+    "Release Drafter configuration file",
+    # Many, many schemas have invalid $schema keys, which emit a warning (-Werror)
+    "A JSON schema for CRYENGINE projects (.cryproj files)",
+    "JSDoc configuration file",
+    "Meta-validation schema for JSON Schema Draft 8",
+    "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.2",
+    "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.3",
+    "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.4",
+    "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.5",
+    "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.2",
+    "Zuul CI configuration file",
+}
+UNSUPPORTED_SCHEMAS = {
+    # Technically valid, but using regex patterns not supported by Python
+    "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
+    "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
+}
+FLAKY_SCHEMAS = {
     # The following schemas refer to an `$id` rather than a JSON pointer.
     # This is valid, but not supported by the Python library - see e.g.
     # https://json-schema.org/understanding-json-schema/structuring.html#using-id-with-ref
     "draft4/Location-independent identifier",
     "draft7/Location-independent identifier",
-    # Bad reference forgot the leading "#"
-    "Microsoft Briefcase configuration file",
-    # Includes a list where it should have a dict
-    "TypeScript Lint configuration file",
-    # These schemas got very, very slow after we fixed object properties merging
+    # Yep, lists of lists of lists of lists of lists of integers are HealthCheck-slow
+    # TODO: write a separate test with healthchecks disabled?
+    "draft4/nested items",
+    "draft7/nested items",
+    "draft4/oneOf with missing optional property",
+    "draft7/oneOf with missing optional property",
+    # Sometimes unsatisfiable.  TODO: improve canonicalisation to remove filters
+    "Drone CI configuration file",
+    "PHP Composer configuration file",
+    "Pyrseas database schema versioning for Postgres databases, v0.8",
+    # Apparently we're not handling this one correctly?
+    "draft4/additionalProperties should not look in applicators",
+    "draft7/additionalProperties should not look in applicators",
+}
+SLOW_SCHEMAS = {
+    "snapcraft project  (https://snapcraft.io)",
+    "batect configuration file",
+    "UI5 Tooling Configuration File (ui5.yaml)",
     "Renovate config file (https://github.com/renovatebot/renovate)",
     "Renovate config file (https://renovatebot.com/)",
     "Jenkins X Pipeline YAML configuration files",
@@ -113,7 +119,18 @@ FLAKY_SCHEMAS = {
     "Configuration file for stylelint",
     "Travis CI configuration file",
     "JSON schema for ESLint configuration files",
-    # TODO: work out how to use slow marker here
+    "Ansible task files-2.0",
+    "Ansible task files-2.1",
+    "Ansible task files-2.2",
+    "Ansible task files-2.3",
+    "Ansible task files-2.4",
+    "Ansible task files-2.5",
+    "Ansible task files-2.6",
+    "Ansible task files-2.7",
+    "Ansible task files-2.9",
+    # oneOf on property names means only objects are valid, but it's a very
+    # filter-heavy way to express that.  TODO: canonicalise oneOf to anyOf.
+    "draft7/oneOf complex types",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
@@ -128,38 +145,86 @@ with open(Path(__file__).parent / "corpus-reported.json") as f:
 
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n.endswith("/oneOf complex types"):
-            # oneOf on property names means only objects are valid,
-            # but it's a very filter-heavy way to express that...
-            # TODO: see if we can auto-detect this, fix it, and emit a warning.
-            assert "type" not in corpus[n]
-            corpus[n]["type"] = "object"
-        if n in FLAKY_SCHEMAS or n.startswith("Ansible task files-"):
+        if n in INVALID_SCHEMAS:
+            continue
+        if n in UNSUPPORTED_SCHEMAS:
+            continue
+        elif n in SLOW_SCHEMAS:
             yield pytest.param(n, marks=pytest.mark.skip)
+        elif n in FLAKY_SCHEMAS:
+            yield pytest.param(n, marks=pytest.mark.skip(strict=False))
         else:
             if isinstance(corpus[n], dict) and "$schema" in corpus[n]:
-                try:
-                    jsonschema.validators.validator_for(corpus[n]).check_schema(
-                        corpus[n]
-                    )
-                except Exception:
-                    # The metaschema specified by $schema was not found.
-                    yield pytest.param(n, marks=pytest.mark.skip)
-                    continue
+                jsonschema.validators.validator_for(corpus[n]).check_schema(corpus[n])
             yield n
+
+
+RECURSIVE_REFS = {
+    # From upstream validation test suite
+    "draft4/valid definition",
+    "draft4/remote ref, containing refs itself",
+    "draft7/remote ref, containing refs itself",
+    "draft7/root pointer ref",
+    "draft7/valid definition",
+    # Schema also requires draft 03, which hypothesis-jsonschema doesn't support
+    "A JSON Schema for ninjs by the IPTC. News and publishing information. See https://iptc.org/standards/ninjs/-1.0",
+    # From schemastore
+    "A JSON schema for Open API documentation files",
+    "Avro Schema Avsc file",
+    "AWS CloudFormation provides a common language for you to describe and provision all the infrastructure resources in your cloud environment.",
+    "JSON schema .NET template files",
+    "AppVeyor CI configuration file",
+    "JSON Document Transofrm",
+    "JSON Linked Data files",
+    "Meta-validation schema for JSON Schema Draft 4",
+    "JSON schema for vim plugin addon-info.json metadata files",
+    "Meta-validation schema for JSON Schema Draft 7",
+    "Neotys as-code load test specification, more at: https://github.com/Neotys-Labs/neoload-cli",
+    "Metadata spec v1.26.4 for KSP-CKAN",
+    "Digital Signature Service Core Protocols, Elements, and Bindings Version 2.0",
+    "Opctl schema for describing an op",
+    "Metadata spec v1.27 for KSP-CKAN",
+    "PocketMine plugin manifest file",
+    "BuckleScript configuration file",
+    "Schema for CircleCI 2.0 config files",
+    "Source Map files version 3",
+    "Schema for Minecraft Bukkit plugin description files",
+    "Swagger API 2.0 schema",
+    "Static Analysis Results Interchange Format (SARIF) version 1",
+    "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.4",
+    "Static Analysis Results Interchange Format (SARIF) version 2",
+    "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.3",
+    "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.5",
+    "Web component file",
+    "Vega visualization specification file",
+    "The AWS Serverless Application Model (AWS SAM, previously known as Project Flourish) extends AWS CloudFormation to provide a simplified way of defining the Amazon API Gateway APIs, AWS Lambda functions, and Amazon DynamoDB tables needed by your serverless application.",
+    "Windows App localization file",
+    "YAML schema for GitHub Workflow",
+    "JSON-stat 2.0 Schema",
+    "Vega-Lite visualization specification file",
+    "Language grammar description files in Textmate and compatible editors",
+    "JSON Schema for GraphQL Mesh Config gile-0.0.16",
+}
 
 
 def xfail_on_reference_resolve_error(f):
     @proxies(f)
     def inner(*args, **kwargs):
+        _, name = args
+        assert isinstance(name, str)
         try:
-            return f(*args, **kwargs)
+            f(*args, **kwargs)
+            assert name not in RECURSIVE_REFS
         except jsonschema.exceptions.RefResolutionError as err:
-            # Currently: could be recursive, remote, or incompatible base schema
-            if isinstance(err, HypothesisRefResolutionError) or isinstance(
-                err._cause, HypothesisRefResolutionError
+            if (
+                isinstance(err, HypothesisRefResolutionError)
+                or isinstance(err._cause, HypothesisRefResolutionError)
+            ) and (
+                "does not fetch remote references" in str(err)
+                or name in RECURSIVE_REFS
+                and "Could not resolve recursive references" in str(err)
             ):
-                pytest.xfail("Could not resolve a reference")
+                pytest.xfail()
             raise
 
     return inner
@@ -193,7 +258,6 @@ def test_can_generate_for_test_suite_schema(data, name):
 
 
 @pytest.mark.parametrize("name", to_name_params(invalid_suite))
-@xfail_on_reference_resolve_error
 def test_cannot_generate_for_empty_test_suite_schema(name):
     strat = from_schema(invalid_suite[name])
     with pytest.raises(Exception):
