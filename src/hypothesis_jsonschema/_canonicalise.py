@@ -51,7 +51,7 @@ SCHEMA_KEYS = tuple(
 # Note that in some cases ("dependencies"), the value may be a list of strings.
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 ALL_KEYWORDS = tuple(
-    ["$schema", *SCHEMA_KEYS, *SCHEMA_OBJECT_KEYS]
+    [*SCHEMA_KEYS, *SCHEMA_OBJECT_KEYS]
     + sum((s.split() for _, s in TYPE_SPECIFIC_KEYS), [])
 )
 
@@ -737,15 +737,26 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     out["multipleOf"] = max(x, y)
                 else:
                     return None
+        # TODO: merge `contains` schemas when one is a subset of the other
+        # TODO: merge `items` schemas or lists-of-schemas
+        # TODO: merge `not` schemas as {not: anyOf: [not1, not2]}
+        # TODO: merge if/then/else schemas to the chained form
+        #       or maybe canonicalise them to an anyOf instead?
+        # TODO: merge dependencies
 
+        # This loop handles the remaining cases.  Notably, we do not attempt to
+        # merge distinct values for:
+        # - `pattern`; computing regex intersection is out of scope
+        # - `contains`; requires allOf and thus enters an infinite loop
+        # - `$ref`; if not already resolved we can't do that here
+        # - `anyOf`; due to product-like explosion in worst case
+        # - `oneOf`; which we plan to handle as an anyOf-not composition
         for k, v in s.items():
             if k not in out:
                 out[k] = v
             elif out[k] != v and k in ALL_KEYWORDS:
                 # If non-validation keys like `title` or `description` don't match,
                 # that doesn't really matter and we'll just go with first we saw.
-                known = "$ref $schema anyOf oneOf items if not pattern contains"
-                assert k in known.split(), (k, out[k], v)
                 return None
         out = canonicalish(out)
         if out == FALSEY:

@@ -338,14 +338,6 @@ def test_merged(group, result):
     assert merged(group) == result
 
 
-def test_unable_to_merge_differnt_draft_versions():
-    different_drafts = [
-        {"$schema": "http://json-schema.org/draft-04/schema#"},
-        {"$schema": "http://json-schema.org/draft-07/schema#"},
-    ]
-    assert merged(different_drafts) is None
-
-
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 @given(json_schemata())
 def test_self_merge_eq_canonicalish(schema):
@@ -416,6 +408,11 @@ def _canonicalises_to_equivalent_fixpoint(data):
     instance = data.draw(JSON_STRATEGY | strat, label="instance")
     assert is_valid(instance, schema) == is_valid(instance, cc)
     jsonschema.validators.validator_for(schema).check_schema(schema)
+
+
+def test_canonicalise_is_only_valid_for_schemas():
+    with pytest.raises(InvalidArgument):
+        canonicalish("not a schema")
 
 
 # Expose fuzz targets in a form that FuzzBuzz can understand (no dotted names)
