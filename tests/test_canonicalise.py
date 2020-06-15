@@ -292,6 +292,7 @@ def test_canonicalises_to_expected(schema, expected):
             {
                 "properties": {"foo": {"enum": [False, True]}},
                 "additionalProperties": {"not": {}},
+                "maxProperties": 1,
             },
         ),
         (

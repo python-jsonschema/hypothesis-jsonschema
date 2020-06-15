@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.16.1 - 2020-06-15
+- Performance improvement for `object` schemas with `additionalProperties: false` (issue #55)
+
 #### 0.16.0 - 2020-06-07
 - Performance improvement for schemas with non-validation keys (such as `description`)
 - Errors from e.g. invalid schemas are deferred from import time to become failing tests

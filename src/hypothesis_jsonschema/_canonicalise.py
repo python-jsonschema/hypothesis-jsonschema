@@ -394,13 +394,12 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         schema.pop("items", None)
     if (
         "properties" in schema
-        and "maxProperties" in schema
         and not schema.get("patternProperties")
         and schema.get("additionalProperties") == FALSEY
     ):
-        schema["maxProperties"] = min(
-            schema["maxProperties"], len(schema["properties"])
-        )
+        max_props = schema.get("maxProperties", math.inf)
+        assert isinstance(max_props, (int, float))
+        schema["maxProperties"] = min(max_props, len(schema["properties"]))
     if "object" in type_ and schema.get("minProperties", 0) > schema.get(
         "maxProperties", math.inf
     ):
