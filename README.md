@@ -10,11 +10,23 @@ that matches some [JSON schema](https://json-schema.org/).
 The public API consists of just one function: `hypothesis_jsonschema.from_schema`,
 which takes a JSON schema and returns a strategy for allowed JSON objects.
 
+```python
+from hypothesis import given
+from hypothesis_jsonschema import from_schema
+
+@given(from_schema(
+    {"type": "integer", "minimum": 1, "exclusiveMaximum": 10}
+))
+def test(value):
+    assert isinstance(value, int)
+    assert 1 <= value < 10
+```
+
+For more details on property-based testing and how to use or customise
+strategies, [see the Hypothesis docs](https://hypothesis.readthedocs.io/).
+
 JSONSchema drafts 04, 05, and 07 are fully tested and working.
 As of version 0.11, this includes resolving non-recursive references!
-
-For details on how to use this strategy in your tests,
-[see the Hypothesis docs](https://hypothesis.readthedocs.io/).
 
 
 ## Supported versions
