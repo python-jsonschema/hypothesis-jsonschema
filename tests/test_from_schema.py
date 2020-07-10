@@ -76,6 +76,8 @@ INVALID_SCHEMAS = {
     "TypeScript Lint configuration file",
     # This schema is missing the "definitions" key which means they're not resolvable.
     "Cirrus CI configuration files",
+    # This schema similarly refers to a non-existent definition
+    "The Bamboo Specs allows you to define Bamboo configuration as code, and have corresponding plans/deployments created or updated automatically in Bamboo",
     # Empty list for requires, which is invalid
     "Release Drafter configuration file",
     # Many, many schemas have invalid $schema keys, which emit a warning (-Werror)
@@ -135,6 +137,7 @@ SLOW_SCHEMAS = {
     "Ansible task files-2.6",
     "Ansible task files-2.7",
     "Ansible task files-2.9",
+    "JSON Schema for GraphQL Code Generator config file",
     # oneOf on property names means only objects are valid, but it's a very
     # filter-heavy way to express that.  TODO: canonicalise oneOf to anyOf.
     "draft7/oneOf complex types",
@@ -211,6 +214,10 @@ RECURSIVE_REFS = {
     "Vega-Lite visualization specification file",
     "Language grammar description files in Textmate and compatible editors",
     "JSON Schema for GraphQL Mesh Config gile-0.0.16",
+    "Azure Pipelines YAML pipelines definition",
+    "Action and rule configuration descriptor for Yippee-Ki-JSON transformations.-1.1.2",
+    "Action and rule configuration descriptor for Yippee-Ki-JSON transformations.-latest",
+    "Schema for Camel K YAML DSL",
 }
 
 

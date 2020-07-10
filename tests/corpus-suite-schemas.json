@@ -194,24 +194,24 @@
             "pattern": "^\\D$",
             "type": "string"
         },
-        "draft7/ECMA 262 \\S matches everything but ascii whitespace": {
+        "draft7/ECMA 262 \\S matches everything but whitespace": {
             "pattern": "^\\S$",
+            "type": "string"
+        },
+        "draft7/ECMA 262 \\W matches everything but ascii letters": {
+            "pattern": "^\\W$",
             "type": "string"
         },
         "draft7/ECMA 262 \\d matches ascii digits only": {
             "pattern": "^\\d$",
             "type": "string"
         },
-        "draft7/ECMA 262 \\s matches ascii whitespace only": {
+        "draft7/ECMA 262 \\s matches whitespace": {
             "pattern": "^\\s$",
             "type": "string"
         },
         "draft7/ECMA 262 \\w matches ascii letters only": {
             "pattern": "^\\w$",
-            "type": "string"
-        },
-        "draft7/ECMA 262 \\w matches everything but ascii letters": {
-            "pattern": "^\\W$",
             "type": "string"
         },
         "draft7/ECMA 262 regex $ does not match trailing newline": {
@@ -344,6 +344,20 @@
             },
             "items": [
                 {}
+            ]
+        },
+        "draft7/additionalItems should not look in applicators, valid case": {
+            "additionalItems": {
+                "type": "boolean"
+            },
+            "allOf": [
+                {
+                    "items": [
+                        {
+                            "type": "integer"
+                        }
+                    ]
+                }
             ]
         },
         "draft7/additionalProperties allows a schema which should validate": {
@@ -1347,6 +1361,18 @@
                 }
             }
         },
+        "draft7/property named $ref, containing an actual $ref": {
+            "definitions": {
+                "is-string": {
+                    "type": "string"
+                }
+            },
+            "properties": {
+                "$ref": {
+                    "$ref": "#/definitions/is-string"
+                }
+            }
+        },
         "draft7/propertyNames validation": {
             "propertyNames": {
                 "maxLength": 3
@@ -1658,6 +1684,28 @@
             "definitions": {
                 "bool": false
             }
+        },
+        "draft7/additionalItems should not look in applicators, invalid case": {
+            "additionalItems": {
+                "type": "boolean"
+            },
+            "allOf": [
+                {
+                    "items": [
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ]
+                }
+            ],
+            "items": [
+                {
+                    "type": "integer"
+                }
+            ]
         },
         "draft7/additionalProperties should not look in applicators": {
             "additionalProperties": {
