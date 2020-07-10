@@ -14,32 +14,32 @@ colorama==0.4.3           # via bandit
 flake8-bandit==2.1.2      # via -r deps/check.in
 flake8-bugbear==20.1.4    # via -r deps/check.in
 flake8-builtins==1.5.3    # via -r deps/check.in
-flake8-comprehensions==3.2.2  # via -r deps/check.in
+flake8-comprehensions==3.2.3  # via -r deps/check.in
 flake8-docstrings==1.5.0  # via -r deps/check.in
 flake8-polyfill==1.0.2    # via flake8-bandit, pep8-naming
 flake8-print==3.1.4       # via -r deps/check.in
-flake8==3.8.2             # via -r deps/check.in, flake8-bandit, flake8-bugbear, flake8-builtins, flake8-comprehensions, flake8-docstrings, flake8-polyfill, flake8-print
+flake8==3.8.3             # via -r deps/check.in, flake8-bandit, flake8-bugbear, flake8-builtins, flake8-comprehensions, flake8-docstrings, flake8-polyfill, flake8-print
 gitdb==4.0.5              # via gitpython
 gitpython==3.1.3          # via bandit
-importlib-metadata==1.6.0  # via flake8, flake8-comprehensions
-isort==4.3.21             # via shed
+importlib-metadata==1.7.0  # via flake8, flake8-comprehensions
+isort==5.0.7              # via shed
 mccabe==0.6.1             # via flake8
 mypy-extensions==0.4.3    # via mypy
-mypy==0.780               # via -r deps/check.in
+mypy==0.782               # via -r deps/check.in
 pathspec==0.8.0           # via black
 pbr==5.4.5                # via stevedore
-pep8-naming==0.10.0       # via -r deps/check.in
+pep8-naming==0.11.1       # via -r deps/check.in
 pycodestyle==2.6.0        # via flake8, flake8-bandit, flake8-print
 pydocstyle==5.0.2         # via flake8-docstrings
 pyflakes==2.2.0           # via autoflake, flake8
-pyupgrade==2.4.4          # via shed
+pyupgrade==2.7.0          # via shed
 pyyaml==5.3.1             # via bandit
-regex==2020.5.14          # via black
+regex==2020.6.8           # via black
 shed==0.0.5               # via -r deps/check.in
 six==1.15.0               # via bandit, flake8-print
 smmap==3.0.4              # via gitdb
 snowballstemmer==2.0.0    # via pydocstyle
-stevedore==2.0.0          # via bandit
+stevedore==2.0.1          # via bandit
 tokenize-rt==4.0.0        # via pyupgrade
 toml==0.10.1              # via black
 typed-ast==1.4.1          # via black, mypy
