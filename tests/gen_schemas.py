@@ -3,10 +3,9 @@
 import re
 from typing import Any, Dict, List, Union
 
-import hypothesis.strategies as st
 import jsonschema
 import pytest
-from hypothesis import assume
+from hypothesis import assume, strategies as st
 
 from hypothesis_jsonschema._canonicalise import JSONType, Schema, encode_canonical_json
 from hypothesis_jsonschema._from_schema import (

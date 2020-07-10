@@ -3,15 +3,22 @@
 import json
 from pathlib import Path
 
-import hypothesis.strategies as st
 import jsonschema
 import pytest
 import strict_rfc3339
-from hypothesis import HealthCheck, assume, given, note, reject, settings
+from gen_schemas import schema_strategy_params
+from hypothesis import (
+    HealthCheck,
+    assume,
+    given,
+    note,
+    reject,
+    settings,
+    strategies as st,
+)
 from hypothesis.errors import FailedHealthCheck, InvalidArgument
 from hypothesis.internal.reflection import proxies
 
-from gen_schemas import schema_strategy_params
 from hypothesis_jsonschema._canonicalise import (
     HypothesisRefResolutionError,
     canonicalish,

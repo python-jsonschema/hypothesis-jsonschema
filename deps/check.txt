@@ -35,7 +35,7 @@ pyflakes==2.2.0           # via autoflake, flake8
 pyupgrade==2.7.0          # via shed
 pyyaml==5.3.1             # via bandit
 regex==2020.6.8           # via black
-shed==0.0.5               # via -r deps/check.in
+shed==0.1.1               # via -r deps/check.in
 six==1.15.0               # via bandit, flake8-print
 smmap==3.0.4              # via gitdb
 snowballstemmer==2.0.0    # via pydocstyle

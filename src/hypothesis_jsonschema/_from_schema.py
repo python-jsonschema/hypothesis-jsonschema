@@ -7,12 +7,10 @@ import re
 from fractions import Fraction
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
-import hypothesis.internal.conjecture.utils as cu
-import hypothesis.provisional as prov
-import hypothesis.strategies as st
 import jsonschema
-from hypothesis import assume
+from hypothesis import assume, provisional as prov, strategies as st
 from hypothesis.errors import InvalidArgument
+from hypothesis.internal.conjecture import utils as cu
 
 from ._canonicalise import (
     FALSEY,

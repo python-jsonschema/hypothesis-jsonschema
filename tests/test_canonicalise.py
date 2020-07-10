@@ -2,13 +2,12 @@
 
 import json
 
-import hypothesis.strategies as st
 import jsonschema
 import pytest
-from hypothesis import HealthCheck, assume, given, note, settings
+from gen_schemas import gen_number, json_schemata, schema_strategy_params
+from hypothesis import HealthCheck, assume, given, note, settings, strategies as st
 from hypothesis.errors import InvalidArgument
 
-from gen_schemas import gen_number, json_schemata, schema_strategy_params
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
