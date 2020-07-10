@@ -22,6 +22,7 @@ from hypothesis.internal.reflection import proxies
 from hypothesis_jsonschema._canonicalise import (
     HypothesisRefResolutionError,
     canonicalish,
+    resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import from_schema, rfc3339
 
@@ -72,12 +73,6 @@ def test_invalid_schemas_raise(schema):
 
 
 INVALID_SCHEMAS = {
-    # Includes a list where it should have a dict
-    "TypeScript Lint configuration file",
-    # This schema is missing the "definitions" key which means they're not resolvable.
-    "Cirrus CI configuration files",
-    # This schema similarly refers to a non-existent definition
-    "The Bamboo Specs allows you to define Bamboo configuration as code, and have corresponding plans/deployments created or updated automatically in Bamboo",
     # Empty list for requires, which is invalid
     "Release Drafter configuration file",
     # Many, many schemas have invalid $schema keys, which emit a warning (-Werror)
@@ -90,6 +85,12 @@ INVALID_SCHEMAS = {
     "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.5",
     "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.2",
     "Zuul CI configuration file",
+}
+NON_EXISTENT_REF_SCHEMAS = {
+    "Cirrus CI configuration files",
+    "The Bamboo Specs allows you to define Bamboo configuration as code, and have corresponding plans/deployments created or updated automatically in Bamboo",
+    # Special case - reference is valid, but target is list-format `items` rather than a subschema
+    "TypeScript Lint configuration file",
 }
 UNSUPPORTED_SCHEMAS = {
     # Technically valid, but using regex patterns not supported by Python
@@ -155,7 +156,7 @@ with open(Path(__file__).parent / "corpus-reported.json") as f:
 
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n in INVALID_SCHEMAS:
+        if n in INVALID_SCHEMAS | NON_EXISTENT_REF_SCHEMAS:
             continue
         if n in UNSUPPORTED_SCHEMAS:
             continue
@@ -167,6 +168,18 @@ def to_name_params(corpus):
             if isinstance(corpus[n], dict) and "$schema" in corpus[n]:
                 jsonschema.validators.validator_for(corpus[n]).check_schema(corpus[n])
             yield n
+
+
+@pytest.mark.parametrize("name", sorted(INVALID_SCHEMAS))
+def test_invalid_schemas_are_invalid(name):
+    with pytest.raises(Exception):
+        jsonschema.validators.validator_for(catalog[name]).check_schema(catalog[name])
+
+
+@pytest.mark.parametrize("name", sorted(NON_EXISTENT_REF_SCHEMAS))
+def test_invalid_ref_schemas_are_invalid(name):
+    with pytest.raises(Exception):
+        resolve_all_refs(catalog[name])
 
 
 RECURSIVE_REFS = {

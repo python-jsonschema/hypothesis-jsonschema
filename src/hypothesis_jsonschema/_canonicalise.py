@@ -562,6 +562,7 @@ def resolve_all_refs(
     """
     if isinstance(schema, bool):
         return canonicalish(schema)
+    assert isinstance(schema, dict), schema
     if resolver is None:
         resolver = LocalResolver.from_schema(deepcopy(schema))
     if not isinstance(resolver, jsonschema.RefResolver):
