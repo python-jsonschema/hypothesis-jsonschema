@@ -757,8 +757,10 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             if m == out["contains"] or m == s["contains"]:
                 out["contains"] = m
                 s.pop("contains")
+        if "not" in out and "not" in s and out["not"] != s["not"]:
+            out["not"] = {"anyOf": [out["not"], s.pop("not")]}
+
         # TODO: merge `items` schemas or lists-of-schemas
-        # TODO: merge `not` schemas as {not: anyOf: [not1, not2]}
         # TODO: merge if/then/else schemas to the chained form
         #       or maybe canonicalise them to an anyOf instead?
         # TODO: merge dependencies

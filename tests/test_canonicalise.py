@@ -342,6 +342,10 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             {"type": "array", "contains": {"type": "integer"}, "minItems": 1},
         ),
+        (
+            [{"not": {"enum": [1, 2, 3]}}, {"not": {"enum": ["a", "b", "c"]}}],
+            {"not": {"anyOf": [{"enum": ["a", "b", "c"]}, {"enum": [1, 2, 3]}]}},
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
