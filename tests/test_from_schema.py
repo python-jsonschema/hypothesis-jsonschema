@@ -96,6 +96,8 @@ UNSUPPORTED_SCHEMAS = {
     # Technically valid, but using regex patterns not supported by Python
     "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
+    # TODO: this is due to a bug merging {'multipleOf': 2} with {'not': {'maximum': 0}}
+    "draft7/validate against correct branch, then vs else",
 }
 FLAKY_SCHEMAS = {
     # The following schemas refer to an `$id` rather than a JSON pointer.

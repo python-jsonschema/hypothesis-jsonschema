@@ -279,6 +279,18 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         elif len(enum_) == 1:
             return {"const": enum_[0]}
         return {"enum": enum_}
+    # if/then/else schemas are ignored unless if and another are present
+    if_ = schema.pop("if", None)
+    then = schema.pop("then", schema)
+    else_ = schema.pop("else", schema)
+    if if_ is not None and (then is not schema or else_ is not schema):
+        schema = {
+            "anyOf": [
+                {"allOf": [if_, then, schema]},
+                {"allOf": [{"not": if_}, else_, schema]},
+            ]
+        }
+    assert isinstance(schema, dict)
     # Recurse into the value of each keyword with a schema (or list of them) as a value
     for key in SCHEMA_KEYS:
         if isinstance(schema.get(key), list):
@@ -538,12 +550,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if (not one_of) or one_of.count(TRUTHY) > 1:
             return FALSEY
         schema["oneOf"] = one_of
-    # if/then/else schemas are ignored unless if and another are present
-    if "if" not in schema:
-        schema.pop("then", None)
-        schema.pop("else", None)
-    if "then" not in schema and "else" not in schema:
-        schema.pop("if", None)
     if schema.get("uniqueItems") is False:
         del schema["uniqueItems"]
     return schema
@@ -761,8 +767,6 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             out["not"] = {"anyOf": [out["not"], s.pop("not")]}
 
         # TODO: merge `items` schemas or lists-of-schemas
-        # TODO: merge if/then/else schemas to the chained form
-        #       or maybe canonicalise them to an anyOf instead?
         # TODO: merge dependencies
 
         # This loop handles the remaining cases.  Notably, we do not attempt to
@@ -772,6 +776,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         # - `$ref`; if not already resolved we can't do that here
         # - `anyOf`; due to product-like explosion in worst case
         # - `oneOf`; which we plan to handle as an anyOf-not composition
+        # - `if`/`then`/`else`; which is removed by canonicalisation
         for k, v in s.items():
             if k not in out:
                 out[k] = v

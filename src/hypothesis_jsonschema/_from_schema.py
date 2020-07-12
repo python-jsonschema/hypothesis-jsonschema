@@ -126,18 +126,6 @@ def __from_schema(schema: Union[bool, Schema]) -> st.SearchStrategy[JSONType]:
         return st.one_of([from_schema(s) for s in schemas if s is not None]).filter(
             make_validator(schema).is_valid
         )
-    # Conditional application of subschemata
-    if "if" in schema:
-        tmp = schema.copy()
-        if_ = tmp.pop("if")
-        then = tmp.pop("then", {})
-        else_ = tmp.pop("else", {})
-        assert isinstance(if_, (bool, dict))
-        assert isinstance(then, (bool, dict))
-        assert isinstance(else_, (bool, dict))
-        return st.one_of([from_schema(s) for s in (then, else_, if_, tmp)]).filter(
-            make_validator(schema).is_valid
-        )
     # Simple special cases
     if "enum" in schema:
         assert schema["enum"], "Canonicalises to non-empty list or FALSEY"
