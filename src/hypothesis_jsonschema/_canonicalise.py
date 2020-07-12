@@ -449,26 +449,33 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Canonicalise "not" subschemas
     if "not" in schema:
         not_ = schema.pop("not")
-        if not_ == TRUTHY or not_ == schema:
-            # If everything is rejected, discard all other (irrelevant) keys
-            # TODO: more sensitive detection of cases where the not-clause
-            # excludes everything in the schema.
-            return FALSEY
-        type_keys = {k: set(v.split()) for k, v in TYPE_SPECIFIC_KEYS}
-        type_constraints = {"type"}
-        for v in type_keys.values():
-            type_constraints |= v
-        if set(not_).issubset(type_constraints):
-            not_["type"] = get_type(not_)
-            for t in set(type_).intersection(not_["type"]):
-                if not type_keys.get(t, set()).intersection(not_):
-                    type_.remove(t)
-                    if t not in ("integer", "number"):
-                        not_["type"].remove(t)
-            not_ = canonicalish(not_)
-        if not_ != FALSEY:
-            # If the "not" key rejects nothing, discard it
-            schema["not"] = not_
+
+        negated = []
+        to_negate = not_["anyOf"] if set(not_) == {"anyOf"} else [not_]
+        for not_ in to_negate:
+            type_keys = {k: set(v.split()) for k, v in TYPE_SPECIFIC_KEYS}
+            type_constraints = {"type"}
+            for v in type_keys.values():
+                type_constraints |= v
+            if set(not_).issubset(type_constraints):
+                not_["type"] = get_type(not_)
+                for t in set(type_).intersection(not_["type"]):
+                    if not type_keys.get(t, set()).intersection(not_):
+                        type_.remove(t)
+                        if t not in ("integer", "number"):
+                            not_["type"].remove(t)
+                not_ = canonicalish(not_)
+
+            m = merged([not_, {**schema, "type": type_}])
+            if m is not None:
+                not_ = m
+            if not_ != FALSEY:
+                negated.append(not_)
+        if len(negated) > 1:
+            schema["not"] = {"anyOf": negated}
+        elif negated:
+            schema["not"] = negated[0]
+
     assert isinstance(type_, list), type_
     if not type_:
         assert type_ == []
@@ -490,6 +497,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if TRUTHY in schema.get("anyOf", ()):
         schema.pop("anyOf", None)
     if "anyOf" in schema:
+        for i, s in enumerate(list(schema["anyOf"])):
+            if set(s) == {"anyOf"}:
+                schema["anyOf"][i : i + 1] = s["anyOf"]
         schema["anyOf"] = sorted(schema["anyOf"], key=encode_canonical_json)
         schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
         if not schema["anyOf"]:

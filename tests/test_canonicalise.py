@@ -101,6 +101,8 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
             "multipleOf": 3,
         },
         {"not": {"type": ["integer", "number"]}, "type": "number"},
+        {"not": {"anyOf": [{"type": "integer"}, {"type": "number"}]}, "type": "number"},
+        {"not": {"enum": [1, 2, 3]}, "const": 2},
         {"oneOf": []},
         {"oneOf": [{}, {}]},
         {"oneOf": [True, False, {}]},
@@ -137,6 +139,7 @@ def test_canonicalises_to_empty(schema):
     [
         ({"type": get_type({})}, {}),
         ({"required": []}, {}),
+        ({"type": "integer", "not": {"type": "string"}}, {"type": "integer"}),
         (
             {"type": "array", "items": [True, False, True]},
             {"type": "array", "items": [{}], "maxItems": 1},
@@ -193,6 +196,16 @@ def test_canonicalises_to_empty(schema):
             {"minItems": 1, "type": "array"},
         ),
         ({"anyOf": [{}, {"type": "null"}]}, {}),
+        (
+            {
+                "anyOf": [
+                    {"type": "string"},
+                    {"anyOf": [{"type": "number"}, {"type": "array"}]},
+                ]
+            },
+            # TODO: collapse into {"type": ["string", "number", "array"]}
+            {"anyOf": [{"type": "array"}, {"type": "number"}, {"type": "string"}]},
+        ),
         ({"uniqueItems": False}, {}),
         (
             {
