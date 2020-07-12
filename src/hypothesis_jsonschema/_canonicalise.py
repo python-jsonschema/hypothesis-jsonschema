@@ -359,8 +359,14 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if schema["contains"] == TRUTHY:
             schema.pop("contains")
             schema["minItems"] = max(schema.get("minItems", 1), 1)
-    # TODO: upper_bound_instances on the items, and use that to set maxItems
-    # constraint for unique arrays.  Not worth handling list-items though...
+    if (
+        "array" in type_
+        and "uniqueItems" in schema
+        and isinstance(schema.get("items", []), dict)
+    ):
+        item_count = upper_bound_instances(schema["items"])
+        if math.isfinite(item_count):
+            schema["maxItems"] = min(item_count, schema.get("maxItems", math.inf))
     if "array" in type_ and schema.get("minItems", 0) > schema.get(
         "maxItems", math.inf
     ):

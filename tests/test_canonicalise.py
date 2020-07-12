@@ -234,6 +234,15 @@ def test_canonicalises_to_empty(schema):
                 "contains": {"type": "number", "multipleOf": 0.75},
             },
         ),
+        (
+            {"type": "array", "items": {"const": 1}, "uniqueItems": True},
+            {
+                "type": "array",
+                "items": {"const": 1},
+                "uniqueItems": True,
+                "maxItems": 1,
+            },
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
