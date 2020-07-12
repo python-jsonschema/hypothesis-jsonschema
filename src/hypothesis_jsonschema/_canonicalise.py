@@ -515,11 +515,19 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if TRUTHY in schema.get("anyOf", ()):
         schema.pop("anyOf", None)
     if "anyOf" in schema:
-        for i, s in enumerate(list(schema["anyOf"])):
+        i = 0
+        while i < len(schema["anyOf"]):
+            s = schema["anyOf"][i]
             if set(s) == {"anyOf"}:
                 schema["anyOf"][i : i + 1] = s["anyOf"]
-        schema["anyOf"] = sorted(schema["anyOf"], key=encode_canonical_json)
-        schema["anyOf"] = [s for s in schema["anyOf"] if s != FALSEY]
+                continue
+            i += 1
+        schema["anyOf"] = [
+            json.loads(s)
+            for s in sorted(
+                {encode_canonical_json(a) for a in schema["anyOf"] if a != FALSEY}
+            )
+        ]
         if not schema["anyOf"]:
             return FALSEY
         if len(schema) == len(schema["anyOf"]) == 1:

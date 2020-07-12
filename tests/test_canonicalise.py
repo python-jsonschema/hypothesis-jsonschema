@@ -196,6 +196,7 @@ def test_canonicalises_to_empty(schema):
             {"minItems": 1, "type": "array"},
         ),
         ({"anyOf": [{}, {"type": "null"}]}, {}),
+        ({"anyOf": [{"anyOf": [{"anyOf": [{"type": "null"}]}]}]}, {"const": None}),
         (
             {
                 "anyOf": [
