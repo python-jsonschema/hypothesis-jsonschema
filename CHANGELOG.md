@@ -1,5 +1,9 @@
 # Changelog
 
+#### 0.16.2 - 2020-07-12
+- Substantial performance gains for some schemas, via improved handling of the
+  `contains`, `not`, `anyOf`, and `if/then/else` keywords
+
 #### 0.16.1 - 2020-06-15
 - Performance improvement for `object` schemas with `additionalProperties: false` (issue #55)
 
