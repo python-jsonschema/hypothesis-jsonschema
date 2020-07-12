@@ -335,6 +335,13 @@ def test_canonicalises_to_expected(schema, expected):
                 "properties": {"ab": {"const": True}},
             },
         ),
+        (
+            [
+                {"type": "array", "contains": {"type": "integer"}},
+                {"type": "array", "contains": {"type": "number"}},
+            ],
+            {"type": "array", "contains": {"type": "integer"}, "minItems": 1},
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})

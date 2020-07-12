@@ -751,7 +751,12 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     out["multipleOf"] = max(x, y)
                 else:
                     return None
-        # TODO: merge `contains` schemas when one is a subset of the other
+        if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
+            # If one `contains` schema is a subset of the other, we can discard it.
+            m = merged([out["contains"], s["contains"]])
+            if m == out["contains"] or m == s["contains"]:
+                out["contains"] = m
+                s.pop("contains")
         # TODO: merge `items` schemas or lists-of-schemas
         # TODO: merge `not` schemas as {not: anyOf: [not1, not2]}
         # TODO: merge if/then/else schemas to the chained form
