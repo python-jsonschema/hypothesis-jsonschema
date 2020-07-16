@@ -674,8 +674,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
         if "type" in out and "type" in s:
             tt = s.pop("type")
+            ot = get_type(out)
+            if "number" in ot:
+                ot.append("integer")
             out["type"] = [
-                t for t in get_type(out) if t in tt or t == "integer" and "number" in tt
+                t for t in ot if t in tt or t == "integer" and "number" in tt
             ]
             out_type = get_type(out)
             if not out_type:

@@ -396,6 +396,7 @@ def test_merge_semantics(data, s1, s2):
     assume(canonicalish(s1) != FALSEY and canonicalish(s2) != FALSEY)
     combined = merged([s1, s2])
     assume(combined is not None)
+    assert combined == merged([s2, s1])  # union is commutative
     assume(combined != FALSEY)
     _merge_semantics_helper(data, s1, s2, combined)
 

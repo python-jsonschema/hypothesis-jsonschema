@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.17.1 - 2020-07-16
+- fixed an internal bug where results incorrectly depended on iteration order (#59)
+
 #### 0.17.0 - 2020-07-16
 - Adds a `custom_formats` keyword argument to `from_schema()`, so that you can
   specify a strategy to generate strings for custom formats like credit card numbers.
