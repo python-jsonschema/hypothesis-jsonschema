@@ -356,6 +356,43 @@ def test_canonicalises_to_expected(schema, expected):
             [{"not": {"enum": [1, 2, 3]}}, {"not": {"enum": ["a", "b", "c"]}}],
             {"not": {"anyOf": [{"enum": ["a", "b", "c"]}, {"enum": [1, 2, 3]}]}},
         ),
+        (
+            [{"dependencies": {"a": ["b"]}}, {"dependencies": {"a": ["c"]}}],
+            {"dependencies": {"a": ["b", "c"]}},
+        ),
+        (
+            [{"dependencies": {"a": ["b"]}}, {"dependencies": {"b": ["c"]}}],
+            {"dependencies": {"a": ["b"], "b": ["c"]}},
+        ),
+        (
+            [
+                {"dependencies": {"a": ["b"]}},
+                {"dependencies": {"a": {"properties": {"b": {"type": "string"}}}}},
+            ],
+            {
+                "dependencies": {
+                    "a": {"required": ["b"], "properties": {"b": {"type": "string"}}}
+                },
+            },
+        ),
+        (
+            [
+                {"dependencies": {"a": {"properties": {"b": {"type": "string"}}}}},
+                {"dependencies": {"a": ["b"]}},
+            ],
+            {
+                "dependencies": {
+                    "a": {"required": ["b"], "properties": {"b": {"type": "string"}}}
+                },
+            },
+        ),
+        (
+            [
+                {"dependencies": {"a": {"pattern": "a"}}},
+                {"dependencies": {"a": {"pattern": "b"}}},
+            ],
+            None,
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})

@@ -422,9 +422,25 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         "maxProperties", math.inf
     ):
         type_.remove("object")
-    # Remove no-op requires
-    if "required" in schema and not schema["required"]:
-        schema.pop("required")
+    # Discard dependencies values that don't restrict anything
+    for k, v in schema.get("dependencies", {}).copy().items():
+        if v == [] or v == TRUTHY:
+            schema["dependencies"].pop(k)
+    # Remove no-op keywords
+    for kw, identity in {
+        "minItems": 0,
+        "items": {},
+        "additionalItems": {},
+        "dependencies": {},
+        "minProperties": 0,
+        "properties": {},
+        "propertyNames": {},
+        "patternProperties": {},
+        "additionalProperties": {},
+        "required": [],
+    }.items():
+        if kw in schema and schema[kw] == identity:
+            schema.pop(kw)
     # Canonicalise "required" schemas to remove redundancy
     if "object" in type_ and "required" in schema:
         assert isinstance(schema["required"], list)
@@ -433,16 +449,18 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             # When the presence of a required property requires other properties via
             # dependencies, those properties can be moved to the base required keys.
             dep_names = {
-                k: sorted(v)
+                k: sorted(set(v))
                 for k, v in schema["dependencies"].items()
                 if isinstance(v, list)
             }
+            schema["dependencies"].update(dep_names)
             while reqs.intersection(dep_names):
                 for r in reqs.intersection(dep_names):
                     reqs.update(dep_names.pop(r))
-            for k, v in list(schema["dependencies"].items()):
-                if isinstance(v, list) and k not in dep_names:
-                    schema["dependencies"].pop(k)
+                    schema["dependencies"].pop(r)
+                    # TODO: else merge schema-dependencies of required properties
+                    # into the base schema after adding required back in and being
+                    # careful to avoid an infinite loop...
         schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
@@ -782,9 +800,37 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 s.pop("contains")
         if "not" in out and "not" in s and out["not"] != s["not"]:
             out["not"] = {"anyOf": [out["not"], s.pop("not")]}
+        if (
+            "dependencies" in out
+            and "dependencies" in s
+            and out["dependencies"] != s["dependencies"]
+        ):
+            # Note: draft 2019-09 added separate keywords for name-dependencies
+            # and schema-dependencies, but when we add support for that it will
+            # be by canonicalising to the existing backwards-compatible keyword.
+            #
+            # In each dependencies dict, the keys are property names and the values
+            # are either a list of required names, or a schema that the whole
+            # instance must match.  To merge a list and a schema, convert the
+            # former into a `required` key!
+            odeps = out["dependencies"]
+            for k, v in odeps.copy().items():
+                if k in s["dependencies"]:
+                    sval = s["dependencies"].pop(k)
+                    if isinstance(v, list) and isinstance(sval, list):
+                        odeps[k] = v + sval
+                        continue
+                    if isinstance(v, list):
+                        v = {"required": v}
+                    elif isinstance(sval, list):
+                        sval = {"required": sval}
+                    m = merged([v, sval])
+                    if m is None:
+                        return None
+                    odeps[k] = m
+            odeps.update(s.pop("dependencies"))
 
         # TODO: merge `items` schemas or lists-of-schemas
-        # TODO: merge dependencies
 
         # This loop handles the remaining cases.  Notably, we do not attempt to
         # merge distinct values for:

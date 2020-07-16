@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.17.2 - 2020-07-16
+- improved handling of overlapping `dependencies` keywords (#57)
+
 #### 0.17.1 - 2020-07-16
 - fixed an internal bug where results incorrectly depended on iteration order (#59)
 
