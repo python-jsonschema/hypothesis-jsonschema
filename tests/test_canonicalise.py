@@ -401,6 +401,25 @@ def test_canonicalises_to_expected(schema, expected):
             ],
             None,
         ),
+        ([{"items": {"pattern": "a"}}, {"items": {"pattern": "b"}}], None),
+        ([{"items": [{"pattern": "a"}]}, {"items": [{"pattern": "b"}]}], None,),
+        (
+            [
+                {"items": [{}], "additionalItems": {"pattern": "a"}},
+                {"items": [{}], "additionalItems": {"pattern": "b"}},
+            ],
+            None,
+        ),
+        (
+            [
+                {"items": [{}, {"type": "string"}], "additionalItems": False},
+                {"items": [{"type": "string"}]},
+            ],
+            {
+                "items": [{"type": "string"}, {"type": "string"}],
+                "additionalItems": FALSEY,
+            },
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})

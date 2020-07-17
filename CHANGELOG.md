@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.17.3 - 2020-07-17
+- improved handling of overlapping `items` keywords (#58)
+
 #### 0.17.2 - 2020-07-16
 - improved handling of overlapping `dependencies` keywords (#57)
 

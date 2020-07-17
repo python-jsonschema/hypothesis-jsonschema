@@ -13,6 +13,7 @@ most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
 
+import itertools
 import json
 import math
 import re
@@ -298,7 +299,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         elif isinstance(schema.get(key), (bool, dict)):
             schema[key] = canonicalish(schema[key])
         else:
-            assert key not in schema
+            assert key not in schema, (key, schema[key])
     for key in SCHEMA_OBJECT_KEYS:
         if key in schema:
             schema[key] = {
@@ -831,8 +832,42 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                         return None
                     odeps[k] = m
             odeps.update(s.pop("dependencies"))
-
-        # TODO: merge `items` schemas or lists-of-schemas
+        if "items" in out or "items" in s:
+            oitems = out.pop("items", TRUTHY)
+            sitems = s.pop("items", TRUTHY)
+            if isinstance(oitems, list) and isinstance(sitems, list):
+                out["items"] = []
+                out["additionalItems"] = merged(
+                    [
+                        out.get("additionalItems", TRUTHY),
+                        s.get("additionalItems", TRUTHY),
+                    ]
+                )
+                for a, b in itertools.zip_longest(oitems, sitems):
+                    if a is None:
+                        a = out.get("additionalItems", TRUTHY)
+                    elif b is None:
+                        b = s.get("additionalItems", TRUTHY)
+                    out["items"].append(merged([a, b]))
+            elif isinstance(oitems, list):
+                out["items"] = [merged([x, sitems]) for x in oitems]
+                out["additionalItems"] = merged(
+                    [out.get("additionalItems", TRUTHY), sitems]
+                )
+            elif isinstance(sitems, list):
+                out["items"] = [merged([x, oitems]) for x in sitems]
+                out["additionalItems"] = merged(
+                    [s.get("additionalItems", TRUTHY), oitems]
+                )
+            else:
+                out["items"] = merged([oitems, sitems])
+                if out["items"] is None:
+                    return None
+            if isinstance(out["items"], list) and None in out["items"]:
+                return None
+            if out.get("additionalItems", TRUTHY) is None:
+                return None
+            s.pop("additionalItems", None)
 
         # This loop handles the remaining cases.  Notably, we do not attempt to
         # merge distinct values for:
