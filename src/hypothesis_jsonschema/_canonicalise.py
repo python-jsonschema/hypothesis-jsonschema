@@ -461,6 +461,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                     # TODO: else merge schema-dependencies of required properties
                     # into the base schema after adding required back in and being
                     # careful to avoid an infinite loop...
+            if not schema["dependencies"]:
+                schema.pop("dependencies")
         schema["required"] = sorted(reqs)
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))

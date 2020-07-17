@@ -53,6 +53,14 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
 
+def test_dependencies_canonicalises_to_fixpoint():
+    """Check that an object drawn from an arbitrary schema is valid."""
+    cc = canonicalish(
+        {"required": [""], "properties": {"": {}}, "dependencies": {"": [""]}}
+    )
+    assert cc == canonicalish(cc)
+
+
 @pytest.mark.parametrize(
     "schema",
     [
