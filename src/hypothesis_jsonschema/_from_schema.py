@@ -4,6 +4,7 @@ import itertools
 import math
 import operator
 import re
+from copy import deepcopy
 from fractions import Fraction
 from functools import partial
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
@@ -18,6 +19,8 @@ from ._canonicalise import (
     TRUTHY,
     TYPE_STRINGS,
     HypothesisRefResolutionError,
+    JSONType,
+    LocalResolver,
     Schema,
     canonicalish,
     get_integer_bounds,
@@ -42,11 +45,13 @@ _FORMATS_TOKEN = object()
 
 
 def merged_as_strategies(
-    schemas: List[Schema], custom_formats: Optional[Dict[str, st.SearchStrategy[str]]]
+    schemas: List[Schema],
+    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]],
+    resolver: LocalResolver,
 ) -> st.SearchStrategy[JSONType]:
     assert schemas, "internal error: must pass at least one schema to merge"
     if len(schemas) == 1:
-        return from_schema(schemas[0], custom_formats=custom_formats)
+        return from_schema(schemas[0], custom_formats=custom_formats, resolver=resolver)
     # Try to merge combinations of strategies.
     strats = []
     combined: Set[str] = set()
@@ -60,7 +65,7 @@ def merged_as_strategies(
         if s is not None and s != FALSEY:
             validators = [make_validator(s) for s in schemas]
             strats.append(
-                from_schema(s, custom_formats=custom_formats).filter(
+                from_schema(s, custom_formats=custom_formats, resolver=resolver).filter(
                     lambda obj: all(v.is_valid(obj) for v in validators)
                 )
             )
@@ -72,6 +77,7 @@ def from_schema(
     schema: Union[bool, Schema],
     *,
     custom_formats: Dict[str, st.SearchStrategy[str]] = None,
+    resolver: Optional[LocalResolver] = None,
 ) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
@@ -79,7 +85,7 @@ def from_schema(
     everything else in drafts 04, 05, and 07 is fully tested and working.
     """
     try:
-        return __from_schema(schema, custom_formats=custom_formats)
+        return __from_schema(schema, custom_formats=custom_formats, resolver=resolver)
     except Exception as err:
         error = err
 
@@ -112,9 +118,10 @@ def __from_schema(
     schema: Union[bool, Schema],
     *,
     custom_formats: Dict[str, st.SearchStrategy[str]] = None,
+    resolver: Optional[LocalResolver] = None,
 ) -> st.SearchStrategy[JSONType]:
     try:
-        schema = resolve_all_refs(schema)
+        schema = resolve_all_refs(schema, resolver=resolver)
     except RecursionError:
         raise HypothesisRefResolutionError(
             f"Could not resolve recursive references in schema={schema!r}"
@@ -141,6 +148,9 @@ def __from_schema(
         }
         custom_formats[_FORMATS_TOKEN] = None  # type: ignore
 
+    if resolver is None:
+        resolver = LocalResolver.from_schema(deepcopy(schema))
+
     schema = canonicalish(schema)
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema == FALSEY:
@@ -155,24 +165,36 @@ def __from_schema(
 
     assert isinstance(schema, dict)
     # Now we handle as many validation keywords as we can...
+    if "$ref" in schema:
+        ref = schema["$ref"]
+
+        def _recurse() -> st.SearchStrategy[JSONType]:
+            _, resolved = resolver.resolve(ref)  # type: ignore
+            return from_schema(
+                resolved, custom_formats=custom_formats, resolver=resolver
+            )
+
+        return st.deferred(_recurse)
     # Applying subschemata with boolean logic
     if "not" in schema:
         not_ = schema.pop("not")
         assert isinstance(not_, dict)
         validator = make_validator(not_).is_valid
-        return from_schema(schema, custom_formats=custom_formats).filter(
-            lambda v: not validator(v)
-        )
+        return from_schema(
+            schema, custom_formats=custom_formats, resolver=resolver
+        ).filter(lambda v: not validator(v))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
         assert isinstance(ao, list)
-        return st.one_of([merged_as_strategies([tmp, s], custom_formats) for s in ao])
+        return st.one_of(
+            [merged_as_strategies([tmp, s], custom_formats, resolver) for s in ao]
+        )
     if "allOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("allOf")
         assert isinstance(ao, list)
-        return merged_as_strategies([tmp] + ao, custom_formats)
+        return merged_as_strategies([tmp] + ao, custom_formats, resolver)
     if "oneOf" in schema:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
@@ -180,7 +202,7 @@ def __from_schema(
         schemas = [merged([tmp, s]) for s in oo]
         return st.one_of(
             [
-                from_schema(s, custom_formats=custom_formats)
+                from_schema(s, custom_formats=custom_formats, resolver=resolver)
                 for s in schemas
                 if s is not None
             ]
@@ -198,8 +220,8 @@ def __from_schema(
         "number": number_schema,
         "integer": integer_schema,
         "string": partial(string_schema, custom_formats),
-        "array": partial(array_schema, custom_formats),
-        "object": partial(object_schema, custom_formats),
+        "array": partial(array_schema, custom_formats, resolver),
+        "object": partial(object_schema, custom_formats, resolver),
     }
     assert set(map_) == set(TYPE_STRINGS)
     return st.one_of([map_[t](schema) for t in get_type(schema)])
@@ -422,10 +444,14 @@ def string_schema(
 
 
 def array_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
+    custom_formats: Dict[str, st.SearchStrategy[str]],
+    resolver: LocalResolver,
+    schema: dict,
 ) -> st.SearchStrategy[List[JSONType]]:
     """Handle schemata for arrays."""
-    _from_schema_ = partial(from_schema, custom_formats=custom_formats)
+    _from_schema_ = partial(
+        from_schema, custom_formats=custom_formats, resolver=resolver
+    )
     items = schema.get("items", {})
     additional_items = schema.get("additionalItems", {})
     min_size = schema.get("minItems", 0)
@@ -436,14 +462,16 @@ def array_schema(
         if max_size is not None:
             max_size -= len(items)
 
-        items_strats = [_from_schema_(s) for s in items]
+        items_strats = [_from_schema_(s) for s in deepcopy(items)]
         additional_items_strat = _from_schema_(additional_items)
 
         # If we have a contains schema to satisfy, we try generating from it when
         # allowed to do so.  We'll skip the None (unmergable / no contains) cases
         # below, and let Hypothesis ignore the FALSEY cases for us.
         if "contains" in schema:
-            for i, mrgd in enumerate(merged([schema["contains"], s]) for s in items):
+            for i, mrgd in enumerate(
+                merged([schema["contains"], s]) for s in deepcopy(items)
+            ):
                 if mrgd is not None:
                     items_strats[i] |= _from_schema_(mrgd)
             contains_additional = merged([schema["contains"], additional_items])
@@ -480,10 +508,10 @@ def array_schema(
                 st.lists(additional_items_strat, min_size=min_size, max_size=max_size),
             )
     else:
-        items_strat = _from_schema_(items)
+        items_strat = _from_schema_(deepcopy(items))
         if "contains" in schema:
             contains_strat = _from_schema_(schema["contains"])
-            if merged([items, schema["contains"]]) != schema["contains"]:
+            if merged([deepcopy(items), schema["contains"]]) != schema["contains"]:
                 # We only need this filter if we couldn't merge items in when
                 # canonicalising.  Note that for list-items, above, we just skip
                 # the mixed generation in this case (because they tend to be
@@ -504,7 +532,9 @@ def array_schema(
 
 
 def object_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
+    custom_formats: Dict[str, st.SearchStrategy[str]],
+    resolver: LocalResolver,
+    schema: dict,
 ) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
     required = schema.get("required", [])  # required keys
@@ -518,7 +548,7 @@ def object_schema(
         return st.builds(dict)
     names["type"] = "string"
 
-    properties = schema.get("properties", {})  # exact name: value schema
+    properties = deepcopy(schema.get("properties", {}))  # exact name: value schema
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     # schema for other values; handled specially if nothing matches
     additional = schema.get("additionalProperties", {})
@@ -533,7 +563,7 @@ def object_schema(
         st.sampled_from(sorted(dep_names) + sorted(dep_schemas) + sorted(properties))
         if (dep_names or dep_schemas or properties)
         else st.nothing(),
-        from_schema(names, custom_formats=custom_formats)
+        from_schema(names, custom_formats=custom_formats, resolver=resolver)
         if additional_allowed
         else st.nothing(),
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
@@ -579,12 +609,20 @@ def object_schema(
                 if re.search(rgx, string=key) is not None
             ]
             if key in properties:
-                pattern_schemas.insert(0, properties[key])
+                pattern_schemas.insert(0, deepcopy(properties[key]))
 
             if pattern_schemas:
-                out[key] = draw(merged_as_strategies(pattern_schemas, custom_formats))
+                out[key] = draw(
+                    merged_as_strategies(pattern_schemas, custom_formats, resolver)
+                )
             else:
-                out[key] = draw(from_schema(additional, custom_formats=custom_formats))
+                out[key] = draw(
+                    from_schema(
+                        deepcopy(additional),
+                        custom_formats=custom_formats,
+                        resolver=resolver,
+                    )
+                )
 
             for k, v in dep_schemas.items():
                 if k in out and not make_validator(v).is_valid(out):

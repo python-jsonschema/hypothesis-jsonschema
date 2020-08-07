@@ -579,7 +579,12 @@ def resolve_all_refs(
             f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
         )
 
-    if "$ref" in schema:
+    def is_recursive(reference: str) -> bool:
+        return reference == "#" or resolver.resolution_scope == reference  # type: ignore
+
+    # To avoid infinite recursion, we skip all recursive definitions, and such references will be processed later
+    # A definition is recursive if it contains a reference to itself or one of its ancestors.
+    if "$ref" in schema and not is_recursive(schema["$ref"]):  # type: ignore
         s = dict(schema)
         ref = s.pop("$ref")
         with resolver.resolving(ref) as got:
@@ -590,7 +595,6 @@ def resolve_all_refs(
                 msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
                 raise HypothesisRefResolutionError(msg)
             return resolve_all_refs(m, resolver=resolver)
-    assert "$ref" not in schema
 
     for key in SCHEMA_KEYS:
         val = schema.get(key, False)

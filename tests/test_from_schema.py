@@ -425,3 +425,36 @@ def test_allowed_custom_format(num):
 def test_allowed_unknown_custom_format(string):
     assert string == "hello world"
     assert "not registered" not in jsonschema.FormatChecker().checkers
+
+
+@pytest.mark.parametrize(
+    "schema",
+    (
+        {
+            "properties": {"foo": {"$ref": "#"}},
+            "additionalProperties": False,
+            "type": "object",
+        },
+        {
+            "definitions": {
+                "Node": {
+                    "type": "object",
+                    "properties": {
+                        "children": {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/Node"},
+                            "maxItems": 2,
+                        }
+                    },
+                    "required": ["children"],
+                    "additionalProperties": False,
+                },
+            },
+            "$ref": "#/definitions/Node",
+        },
+    ),
+)
+@given(data=st.data())
+def test_recursive_reference(data, schema):
+    value = data.draw(from_schema(schema))
+    jsonschema.validate(value, schema)
