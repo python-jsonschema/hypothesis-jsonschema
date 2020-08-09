@@ -171,7 +171,7 @@ def __from_schema(
         def _recurse() -> st.SearchStrategy[JSONType]:
             _, resolved = resolver.resolve(ref)  # type: ignore
             return from_schema(
-                resolved, custom_formats=custom_formats, resolver=resolver
+                deepcopy(resolved), custom_formats=custom_formats, resolver=resolver
             )
 
         return st.deferred(_recurse)
@@ -462,16 +462,14 @@ def array_schema(
         if max_size is not None:
             max_size -= len(items)
 
-        items_strats = [_from_schema_(s) for s in deepcopy(items)]
+        items_strats = [_from_schema_(s) for s in items]
         additional_items_strat = _from_schema_(additional_items)
 
         # If we have a contains schema to satisfy, we try generating from it when
         # allowed to do so.  We'll skip the None (unmergable / no contains) cases
         # below, and let Hypothesis ignore the FALSEY cases for us.
         if "contains" in schema:
-            for i, mrgd in enumerate(
-                merged([schema["contains"], s]) for s in deepcopy(items)
-            ):
+            for i, mrgd in enumerate(merged([schema["contains"], s]) for s in items):
                 if mrgd is not None:
                     items_strats[i] |= _from_schema_(mrgd)
             contains_additional = merged([schema["contains"], additional_items])
@@ -508,10 +506,10 @@ def array_schema(
                 st.lists(additional_items_strat, min_size=min_size, max_size=max_size),
             )
     else:
-        items_strat = _from_schema_(deepcopy(items))
+        items_strat = _from_schema_(items)
         if "contains" in schema:
             contains_strat = _from_schema_(schema["contains"])
-            if merged([deepcopy(items), schema["contains"]]) != schema["contains"]:
+            if merged([items, schema["contains"]]) != schema["contains"]:
                 # We only need this filter if we couldn't merge items in when
                 # canonicalising.  Note that for list-items, above, we just skip
                 # the mixed generation in this case (because they tend to be
@@ -548,7 +546,7 @@ def object_schema(
         return st.builds(dict)
     names["type"] = "string"
 
-    properties = deepcopy(schema.get("properties", {}))  # exact name: value schema
+    properties = schema.get("properties", {})  # exact name: value schema
     patterns = schema.get("patternProperties", {})  # regex for names: value schema
     # schema for other values; handled specially if nothing matches
     additional = schema.get("additionalProperties", {})
@@ -609,7 +607,7 @@ def object_schema(
                 if re.search(rgx, string=key) is not None
             ]
             if key in properties:
-                pattern_schemas.insert(0, deepcopy(properties[key]))
+                pattern_schemas.insert(0, properties[key])
 
             if pattern_schemas:
                 out[key] = draw(
@@ -618,9 +616,7 @@ def object_schema(
             else:
                 out[key] = draw(
                     from_schema(
-                        deepcopy(additional),
-                        custom_formats=custom_formats,
-                        resolver=resolver,
+                        additional, custom_formats=custom_formats, resolver=resolver,
                     )
                 )
 

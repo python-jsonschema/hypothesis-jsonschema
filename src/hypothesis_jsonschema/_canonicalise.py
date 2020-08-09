@@ -580,7 +580,7 @@ def resolve_all_refs(
         )
 
     def is_recursive(reference: str) -> bool:
-        return reference == "#" or resolver.resolution_scope == reference  # type: ignore
+        return reference == "#" or reference in resolver._scopes_stack  # type: ignore
 
     # To avoid infinite recursion, we skip all recursive definitions, and such references will be processed later
     # A definition is recursive if it contains a reference to itself or one of its ancestors.
@@ -612,7 +612,9 @@ def resolve_all_refs(
             subschema = schema[key]
             assert isinstance(subschema, dict)
             schema[key] = {
-                k: resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
+                k: resolve_all_refs(deepcopy(v), resolver=resolver)
+                if isinstance(v, dict)
+                else v
                 for k, v in subschema.items()
             }
     assert isinstance(schema, dict)

@@ -452,9 +452,79 @@ def test_allowed_unknown_custom_format(string):
             },
             "$ref": "#/definitions/Node",
         },
+        # Simplified Open API schema
+        {
+            "type": "object",
+            "required": ["paths"],
+            "properties": {"paths": {"$ref": "#/definitions/Paths"}},
+            "additionalProperties": False,
+            "definitions": {
+                "Schema": {
+                    "type": "object",
+                    "properties": {"items": {"$ref": "#/definitions/Schema"}},
+                    "additionalProperties": False,
+                },
+                "MediaType": {
+                    "type": "object",
+                    "properties": {"schema": {"$ref": "#/definitions/Schema"}},
+                    "patternProperties": {"^x-": {}},
+                    "additionalProperties": False,
+                },
+                "Paths": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^\\/": {"$ref": "#/definitions/PathItem"},
+                        "^x-": {},
+                    },
+                    "additionalProperties": False,
+                },
+                "PathItem": {
+                    "type": "object",
+                    "properties": {
+                        "parameters": {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/Parameter"},
+                            "uniqueItems": True,
+                        },
+                    },
+                    "patternProperties": {
+                        "^(get|put|post|delete|options|head|patch|trace)$": {
+                            "$ref": "#/definitions/Operation"
+                        },
+                        "^x-": {},
+                    },
+                    "additionalProperties": False,
+                },
+                "Operation": {
+                    "type": "object",
+                    "required": ["responses"],
+                    "properties": {
+                        "parameters": {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/Parameter"},
+                            "uniqueItems": True,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "Parameter": {
+                    "type": "object",
+                    "properties": {
+                        "schema": {"$ref": "#/definitions/Schema"},
+                        "content": {
+                            "type": "object",
+                            "minProperties": 1,
+                            "maxProperties": 1,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            },
+        },
     ),
 )
 @given(data=st.data())
+@settings(suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much])
 def test_recursive_reference(data, schema):
     value = data.draw(from_schema(schema))
     jsonschema.validate(value, schema)
