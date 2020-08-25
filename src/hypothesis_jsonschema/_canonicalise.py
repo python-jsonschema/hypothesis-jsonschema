@@ -12,14 +12,14 @@ one way to generate any given value... but much more importantly, we can do
 most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
-
+import functools
 import itertools
 import json
 import math
 import re
 from copy import deepcopy
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, Type, Union
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
@@ -116,9 +116,62 @@ class HypothesisRefResolutionError(jsonschema.exceptions.RefResolutionError):
     pass
 
 
-def encode_canonical_json(value: JSONType) -> str:
+def _make_cache_key(
+    value: JSONType,
+) -> Tuple[Type, Union[Tuple, None, bool, float, str]]:
+    """Make a hashable object from any JSON value.
+
+    The idea is to recursively convert all mutable values to immutable and adding values types as a discriminant.
+    """
+    if isinstance(value, dict):
+        return (dict, tuple((k, _make_cache_key(v)) for k, v in value.items()))
+    if isinstance(value, list):
+        return (list, tuple(map(_make_cache_key, value)))
+    # Primitive types are hashable
+    # `type` is needed to distinguish false-ish values - 0, "", False have the same hash (0)
+    return (type(value), value)
+
+
+class HashedJSON:
+    """A proxy that holds a JSON value.
+
+    Adds a capability for the inner value to be cached, loosely based on `functools._HashedSeq`.
+    """
+
+    __slots__ = ("value", "hashedvalue")
+
+    def __init__(self, value: JSONType):
+        self.value = value
+        # `hash` is called multiple times on cache miss, therefore it is evaluated only once
+        self.hashedvalue = hash(_make_cache_key(value))
+
+    def __hash__(self) -> int:
+        return self.hashedvalue
+
+    def __eq__(self, other: "HashedJSON") -> bool:  # type: ignore
+        # TYPES: This class should be used only for caching purposes and there should be
+        # no values of other types to compare
+        return self.hashedvalue == other.hashedvalue
+
+
+def cached_json(func: Callable[[HashedJSON], str]) -> Callable[[JSONType], str]:
+    """Cache calls to `encode_canonical_json`.
+
+    The same schemas are encoded multiple times during canonicalisation and caching gives visible performance impact.
+    """
+    cached_func = functools.lru_cache(maxsize=1024)(func)
+
+    @functools.wraps(cached_func)
+    def wrapped(value: JSONType) -> str:
+        return cached_func(HashedJSON(value))
+
+    return wrapped
+
+
+@cached_json
+def encode_canonical_json(value: HashedJSON) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
+    return json.dumps(value.value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
 def sort_key(value: JSONType) -> Tuple[int, float, Union[float, str]]:
