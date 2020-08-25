@@ -600,11 +600,11 @@ def resolve_all_refs(
         val = schema.get(key, False)
         if isinstance(val, list):
             schema[key] = [
-                resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
+                resolve_all_refs(deepcopy(v), resolver=resolver) if isinstance(v, dict) else v
                 for v in val
             ]
         elif isinstance(val, dict):
-            schema[key] = resolve_all_refs(val, resolver=resolver)
+            schema[key] = resolve_all_refs(deepcopy(val), resolver=resolver)
         else:
             assert isinstance(val, bool)
     for key in SCHEMA_OBJECT_KEYS:  # values are keys-to-schema-dicts, not schemas
