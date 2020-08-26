@@ -9,3 +9,4 @@ flake8-print
 mypy
 pep8-naming
 shed
+com2ann  # via shed; workaround for missing python_requires
