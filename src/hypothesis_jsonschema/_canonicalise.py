@@ -35,7 +35,7 @@ TYPE_STRINGS = ("null", "boolean", "integer", "number", "string", "array", "obje
 TYPE_SPECIFIC_KEYS = (
     ("number", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
     ("integer", "multipleOf maximum exclusiveMaximum minimum exclusiveMinimum"),
-    ("string", "maxLength minLength pattern contentEncoding contentMediaType"),
+    ("string", "maxLength minLength pattern format contentEncoding contentMediaType"),
     ("array", "items additionalItems maxItems minItems uniqueItems contains"),
     (
         "object",

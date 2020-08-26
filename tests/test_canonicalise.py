@@ -275,6 +275,13 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"multipleOf": 0.5}, {"multipleOf": 1.5}], {"multipleOf": 1.5}),
         (
             [
+                {"type": "string", "format": "color"},
+                {"type": "string", "format": "date-fullyear"},
+            ],
+            None,
+        ),
+        (
+            [
                 {"type": "integer", "multipleOf": 4},
                 {"type": "integer", "multipleOf": 6},
             ],

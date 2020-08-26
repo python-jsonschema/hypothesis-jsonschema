@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.17.4 - 2020-08-26
+- fixed string schemas with different `format` keywords (#63)
+
 #### 0.17.3 - 2020-07-17
 - improved handling of overlapping `items` keywords (#58)
 
