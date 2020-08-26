@@ -306,7 +306,7 @@ def regex_patterns(draw: Any) -> str:
     assert isinstance(result, str)
     try:
         re.compile(result)
-    except re.error:
+    except (re.error, FutureWarning):
         assume(False)
     return result
 
