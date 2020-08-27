@@ -76,6 +76,8 @@ def test_invalid_schemas_raise(schema):
 INVALID_SCHEMAS = {
     # Empty list for requires, which is invalid
     "Release Drafter configuration file",
+    # Contains a string where a subschema is expected
+    "Pmbot configuration file",
     # Many, many schemas have invalid $schema keys, which emit a warning (-Werror)
     "A JSON schema for CRYENGINE projects (.cryproj files)",
     "JSDoc configuration file",
@@ -89,7 +91,7 @@ INVALID_SCHEMAS = {
 }
 NON_EXISTENT_REF_SCHEMAS = {
     "Cirrus CI configuration files",
-    "The Bamboo Specs allows you to define Bamboo configuration as code, and have corresponding plans/deployments created or updated automatically in Bamboo",
+    "Metadata spec for KSP-CKAN",
     # Special case - reference is valid, but target is list-format `items` rather than a subschema
     "TypeScript Lint configuration file",
 }
@@ -130,19 +132,25 @@ SLOW_SCHEMAS = {
     "Configuration file for stylelint",
     "Travis CI configuration file",
     "JSON schema for ESLint configuration files",
-    "Ansible task files-2.0",
-    "Ansible task files-2.1",
-    "Ansible task files-2.2",
-    "Ansible task files-2.3",
-    "Ansible task files-2.4",
-    "Ansible task files-2.5",
-    "Ansible task files-2.6",
-    "Ansible task files-2.7",
-    "Ansible task files-2.9",
     "JSON Schema for GraphQL Code Generator config file",
+    "Schema for the representation of 3D city models",
+    "Vela Pipeline Configuration File",
     # oneOf on property names means only objects are valid, but it's a very
     # filter-heavy way to express that.  TODO: canonicalise oneOf to anyOf.
     "draft7/oneOf complex types",
+}
+MISSING_METASCHEMA = {
+    # The metaschema specified by $schema was not found. Using the latest
+    # draft to validate, but this will raise an error in the future.
+    "JSON schema for MochaJS configuration files",
+    "ORY Hydra configuration file",
+    "ORY Keto configuration file",
+    "ORY Kratos configuration file",
+    "ORY Oathkeeper configuration file",
+    "Packer template JSON configuration",
+    "The Compose specification establishes a standard for the definition of "
+    + "multi-container platform-agnostic applications. ",
+    "Traefik v2 YAML configuration file",
 }
 
 with open(Path(__file__).parent / "corpus-schemastore-catalog.json") as f:
@@ -157,11 +165,11 @@ with open(Path(__file__).parent / "corpus-reported.json") as f:
 
 def to_name_params(corpus):
     for n in sorted(corpus):
-        if n in INVALID_SCHEMAS | NON_EXISTENT_REF_SCHEMAS:
+        if n in INVALID_SCHEMAS | NON_EXISTENT_REF_SCHEMAS | MISSING_METASCHEMA:
             continue
         if n in UNSUPPORTED_SCHEMAS:
             continue
-        elif n in SLOW_SCHEMAS:
+        elif n in SLOW_SCHEMAS or re.match("^Ansible( role)? task files", n):
             yield pytest.param(n, marks=pytest.mark.skip)
         elif n in FLAKY_SCHEMAS:
             yield pytest.param(n, marks=pytest.mark.skip(strict=False))
@@ -232,6 +240,8 @@ RECURSIVE_REFS = {
     "Action and rule configuration descriptor for Yippee-Ki-JSON transformations.-1.1.2",
     "Action and rule configuration descriptor for Yippee-Ki-JSON transformations.-latest",
     "Schema for Camel K YAML DSL",
+    "Ansible inventory files",
+    "This schema describes the YAML config that Netlify uses",
 }
 
 
