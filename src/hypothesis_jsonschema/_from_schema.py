@@ -18,7 +18,6 @@ from ._canonicalise import (
     FALSEY,
     TRUTHY,
     TYPE_STRINGS,
-    HypothesisRefResolutionError,
     JSONType,
     LocalResolver,
     Schema,
@@ -61,9 +60,9 @@ def merged_as_strategies(
     ):
         if combined.issuperset(group):
             continue
-        s = merged([inputs[g] for g in group])
+        s = merged([inputs[g] for g in group], resolver=resolver)
         if s is not None and s != FALSEY:
-            validators = [make_validator(s) for s in schemas]
+            validators = [make_validator(s, resolver=resolver) for s in schemas]
             strats.append(
                 from_schema(s, custom_formats=custom_formats, resolver=resolver).filter(
                     lambda obj: all(v.is_valid(obj) for v in validators)
@@ -120,12 +119,7 @@ def __from_schema(
     custom_formats: Dict[str, st.SearchStrategy[str]] = None,
     resolver: Optional[LocalResolver] = None,
 ) -> st.SearchStrategy[JSONType]:
-    try:
-        schema = resolve_all_refs(schema, resolver=resolver)
-    except RecursionError:
-        raise HypothesisRefResolutionError(
-            f"Could not resolve recursive references in schema={schema!r}"
-        ) from None
+    schema = resolve_all_refs(schema, resolver=resolver)
     # We check for _FORMATS_TOKEN to avoid re-validating known good data.
     if custom_formats is not None and _FORMATS_TOKEN not in custom_formats:
         assert isinstance(custom_formats, dict)
@@ -151,7 +145,7 @@ def __from_schema(
     if resolver is None:
         resolver = LocalResolver.from_schema(deepcopy(schema))
 
-    schema = canonicalish(schema)
+    schema = canonicalish(schema, resolver)
     # Boolean objects are special schemata; False rejects all and True accepts all.
     if schema == FALSEY:
         return st.nothing()
@@ -169,8 +163,9 @@ def __from_schema(
         ref = schema["$ref"]
 
         def _recurse() -> st.SearchStrategy[JSONType]:
-            _, resolved = resolver.resolve(ref)  # type: ignore
-            return from_schema(
+            url, resolved = resolver.resolve(ref)  # type: ignore
+            resolver.push_scope(url)  # type: ignore
+            return __from_schema(
                 deepcopy(resolved), custom_formats=custom_formats, resolver=resolver
             )
 
@@ -179,7 +174,7 @@ def __from_schema(
     if "not" in schema:
         not_ = schema.pop("not")
         assert isinstance(not_, dict)
-        validator = make_validator(not_).is_valid
+        validator = make_validator(not_, resolver=resolver).is_valid
         return from_schema(
             schema, custom_formats=custom_formats, resolver=resolver
         ).filter(lambda v: not validator(v))
@@ -199,14 +194,14 @@ def __from_schema(
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
         assert isinstance(oo, list)
-        schemas = [merged([tmp, s]) for s in oo]
+        schemas = [merged([tmp, s], resolver=resolver) for s in oo]
         return st.one_of(
             [
                 from_schema(s, custom_formats=custom_formats, resolver=resolver)
                 for s in schemas
                 if s is not None
             ]
-        ).filter(make_validator(schema).is_valid)
+        ).filter(make_validator(schema, resolver=resolver).is_valid)
     # Simple special cases
     if "enum" in schema:
         assert schema["enum"], "Canonicalises to non-empty list or FALSEY"
@@ -217,8 +212,9 @@ def __from_schema(
     map_: Dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = {
         "null": lambda _: st.none(),
         "boolean": lambda _: st.booleans(),
-        "number": number_schema,
-        "integer": integer_schema,
+        # Mypy doesn't recognize that `resolver` has the `LocalResolver` type
+        "number": lambda s: number_schema(s, resolver=resolver),  # type: ignore
+        "integer": lambda s: integer_schema(s, resolver=resolver),  # type: ignore
         "string": partial(string_schema, custom_formats),
         "array": partial(array_schema, custom_formats, resolver),
         "object": partial(object_schema, custom_formats, resolver),
@@ -228,7 +224,10 @@ def __from_schema(
 
 
 def _numeric_with_multiplier(
-    min_value: Optional[float], max_value: Optional[float], schema: Schema
+    min_value: Optional[float],
+    max_value: Optional[float],
+    schema: Schema,
+    resolver: LocalResolver,
 ) -> st.SearchStrategy[float]:
     """Handle numeric schemata containing the multipleOf key."""
     multiple_of = schema["multipleOf"]
@@ -246,23 +245,23 @@ def _numeric_with_multiplier(
     return (
         st.integers(min_value, max_value)
         .map(lambda x: x * multiple_of)
-        .filter(make_validator(schema).is_valid)
+        .filter(make_validator(schema, resolver=resolver).is_valid)
     )
 
 
-def integer_schema(schema: dict) -> st.SearchStrategy[float]:
+def integer_schema(schema: dict, resolver: LocalResolver) -> st.SearchStrategy[float]:
     """Handle integer schemata."""
     min_value, max_value = get_integer_bounds(schema)
     if "multipleOf" in schema:
-        return _numeric_with_multiplier(min_value, max_value, schema)
+        return _numeric_with_multiplier(min_value, max_value, schema, resolver)
     return st.integers(min_value, max_value)
 
 
-def number_schema(schema: dict) -> st.SearchStrategy[float]:
+def number_schema(schema: dict, resolver: LocalResolver) -> st.SearchStrategy[float]:
     """Handle numeric schemata."""
     min_value, max_value, exclude_min, exclude_max = get_number_bounds(schema)
     if "multipleOf" in schema:
-        return _numeric_with_multiplier(min_value, max_value, schema)
+        return _numeric_with_multiplier(min_value, max_value, schema, resolver)
     return st.floats(
         min_value=min_value,
         max_value=max_value,
@@ -469,10 +468,14 @@ def array_schema(
         # allowed to do so.  We'll skip the None (unmergable / no contains) cases
         # below, and let Hypothesis ignore the FALSEY cases for us.
         if "contains" in schema:
-            for i, mrgd in enumerate(merged([schema["contains"], s]) for s in items):
+            for i, mrgd in enumerate(
+                merged([schema["contains"], s], resolver=resolver) for s in items
+            ):
                 if mrgd is not None:
                     items_strats[i] |= _from_schema_(mrgd)
-            contains_additional = merged([schema["contains"], additional_items])
+            contains_additional = merged(
+                [schema["contains"], additional_items], resolver=resolver
+            )
             if contains_additional is not None:
                 additional_items_strat |= _from_schema_(contains_additional)
 
@@ -509,12 +512,17 @@ def array_schema(
         items_strat = _from_schema_(items)
         if "contains" in schema:
             contains_strat = _from_schema_(schema["contains"])
-            if merged([items, schema["contains"]]) != schema["contains"]:
+            if (
+                merged([items, schema["contains"]], resolver=resolver)
+                != schema["contains"]
+            ):
                 # We only need this filter if we couldn't merge items in when
                 # canonicalising.  Note that for list-items, above, we just skip
                 # the mixed generation in this case (because they tend to be
                 # heterogeneous) and hope it works out anyway.
-                contains_strat = contains_strat.filter(make_validator(items).is_valid)
+                contains_strat = contains_strat.filter(
+                    make_validator(items, resolver=resolver).is_valid
+                )
             items_strat |= contains_strat
 
         strat = st.lists(
@@ -525,7 +533,7 @@ def array_schema(
         )
     if "contains" not in schema:
         return strat
-    contains = make_validator(schema["contains"]).is_valid
+    contains = make_validator(schema["contains"], resolver=resolver).is_valid
     return strat.filter(lambda val: any(contains(x) for x in val))
 
 
@@ -567,7 +575,7 @@ def object_schema(
         st.one_of([st.from_regex(p) for p in sorted(patterns)]),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
-        make_validator(names).is_valid
+        make_validator(names, resolver=resolver).is_valid
     )
 
     @st.composite  # type: ignore
@@ -611,7 +619,9 @@ def object_schema(
 
             if pattern_schemas:
                 out[key] = draw(
-                    merged_as_strategies(pattern_schemas, custom_formats, resolver)
+                    merged_as_strategies(
+                        pattern_schemas, custom_formats, resolver=resolver
+                    )
                 )
             else:
                 out[key] = draw(
@@ -621,7 +631,7 @@ def object_schema(
                 )
 
             for k, v in dep_schemas.items():
-                if k in out and not make_validator(v).is_valid(out):
+                if k in out and not make_validator(v, resolver=resolver).is_valid(out):
                     out.pop(key)
                     elements.reject()
 

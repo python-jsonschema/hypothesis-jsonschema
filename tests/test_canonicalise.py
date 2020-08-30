@@ -20,7 +20,7 @@ from hypothesis_jsonschema._from_schema import JSON_STRATEGY
 
 
 def is_valid(instance, schema):
-    return make_validator(schema).is_valid(instance)
+    return make_validator(schema, resolver=None).is_valid(instance)
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
