@@ -18,7 +18,6 @@ from ._canonicalise import (
     FALSEY,
     TRUTHY,
     TYPE_STRINGS,
-    JSONType,
     LocalResolver,
     Schema,
     canonicalish,

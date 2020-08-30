@@ -17,7 +17,8 @@ import json
 import math
 import re
 from copy import deepcopy
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, Dict, List, NoReturn, Optional, Set, Tuple, Union
+from urllib.parse import urljoin
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
@@ -85,9 +86,9 @@ def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
     return validator
 
 
-def make_validator(schema: Schema) -> JSONSchemaValidator:
+def make_validator(schema: Schema, resolver: LocalResolver) -> JSONSchemaValidator:
     validator = _get_validator_class(schema)
-    return validator(schema)
+    return validator(schema, resolver=resolver)
 
 
 class HypothesisRefResolutionError(jsonschema.exceptions.RefResolutionError):
@@ -567,15 +568,14 @@ FALSEY = canonicalish(False)
 
 
 def resolve_all_refs(
-    schema: Union[bool, Schema], *, resolver: LocalResolver = None
+    schema: Union[bool, Schema],
+    *,
+    resolver: LocalResolver = None,
+    seen_map: Dict[str, Set[str]] = None,
 ) -> Schema:
-    """
-    Resolve all references in the given schema.
-
-    This handles nested definitions, but not recursive definitions.
-    The latter require special handling to convert to strategies and are much
-    less common, so we just ignore them (and error out) for now.
-    """
+    """Resolve all non-recursive references in the given schema."""
+    if seen_map is None:
+        seen_map = {}
     if isinstance(schema, bool):
         return canonicalish(schema)
     assert isinstance(schema, dict), schema
@@ -587,33 +587,41 @@ def resolve_all_refs(
         )
 
     def is_recursive(reference: str) -> bool:
-        return reference == "#" or reference in resolver._scopes_stack  # type: ignore
+        full_ref = urljoin(resolver.base_uri, reference)  # type: ignore
+        return reference == "#" or reference in resolver._scopes_stack or full_ref in resolver._scopes_stack  # type: ignore
 
     # To avoid infinite recursion, we skip all recursive definitions, and such references will be processed later
     # A definition is recursive if it contains a reference to itself or one of its ancestors.
-    if "$ref" in schema and not is_recursive(schema["$ref"]):  # type: ignore
-        s = dict(schema)
-        ref = s.pop("$ref")
-        with resolver.resolving(ref) as got:
-            if s == {}:
-                return resolve_all_refs(got, resolver=resolver)
-            m = merged([s, got], resolver=resolver)
-            if m is None:  # pragma: no cover
-                msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
-                raise HypothesisRefResolutionError(msg)
-            return resolve_all_refs(m, resolver=resolver)
+    if "$ref" in schema:
+        path = "-".join(resolver._scopes_stack)
+        seen_paths = seen_map.setdefault(path, set())
+        if schema["$ref"] not in seen_paths and not is_recursive(schema["$ref"]):  # type: ignore
+            seen_paths.add(schema["$ref"])  # type: ignore
+            s = dict(schema)
+            ref = s.pop("$ref")
+            with resolver.resolving(ref) as got:
+                if s == {}:
+                    return resolve_all_refs(got, resolver=resolver, seen_map=seen_map)
+                m = merged([s, got])
+                if m is None:  # pragma: no cover
+                    msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
+                    raise HypothesisRefResolutionError(msg)
+
+                return resolve_all_refs(m, resolver=resolver, seen_map=seen_map)
 
     for key in SCHEMA_KEYS:
         val = schema.get(key, False)
         if isinstance(val, list):
             schema[key] = [
-                resolve_all_refs(deepcopy(v), resolver=resolver)
+                resolve_all_refs(deepcopy(v), resolver=resolver, seen_map=seen_map)
                 if isinstance(v, dict)
                 else v
                 for v in val
             ]
         elif isinstance(val, dict):
-            schema[key] = resolve_all_refs(deepcopy(val), resolver=resolver)
+            schema[key] = resolve_all_refs(
+                deepcopy(val), resolver=resolver, seen_map=seen_map
+            )
         else:
             assert isinstance(val, bool)
     for key in SCHEMA_OBJECT_KEYS:  # values are keys-to-schema-dicts, not schemas
@@ -621,7 +629,7 @@ def resolve_all_refs(
             subschema = schema[key]
             assert isinstance(subschema, dict)
             schema[key] = {
-                k: resolve_all_refs(deepcopy(v), resolver=resolver)
+                k: resolve_all_refs(deepcopy(v), resolver=resolver, seen_map=seen_map)
                 if isinstance(v, dict)
                 else v
                 for k, v in subschema.items()
