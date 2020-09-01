@@ -521,6 +521,21 @@ def test_canonicalise_is_only_valid_for_schemas():
         canonicalish("not a schema")
 
 
+def test_validators_use_proper_draft():
+    # See GH-66
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "not": {
+            "allOf": [
+                {"exclusiveMinimum": True, "minimum": 0},
+                {"exclusiveMaximum": True, "maximum": 10},
+            ]
+        },
+    }
+    cc = canonicalish(schema)
+    jsonschema.validators.validator_for(cc).check_schema(cc)
+
+
 # Expose fuzz targets in a form that FuzzBuzz can understand (no dotted names)
 fuzz_canonical_json_encoding = test_canonical_json_encoding.hypothesis.fuzz_one_input
 fuzz_merge_semantics = test_merge_semantics.hypothesis.fuzz_one_input

@@ -29,6 +29,11 @@ from hypothesis.internal.floats import next_down as ieee_next_down, next_up
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
 JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 Schema = Dict[str, JSONType]
+JSONSchemaValidator = Union[
+    jsonschema.validators.Draft4Validator,
+    jsonschema.validators.Draft6Validator,
+    jsonschema.validators.Draft7Validator,
+]
 
 # Canonical type strings, in order.
 TYPE_STRINGS = ("null", "boolean", "integer", "number", "string", "array", "object")
@@ -66,16 +71,19 @@ def next_down(val: float) -> float:
     return out
 
 
-def make_validator(
-    schema: Schema,
-) -> Union[
-    jsonschema.validators.Draft3Validator,
-    jsonschema.validators.Draft4Validator,
-    jsonschema.validators.Draft6Validator,
-    jsonschema.validators.Draft7Validator,
-]:
-    validator_cls = jsonschema.validators.validator_for(schema)
-    return validator_cls(schema)
+def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
+    try:
+        validator = jsonschema.validators.validator_for(schema)
+        validator.check_schema(schema)
+    except jsonschema.exceptions.SchemaError:
+        validator = jsonschema.Draft4Validator
+        validator.check_schema(schema)
+    return validator
+
+
+def make_validator(schema: Schema) -> JSONSchemaValidator:
+    validator = _get_validator_class(schema)
+    return validator(schema)
 
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
@@ -888,7 +896,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         if out == FALSEY:
             return FALSEY
     assert isinstance(out, dict)
-    jsonschema.validators.validator_for(out).check_schema(out)
+    _get_validator_class(out)
     return out
 
 
