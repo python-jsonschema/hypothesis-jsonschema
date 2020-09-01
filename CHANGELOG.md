@@ -1,5 +1,7 @@
 # Changelog
 
+- Use a validator that corresponds to the input schema draft version (#66)
+
 #### 0.17.4 - 2020-08-26
 - fixed string schemas with different `format` keywords (#63)
 
