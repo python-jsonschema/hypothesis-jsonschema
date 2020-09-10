@@ -534,14 +534,3 @@ def test_validators_use_proper_draft():
     }
     cc = canonicalish(schema)
     jsonschema.validators.validator_for(cc).check_schema(cc)
-
-
-# Expose fuzz targets in a form that FuzzBuzz can understand (no dotted names)
-fuzz_canonical_json_encoding = test_canonical_json_encoding.hypothesis.fuzz_one_input
-fuzz_merge_semantics = test_merge_semantics.hypothesis.fuzz_one_input
-fuzz_self_merge_eq_canonicalish = (
-    test_self_merge_eq_canonicalish.hypothesis.fuzz_one_input
-)
-fuzz_canonicalises_to_equivalent_fixpoint = (
-    _canonicalises_to_equivalent_fixpoint.hypothesis.fuzz_one_input
-)
