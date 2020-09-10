@@ -1,7 +1,5 @@
 """Tests for the hypothesis-jsonschema library."""
 
-import json
-
 import jsonschema
 import pytest
 from gen_schemas import gen_number, json_schemata, schema_strategy_params
@@ -12,7 +10,6 @@ from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
     canonicalish,
-    encode_canonical_json,
     get_type,
     make_validator,
     merged,
@@ -24,15 +21,6 @@ from hypothesis_jsonschema._from_schema import JSON_STRATEGY
 
 def is_valid(instance, schema):
     return make_validator(schema).is_valid(instance)
-
-
-@given(JSON_STRATEGY)
-def test_canonical_json_encoding(v):
-    """Test our hand-rolled canonicaljson implementation."""
-    encoded = encode_canonical_json(v)
-    v2 = json.loads(encoded)
-    assert v == v2
-    assert encode_canonical_json(v2) == encoded
 
 
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)

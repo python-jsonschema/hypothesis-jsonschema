@@ -18,10 +18,8 @@ from ._canonicalise import (
     TRUTHY,
     TYPE_STRINGS,
     HypothesisRefResolutionError,
-    JSONType,
     Schema,
     canonicalish,
-    encode_canonical_json,
     get_integer_bounds,
     get_number_bounds,
     get_type,
@@ -29,6 +27,7 @@ from ._canonicalise import (
     merged,
     resolve_all_refs,
 )
+from ._encode import JSONType, encode_canonical_json
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
     st.none()
