@@ -86,7 +86,7 @@
         "draft4/base URI change": {
             "id": "http://localhost:1234/",
             "items": {
-                "id": "folder/",
+                "id": "baseUriChange/",
                 "items": {
                     "$ref": "folderInteger.json"
                 }
@@ -95,7 +95,7 @@
         "draft4/base URI change - change folder": {
             "definitions": {
                 "baz": {
-                    "id": "folder/",
+                    "id": "baseUriChangeFolder/",
                     "items": {
                         "$ref": "folderInteger.json"
                     },
@@ -121,7 +121,7 @@
                             "type": "array"
                         }
                     },
-                    "id": "folder/"
+                    "id": "baseUriChangeFolderInSubschema/"
                 }
             },
             "id": "http://localhost:1234/scope_change_defs2.json",
@@ -595,7 +595,7 @@
         "draft7/base URI change": {
             "$id": "http://localhost:1234/",
             "items": {
-                "$id": "folder/",
+                "$id": "baseUriChange/",
                 "items": {
                     "$ref": "folderInteger.json"
                 }
@@ -605,7 +605,7 @@
             "$id": "http://localhost:1234/scope_change_defs1.json",
             "definitions": {
                 "baz": {
-                    "$id": "folder/",
+                    "$id": "baseUriChangeFolder/",
                     "items": {
                         "$ref": "folderInteger.json"
                     },
@@ -623,7 +623,7 @@
             "$id": "http://localhost:1234/scope_change_defs2.json",
             "definitions": {
                 "baz": {
-                    "$id": "folder/",
+                    "$id": "baseUriChangeFolderInSubschema/",
                     "definitions": {
                         "bar": {
                             "items": {
@@ -666,6 +666,16 @@
         "draft7/const with 1 does not match true": {
             "const": 1
         },
+        "draft7/const with [false] does not match [0]": {
+            "const": [
+                false
+            ]
+        },
+        "draft7/const with [true] does not match [1]": {
+            "const": [
+                true
+            ]
+        },
         "draft7/const with array": {
             "const": [
                 {
@@ -687,6 +697,16 @@
         },
         "draft7/const with true does not match 1": {
             "const": true
+        },
+        "draft7/const with {\"a\": false} does not match {\"a\": 0}": {
+            "const": {
+                "a": false
+            }
+        },
+        "draft7/const with {\"a\": true} does not match {\"a\": 1}": {
+            "const": {
+                "a": true
+            }
         },
         "draft7/contains keyword validation": {
             "contains": {
@@ -785,25 +805,27 @@
             "type": "object"
         },
         "draft7/escaped pointer ref": {
-            "percent%field": {
-                "type": "integer"
+            "definitions": {
+                "percent%field": {
+                    "type": "integer"
+                },
+                "slash/field": {
+                    "type": "integer"
+                },
+                "tilde~field": {
+                    "type": "integer"
+                }
             },
             "properties": {
                 "percent": {
-                    "$ref": "#/percent%25field"
+                    "$ref": "#/definitions/percent%25field"
                 },
                 "slash": {
-                    "$ref": "#/slash~1field"
+                    "$ref": "#/definitions/slash~1field"
                 },
                 "tilde": {
-                    "$ref": "#/tilde~0field"
+                    "$ref": "#/definitions/tilde~0field"
                 }
-            },
-            "slash/field": {
-                "type": "integer"
-            },
-            "tilde~field": {
-                "type": "integer"
             }
         },
         "draft7/exclusiveMaximum validation": {
@@ -859,6 +881,17 @@
             },
             "then": {
                 "minimum": -10
+            }
+        },
+        "draft7/if appears at the end when serialized (keyword processing sequence)": {
+            "else": {
+                "const": "other"
+            },
+            "if": {
+                "maxLength": 4
+            },
+            "then": {
+                "const": "yes"
             }
         },
         "draft7/if with boolean schema false": {

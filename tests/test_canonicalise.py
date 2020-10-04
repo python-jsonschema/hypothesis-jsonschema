@@ -397,7 +397,7 @@ def test_canonicalises_to_expected(schema, expected):
             None,
         ),
         ([{"items": {"pattern": "a"}}, {"items": {"pattern": "b"}}], None),
-        ([{"items": [{"pattern": "a"}]}, {"items": [{"pattern": "b"}]}], None,),
+        ([{"items": [{"pattern": "a"}]}, {"items": [{"pattern": "b"}]}], None),
         (
             [
                 {"items": [{}], "additionalItems": {"pattern": "a"}},
