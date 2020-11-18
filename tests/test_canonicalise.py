@@ -558,3 +558,133 @@ def test_validators_use_proper_draft():
     }
     cc = canonicalish(schema)
     jsonschema.validators.validator_for(cc).check_schema(cc)
+
+
+# Reference to itself
+ROOT_REFERENCE = {"$ref": "#"}
+# One extra nesting level
+NESTED = {"not": {"$ref": "#/not"}}
+# The same as above, but includes "$id".
+NESTED_WITH_ID = {
+    "not": {"$ref": "#/not"},
+    "$id": "http://json-schema.org/draft-07/schema#",
+}
+SELF_REFERENTIAL = {"foo": {"$ref": "#foo"}, "not": {"$ref": "#foo"}}
+
+
+@pytest.mark.parametrize(
+    "schema, expected",
+    (
+        (ROOT_REFERENCE, ROOT_REFERENCE),
+        (NESTED, NESTED),
+        (NESTED_WITH_ID, NESTED_WITH_ID),
+        # "foo" content should be inlined as is, because "#" is recursive (special case)
+        (
+            {"foo": {"$ref": "#"}, "not": {"$ref": "#foo"}},
+            {"foo": {"$ref": "#"}, "not": {"$ref": "#"}},
+        ),
+        # "foo" content should be inlined as is, because it points to itself
+        (
+            SELF_REFERENTIAL,
+            SELF_REFERENTIAL,
+        ),
+        # The same as above, but with one extra nesting level
+        (
+            {"foo": {"not": {"$ref": "#foo"}}, "not": {"$ref": "#foo"}},
+            # 1. We start from resolving "$ref" in "not"
+            # 2. at this point we don't know this path is recursive, so we follow to "foo"
+            # 3. inside "foo" we found a reference to "foo", which means it is recursive
+            {"foo": {"not": {"$ref": "#foo"}}, "not": {"not": {"$ref": "#foo"}}},
+        ),
+        # Circular reference between two schemas
+        (
+            {"foo": {"$ref": "#bar"}, "bar": {"$ref": "#foo"}, "not": {"$ref": "#foo"}},
+            # 1. We start in "not" and follow to "foo"
+            # 2. In "foo" we follow to "bar"
+            # 3. Here we see a reference to previously seen scope, which means it is a recursive path
+            # We take the schema where we stop and inline it to the starting point (therefore it is `{"$ref": "#foo"}`)
+            {"foo": {"$ref": "#bar"}, "bar": {"$ref": "#foo"}, "not": {"$ref": "#foo"}},
+        ),
+    ),
+)
+def test_skip_recursive_references_simple_schemas(schema, expected):
+    # When there is a recursive reference, it should not be resolved
+    assert resolve_all_refs(schema) == expected
+
+
+@pytest.mark.parametrize(
+    "schema, resolved",
+    (
+        # NOTE. The `resolved` fixture does not include "definitions" to save visual space here, but it is extended
+        # with it in the test body.
+        # The reference target is behind two references, that share the same definition path. Not a recursive reference
+        (
+            {
+                "definitions": {
+                    "properties": {
+                        "foo": {"type": "string"},
+                        "bar": {"$ref": "#/definitions/properties/foo"},
+                    },
+                },
+                "not": {"$ref": "#/definitions/properties/bar"},
+            },
+            {
+                "not": {"type": "string"},
+            },
+        ),
+        # Here we need to resolve multiple references while being on the same resolution scope:
+        # "#/definitions/foo" contains two references
+        (
+            {
+                "definitions": {
+                    "foo": {
+                        "properties": {
+                            "bar": {"$ref": "#/definitions/spam"},
+                            "baz": {"$ref": "#/definitions/spam"},
+                        }
+                    },
+                    "spam": {"type": "string"},
+                },
+                "properties": {"foo": {"$ref": "#/definitions/foo"}},
+            },
+            {
+                "properties": {
+                    "foo": {
+                        "properties": {
+                            "bar": {"type": "string"},
+                            "baz": {"type": "string"},
+                        }
+                    }
+                },
+            },
+        ),
+        # Similar to the one above, but recursive
+        (
+            {
+                "definitions": {
+                    "foo": {
+                        "properties": {
+                            "bar": {"$ref": "#/definitions/spam"},
+                            "baz": {"$ref": "#/definitions/spam"},
+                        }
+                    },
+                    "spam": {"$ref": "#/definitions/foo"},
+                },
+                "properties": {"foo": {"$ref": "#/definitions/foo"}},
+            },
+            {
+                "properties": {
+                    "foo": {
+                        "properties": {
+                            "bar": {"$ref": "#/definitions/foo"},
+                            "baz": {"$ref": "#/definitions/foo"},
+                        }
+                    }
+                },
+            },
+        ),
+    ),
+)
+def test_skip_recursive_references_complex_schemas(schema, resolved):
+    resolved["definitions"] = schema["definitions"]
+    assert resolve_all_refs(schema) == resolved
