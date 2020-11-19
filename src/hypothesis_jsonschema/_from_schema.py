@@ -114,7 +114,7 @@ def __from_schema(
     custom_formats: Dict[str, st.SearchStrategy[str]] = None,
 ) -> st.SearchStrategy[JSONType]:
     try:
-        schema = resolve_all_refs(schema)
+        schema, _ = resolve_all_refs(schema)
     except RecursionError:
         raise HypothesisRefResolutionError(
             f"Could not resolve recursive references in schema={schema!r}"

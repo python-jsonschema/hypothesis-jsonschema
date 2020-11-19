@@ -578,12 +578,12 @@ SELF_REFERENTIAL = {"foo": {"$ref": "#foo"}, "not": {"$ref": "#foo"}}
         (ROOT_REFERENCE, ROOT_REFERENCE),
         (NESTED, NESTED),
         (NESTED_WITH_ID, NESTED_WITH_ID),
-        # "foo" content should be inlined as is, because "#" is recursive (special case)
+        # "foo" content should not be inlined, because "#" is recursive (special case)
         (
             {"foo": {"$ref": "#"}, "not": {"$ref": "#foo"}},
-            {"foo": {"$ref": "#"}, "not": {"$ref": "#"}},
+            {"foo": {"$ref": "#"}, "not": {"$ref": "#foo"}},
         ),
-        # "foo" content should be inlined as is, because it points to itself
+        # "foo" content should not be inlined, because it points to itself
         (
             SELF_REFERENTIAL,
             SELF_REFERENTIAL,
@@ -594,7 +594,7 @@ SELF_REFERENTIAL = {"foo": {"$ref": "#foo"}, "not": {"$ref": "#foo"}}
             # 1. We start from resolving "$ref" in "not"
             # 2. at this point we don't know this path is recursive, so we follow to "foo"
             # 3. inside "foo" we found a reference to "foo", which means it is recursive
-            {"foo": {"not": {"$ref": "#foo"}}, "not": {"not": {"$ref": "#foo"}}},
+            {"foo": {"not": {"$ref": "#foo"}}, "not": {"$ref": "#foo"}},
         ),
         # Circular reference between two schemas
         (
@@ -602,14 +602,13 @@ SELF_REFERENTIAL = {"foo": {"$ref": "#foo"}, "not": {"$ref": "#foo"}}
             # 1. We start in "not" and follow to "foo"
             # 2. In "foo" we follow to "bar"
             # 3. Here we see a reference to previously seen scope, which means it is a recursive path
-            # We take the schema where we stop and inline it to the starting point (therefore it is `{"$ref": "#foo"}`)
             {"foo": {"$ref": "#bar"}, "bar": {"$ref": "#foo"}, "not": {"$ref": "#foo"}},
         ),
     ),
 )
 def test_skip_recursive_references_simple_schemas(schema, expected):
     # When there is a recursive reference, it should not be resolved
-    assert resolve_all_refs(schema) == expected
+    assert resolve_all_refs(schema)[0] == expected
 
 
 @pytest.mark.parametrize(
@@ -673,18 +672,11 @@ def test_skip_recursive_references_simple_schemas(schema, expected):
                 "properties": {"foo": {"$ref": "#/definitions/foo"}},
             },
             {
-                "properties": {
-                    "foo": {
-                        "properties": {
-                            "bar": {"$ref": "#/definitions/foo"},
-                            "baz": {"$ref": "#/definitions/foo"},
-                        }
-                    }
-                },
+                "properties": {"foo": {"$ref": "#/definitions/foo"}},
             },
         ),
     ),
 )
 def test_skip_recursive_references_complex_schemas(schema, resolved):
     resolved["definitions"] = schema["definitions"]
-    assert resolve_all_refs(schema) == resolved
+    assert resolve_all_refs(schema)[0] == resolved
