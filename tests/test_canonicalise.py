@@ -200,8 +200,26 @@ def test_canonicalises_to_empty(schema):
                     {"anyOf": [{"type": "number"}, {"type": "array"}]},
                 ]
             },
-            # TODO: collapse into {"type": ["string", "number", "array"]}
-            {"anyOf": [{"type": "array"}, {"type": "number"}, {"type": "string"}]},
+            {"type": ["number", "string", "array"]},
+        ),
+        (
+            {
+                "anyOf": [
+                    {"type": "integer"},
+                    {"type": "number"},
+                ]
+            },
+            {"type": "number"},
+        ),
+        (
+            {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "number"},
+                ],
+                "type": ["string", "object"],
+            },
+            {"type": "string"},
         ),
         ({"uniqueItems": False}, {}),
         (

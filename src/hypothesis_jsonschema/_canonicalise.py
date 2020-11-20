@@ -511,6 +511,21 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             return FALSEY
         if len(schema) == len(schema["anyOf"]) == 1:
             return schema["anyOf"][0]  # type: ignore
+        types = []
+        # Turn
+        #   {"anyOf": [{"type": "string"}, {"type": "null"}]}
+        # into
+        #   {"type": ["string", "null"]}
+        for subschema in schema["anyOf"]:
+            if "type" in subschema and len(subschema) == 1:
+                types.extend(get_type(subschema))
+            else:
+                break
+        else:
+            # All subschemas have only the "type" keyword, then we merge all types into the parent schema
+            del schema["anyOf"]
+            new_types = canonicalish({"type": types})
+            schema = merged([schema, new_types])
     if "allOf" in schema:
         schema["allOf"] = [
             json.loads(enc)
