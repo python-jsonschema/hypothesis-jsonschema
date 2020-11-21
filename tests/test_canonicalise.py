@@ -260,6 +260,22 @@ def test_canonicalises_to_empty(schema):
             # TODO: could be {"enum": ["a", "b", "c"]},
             {"anyOf": [{"const": "a"}, {"const": "b"}, {"const": "c"}]},
         ),
+        (
+            {"if": {"type": "null"}, "then": {"type": "null"}},
+            {},
+        ),
+        (
+            {"if": {"type": "null"}, "then": {"type": "null"}, "else": {}},
+            {},
+        ),
+        (
+            {"if": {"type": "null"}, "then": {}, "else": {}},
+            {},
+        ),
+        (
+            {"if": {"type": "integer"}, "then": {}, "else": {}, "type": "number"},
+            {"type": "number"},
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
