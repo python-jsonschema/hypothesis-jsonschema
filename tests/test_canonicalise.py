@@ -203,20 +203,12 @@ def test_canonicalises_to_empty(schema):
             {"type": ["number", "string", "array"]},
         ),
         (
-            {
-                "anyOf": [
-                    {"type": "integer"},
-                    {"type": "number"},
-                ]
-            },
+            {"anyOf": [{"type": "integer"}, {"type": "number"}]},
             {"type": "number"},
         ),
         (
             {
-                "anyOf": [
-                    {"type": "string"},
-                    {"type": "number"},
-                ],
+                "anyOf": [{"type": "string"}, {"type": "number"}],
                 "type": ["string", "object"],
             },
             {"type": "string"},
@@ -257,6 +249,16 @@ def test_canonicalises_to_empty(schema):
                 "uniqueItems": True,
                 "maxItems": 1,
             },
+        ),
+        (
+            {
+                "anyOf": [
+                    {"const": "a"},
+                    {"anyOf": [{"anyOf": [{"const": "c"}]}, {"const": "b"}]},
+                ]
+            },
+            # TODO: could be {"enum": ["a", "b", "c"]},
+            {"anyOf": [{"const": "a"}, {"const": "b"}, {"const": "c"}]},
         ),
     ],
 )
