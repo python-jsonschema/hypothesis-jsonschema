@@ -243,12 +243,13 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     then = schema.pop("then", schema)
     else_ = schema.pop("else", schema)
     if if_ is not None and (then is not schema or else_ is not schema):
-        schema = {
-            "anyOf": [
-                {"allOf": [if_, then, schema]},
-                {"allOf": [{"not": if_}, else_, schema]},
-            ]
-        }
+        if then not in (if_, TRUTHY) or else_ != TRUTHY:
+            schema = {
+                "anyOf": [
+                    {"allOf": [if_, then, schema]},
+                    {"allOf": [{"not": if_}, else_, schema]},
+                ]
+            }
     assert isinstance(schema, dict)
     # Recurse into the value of each keyword with a schema (or list of them) as a value
     for key in SCHEMA_KEYS:

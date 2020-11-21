@@ -1,5 +1,7 @@
 # Changelog
 
+- Improve performance for conditional keywords
+
 #### 0.18.1 - 2020-11-21
 - Canonicalise `anyOf` special cases when all subschemas have only the `type` keyword
 
