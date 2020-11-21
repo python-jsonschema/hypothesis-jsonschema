@@ -1,5 +1,6 @@
 # Changelog
 
+#### 0.18.1 - 2020-11-21
 - Canonicalise `anyOf` special cases when all subschemas have only the `type` keyword
 
 #### 0.18.0 - 2020-09-10
