@@ -1,9 +1,8 @@
 """Canonical encoding for the JSONSchema semantics, where 1 == 1.0."""
-import functools
 import json
 import math
 from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
-from typing import Any, Callable, Dict, Tuple, Type, Union
+from typing import Any, Dict, Tuple, Union
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
@@ -36,62 +35,9 @@ class CanonicalisingJsonEncoder(json.JSONEncoder):
         )(o, 0)
 
 
-def _make_cache_key(
-    value: JSONType,
-) -> Tuple[Type, Union[None, bool, float, str, tuple, frozenset]]:
-    """Make a hashable object from any JSON value.
-
-    The idea is to recursively convert all mutable values to immutable and adding values types as a discriminant.
-    """
-    if isinstance(value, dict):
-        return (dict, frozenset((k, _make_cache_key(v)) for k, v in value.items()))
-    if isinstance(value, list):
-        return (list, tuple(map(_make_cache_key, value)))
-    # Primitive types are hashable
-    # `type` is needed to distinguish false-ish values - 0, "", False have the same hash (0)
-    return (type(value), value)
-
-
-class HashedJSON:
-    """A proxy that holds a JSON value.
-
-    Adds a capability for the inner value to be cached, loosely based on `functools._HashedSeq`.
-    """
-
-    __slots__ = ("value", "hashedvalue")
-
-    def __init__(self, value: JSONType):
-        self.value = value
-        # `hash` is called multiple times on cache miss, therefore it is evaluated only once
-        self.hashedvalue = hash(_make_cache_key(value))
-
-    def __hash__(self) -> int:
-        return self.hashedvalue
-
-    def __eq__(self, other: "HashedJSON") -> bool:  # type: ignore
-        # TYPES: This class should be used only for caching purposes and there should be
-        # no values of other types to compare
-        return self.hashedvalue == other.hashedvalue
-
-
-def cached_json(func: Callable[[HashedJSON], str]) -> Callable[[JSONType], str]:
-    """Cache calls to `encode_canonical_json`.
-
-    The same schemas are encoded multiple times during canonicalisation and caching gives visible performance impact.
-    """
-    cached_func = functools.lru_cache(maxsize=1024)(func)
-
-    @functools.wraps(cached_func)
-    def wrapped(value: JSONType) -> str:
-        return cached_func(HashedJSON(value))
-
-    return wrapped
-
-
-@cached_json
-def encode_canonical_json(value: HashedJSON) -> str:
+def encode_canonical_json(value: JSONType) -> str:
     """Canonical form serialiser, for uniqueness testing."""
-    return json.dumps(value.value, sort_keys=True, cls=CanonicalisingJsonEncoder)
+    return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
 def sort_key(value: JSONType) -> Tuple[int, float, Union[float, str]]:
