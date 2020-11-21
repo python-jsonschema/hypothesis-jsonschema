@@ -522,10 +522,12 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             else:
                 break
         else:
-            # All subschemas have only the "type" keyword, then we merge all types into the parent schema
+            # All subschemas have only the "type" keyword, then we merge all types
+            # into the parent schema
             del schema["anyOf"]
             new_types = canonicalish({"type": types})
             schema = merged([schema, new_types])
+            assert isinstance(schema, dict)  # merging was certainly valid
     if "allOf" in schema:
         schema["allOf"] = [
             json.loads(enc)
