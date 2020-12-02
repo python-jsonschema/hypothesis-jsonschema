@@ -21,7 +21,7 @@ from hypothesis.errors import FailedHealthCheck, InvalidArgument
 from hypothesis.internal.reflection import proxies
 
 from hypothesis_jsonschema._canonicalise import (
-    HypothesisRefResolutionError,
+    LocalResolver,
     canonicalish,
     resolve_all_refs,
 )
@@ -180,7 +180,9 @@ def test_invalid_schemas_are_invalid(name):
 @pytest.mark.parametrize("name", sorted(NON_EXISTENT_REF_SCHEMAS))
 def test_invalid_ref_schemas_are_invalid(name):
     with pytest.raises(Exception):
-        resolve_all_refs(catalog[name])
+        schema = catalog[name]
+        resolver = LocalResolver.from_schema(schema)
+        resolve_all_refs(schema, resolver=resolver)
 
 
 RECURSIVE_REFS = {
@@ -242,16 +244,8 @@ def xfail_on_reference_resolve_error(f):
         assert isinstance(name, str)
         try:
             f(*args, **kwargs)
-            assert name not in RECURSIVE_REFS
         except jsonschema.exceptions.RefResolutionError as err:
-            if (
-                isinstance(err, HypothesisRefResolutionError)
-                or isinstance(err._cause, HypothesisRefResolutionError)
-            ) and (
-                "does not fetch remote references" in str(err)
-                or name in RECURSIVE_REFS
-                and "Could not resolve recursive references" in str(err)
-            ):
+            if "does not fetch remote references" in str(err):
                 pytest.xfail()
             raise
 
