@@ -17,7 +17,6 @@ from ._canonicalise import (
     FALSEY,
     TRUTHY,
     TYPE_STRINGS,
-    HypothesisRefResolutionError,
     Schema,
     canonicalish,
     get_integer_bounds,
@@ -113,12 +112,7 @@ def __from_schema(
     *,
     custom_formats: Dict[str, st.SearchStrategy[str]] = None,
 ) -> st.SearchStrategy[JSONType]:
-    try:
-        schema, _ = resolve_all_refs(schema)
-    except RecursionError:
-        raise HypothesisRefResolutionError(
-            f"Could not resolve recursive references in schema={schema!r}"
-        ) from None
+    schema, _ = resolve_all_refs(schema)
     # We check for _FORMATS_TOKEN to avoid re-validating known good data.
     if custom_formats is not None and _FORMATS_TOKEN not in custom_formats:
         assert isinstance(custom_formats, dict)
