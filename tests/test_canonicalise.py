@@ -9,6 +9,7 @@ from hypothesis.errors import InvalidArgument
 from hypothesis_jsonschema import from_schema
 from hypothesis_jsonschema._canonicalise import (
     FALSEY,
+    LocalResolver,
     canonicalish,
     get_type,
     make_validator,
@@ -608,7 +609,8 @@ SELF_REFERENTIAL = {"foo": {"$ref": "#foo"}, "not": {"$ref": "#foo"}}
 )
 def test_skip_recursive_references_simple_schemas(schema, expected):
     # When there is a recursive reference, it should not be resolved
-    assert resolve_all_refs(schema)[0] == expected
+    resolver = LocalResolver.from_schema(schema)
+    assert resolve_all_refs(schema, resolver=resolver)[0] == expected
 
 
 @pytest.mark.parametrize(
@@ -679,4 +681,5 @@ def test_skip_recursive_references_simple_schemas(schema, expected):
 )
 def test_skip_recursive_references_complex_schemas(schema, resolved):
     resolved["definitions"] = schema["definitions"]
-    assert resolve_all_refs(schema)[0] == resolved
+    resolver = LocalResolver.from_schema(schema)
+    assert resolve_all_refs(schema, resolver=resolver)[0] == resolved

@@ -79,9 +79,20 @@ def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
     return validator
 
 
-def make_validator(schema: Schema) -> JSONSchemaValidator:
+class LocalResolver(jsonschema.RefResolver):
+    def resolve_remote(self, uri: str) -> NoReturn:
+        raise HypothesisRefResolutionError(
+            f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
+        )
+
+
+def make_validator(
+    schema: Schema, resolver: LocalResolver = None
+) -> JSONSchemaValidator:
+    if resolver is None:
+        resolver = LocalResolver.from_schema(schema)
     validator = _get_validator_class(schema)
-    return validator(schema)
+    return validator(schema, resolver=resolver)
 
 
 class HypothesisRefResolutionError(jsonschema.exceptions.RefResolutionError):
@@ -203,7 +214,7 @@ def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
     return lower, upper
 
 
-def canonicalish(schema: JSONType) -> Dict[str, Any]:
+def canonicalish(schema: JSONType, resolver: LocalResolver = None) -> Dict[str, Any]:
     """Convert a schema into a more-canonical form.
 
     This is obviously incomplete, but improves best-effort recognition of
@@ -225,12 +236,15 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             "but expected a dict."
         )
 
+    if resolver is None:
+        resolver = LocalResolver.from_schema(schema)
+
     if "const" in schema:
-        if not make_validator(schema).is_valid(schema["const"]):
+        if not make_validator(schema, resolver=resolver).is_valid(schema["const"]):
             return FALSEY
         return {"const": schema["const"]}
     if "enum" in schema:
-        validator = make_validator(schema)
+        validator = make_validator(schema, resolver=resolver)
         enum_ = sorted(
             (v for v in schema["enum"] if validator.is_valid(v)), key=sort_key
         )
@@ -254,15 +268,15 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     # Recurse into the value of each keyword with a schema (or list of them) as a value
     for key in SCHEMA_KEYS:
         if isinstance(schema.get(key), list):
-            schema[key] = [canonicalish(v) for v in schema[key]]
+            schema[key] = [canonicalish(v, resolver=resolver) for v in schema[key]]
         elif isinstance(schema.get(key), (bool, dict)):
-            schema[key] = canonicalish(schema[key])
+            schema[key] = canonicalish(schema[key], resolver=resolver)
         else:
             assert key not in schema, (key, schema[key])
     for key in SCHEMA_OBJECT_KEYS:
         if key in schema:
             schema[key] = {
-                k: v if isinstance(v, list) else canonicalish(v)
+                k: v if isinstance(v, list) else canonicalish(v, resolver=resolver)
                 for k, v in schema[key].items()
             }
 
@@ -308,7 +322,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
     if "array" in type_ and "contains" in schema:
         if isinstance(schema.get("items"), dict):
-            contains_items = merged([schema["contains"], schema["items"]])
+            contains_items = merged(
+                [schema["contains"], schema["items"]], resolver=resolver
+            )
             if contains_items is not None:
                 schema["contains"] = contains_items
 
@@ -462,9 +478,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                         type_.remove(t)
                         if t not in ("integer", "number"):
                             not_["type"].remove(t)
-                not_ = canonicalish(not_)
+                not_ = canonicalish(not_, resolver=resolver)
 
-            m = merged([not_, {**schema, "type": type_}])
+            m = merged([not_, {**schema, "type": type_}], resolver=resolver)
             if m is not None:
                 not_ = m
             if not_ != FALSEY:
@@ -543,7 +559,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         else:
             tmp = schema.copy()
             ao = tmp.pop("allOf")
-            out = merged([tmp] + ao)
+            out = merged([tmp] + ao, resolver=resolver)
             if isinstance(out, dict):  # pragma: no branch
                 schema = out
                 # TODO: this assertion is soley because mypy 0.750 doesn't know
@@ -555,7 +571,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         one_of = sorted(one_of, key=encode_canonical_json)
         one_of = [s for s in one_of if s != FALSEY]
         if len(one_of) == 1:
-            m = merged([schema, one_of[0]])
+            m = merged([schema, one_of[0]], resolver=resolver)
             if m is not None:  # pragma: no branch
                 return m
         if (not one_of) or one_of.count(TRUTHY) > 1:
@@ -568,13 +584,6 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
 TRUTHY = canonicalish(True)
 FALSEY = canonicalish(False)
-
-
-class LocalResolver(jsonschema.RefResolver):
-    def resolve_remote(self, uri: str) -> NoReturn:
-        raise HypothesisRefResolutionError(
-            f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
-        )
 
 
 def is_recursive_reference(reference: str, resolver: LocalResolver) -> bool:
@@ -593,7 +602,7 @@ def is_recursive_reference(reference: str, resolver: LocalResolver) -> bool:
 
 
 def resolve_all_refs(
-    schema: Union[bool, Schema], *, resolver: LocalResolver = None
+    schema: Union[bool, Schema], *, resolver: LocalResolver
 ) -> Tuple[Schema, bool]:
     """Resolve all non-recursive references in the given schema.
 
@@ -602,8 +611,6 @@ def resolve_all_refs(
     if isinstance(schema, bool):
         return canonicalish(schema), False
     assert isinstance(schema, dict), schema
-    if resolver is None:
-        resolver = LocalResolver.from_schema(deepcopy(schema))
     if not isinstance(resolver, jsonschema.RefResolver):
         raise InvalidArgument(
             f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
@@ -617,7 +624,7 @@ def resolve_all_refs(
             with resolver.resolving(ref) as got:
                 if s == {}:
                     return resolve_all_refs(deepcopy(got), resolver=resolver)
-                m = merged([s, got])
+                m = merged([s, got], resolver=resolver)
                 if m is None:  # pragma: no cover
                     msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
                     raise HypothesisRefResolutionError(msg)
@@ -671,7 +678,7 @@ def resolve_all_refs(
     return schema, False
 
 
-def merged(schemas: List[Any]) -> Optional[Schema]:
+def merged(schemas: List[Any], resolver: LocalResolver = None) -> Optional[Schema]:
     """Merge *n* schemas into a single schema, or None if result is invalid.
 
     Takes the logical intersection, so any object that validates against the returned
@@ -684,7 +691,9 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
     It's currently also used for keys that could be merged but aren't yet.
     """
     assert schemas, "internal error: must pass at least one schema to merge"
-    schemas = sorted((canonicalish(s) for s in schemas), key=upper_bound_instances)
+    schemas = sorted(
+        (canonicalish(s, resolver=resolver) for s in schemas), key=upper_bound_instances
+    )
     if any(s == FALSEY for s in schemas):
         return FALSEY
     out = schemas[0]
@@ -693,11 +702,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             continue
         # If we have a const or enum, this is fairly easy by filtering:
         if "const" in out:
-            if make_validator(s).is_valid(out["const"]):
+            if make_validator(s, resolver=resolver).is_valid(out["const"]):
                 continue
             return FALSEY
         if "enum" in out:
-            validator = make_validator(s)
+            validator = make_validator(s, resolver=resolver)
             enum_ = [v for v in out["enum"] if validator.is_valid(v)]
             if not enum_:
                 return FALSEY
@@ -748,21 +757,23 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 else:
                     out_combined = merged(
                         [s for p, s in out_pat.items() if re.search(p, prop_name)]
-                        or [out_add]
+                        or [out_add],
+                        resolver=resolver,
                     )
                 if prop_name in s_props:
                     s_combined = s_props[prop_name]
                 else:
                     s_combined = merged(
                         [s for p, s in s_pat.items() if re.search(p, prop_name)]
-                        or [s_add]
+                        or [s_add],
+                        resolver=resolver,
                     )
                 if out_combined is None or s_combined is None:  # pragma: no cover
                     # Note that this can only be the case if we were actually going to
                     # use the schema which we attempted to merge, i.e. prop_name was
                     # not in the schema and there were unmergable pattern schemas.
                     return None
-                m = merged([out_combined, s_combined])
+                m = merged([out_combined, s_combined], resolver=resolver)
                 if m is None:
                     return None
                 out_props[prop_name] = m
@@ -770,14 +781,17 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         # simpler as we merge with either an identical pattern, or additionalProperties.
         if out_pat or s_pat:
             for pattern in set(out_pat) | set(s_pat):
-                m = merged([out_pat.get(pattern, out_add), s_pat.get(pattern, s_add)])
+                m = merged(
+                    [out_pat.get(pattern, out_add), s_pat.get(pattern, s_add)],
+                    resolver=resolver,
+                )
                 if m is None:  # pragma: no cover
                     return None
                 out_pat[pattern] = m
             out["patternProperties"] = out_pat
         # Finally, we merge togther the additionalProperties schemas.
         if out_add or s_add:
-            m = merged([out_add, s_add])
+            m = merged([out_add, s_add], resolver=resolver)
             if m is None:  # pragma: no cover
                 return None
             out["additionalProperties"] = m
@@ -811,7 +825,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     return None
         if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
             # If one `contains` schema is a subset of the other, we can discard it.
-            m = merged([out["contains"], s["contains"]])
+            m = merged([out["contains"], s["contains"]], resolver=resolver)
             if m == out["contains"] or m == s["contains"]:
                 out["contains"] = m
                 s.pop("contains")
@@ -841,7 +855,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                         v = {"required": v}
                     elif isinstance(sval, list):
                         sval = {"required": sval}
-                    m = merged([v, sval])
+                    m = merged([v, sval], resolver=resolver)
                     if m is None:
                         return None
                     odeps[k] = m
@@ -855,26 +869,27 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     [
                         out.get("additionalItems", TRUTHY),
                         s.get("additionalItems", TRUTHY),
-                    ]
+                    ],
+                    resolver=resolver,
                 )
                 for a, b in itertools.zip_longest(oitems, sitems):
                     if a is None:
                         a = out.get("additionalItems", TRUTHY)
                     elif b is None:
                         b = s.get("additionalItems", TRUTHY)
-                    out["items"].append(merged([a, b]))
+                    out["items"].append(merged([a, b], resolver=resolver))
             elif isinstance(oitems, list):
-                out["items"] = [merged([x, sitems]) for x in oitems]
+                out["items"] = [merged([x, sitems], resolver=resolver) for x in oitems]
                 out["additionalItems"] = merged(
-                    [out.get("additionalItems", TRUTHY), sitems]
+                    [out.get("additionalItems", TRUTHY), sitems], resolver=resolver
                 )
             elif isinstance(sitems, list):
-                out["items"] = [merged([x, oitems]) for x in sitems]
+                out["items"] = [merged([x, oitems], resolver=resolver) for x in sitems]
                 out["additionalItems"] = merged(
-                    [s.get("additionalItems", TRUTHY), oitems]
+                    [s.get("additionalItems", TRUTHY), oitems], resolver=resolver
                 )
             else:
-                out["items"] = merged([oitems, sitems])
+                out["items"] = merged([oitems, sitems], resolver=resolver)
                 if out["items"] is None:
                     return None
             if isinstance(out["items"], list) and None in out["items"]:
@@ -898,7 +913,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 # If non-validation keys like `title` or `description` don't match,
                 # that doesn't really matter and we'll just go with first we saw.
                 return None
-        out = canonicalish(out)
+        out = canonicalish(out, resolver=resolver)
         if out == FALSEY:
             return FALSEY
     assert isinstance(out, dict)
