@@ -4,6 +4,7 @@ import itertools
 import math
 import operator
 import re
+import warnings
 from fractions import Fraction
 from functools import partial
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
@@ -388,6 +389,14 @@ STRING_FORMATS = {
 }
 
 
+def _warn_invalid_regex(pattern: str, err: re.error, kw: str = "pattern") -> None:
+    warnings.warn(
+        f"Got {kw}={pattern!r}, but this is not valid syntax for a Python regular "
+        f"expression ({err}) so it will not be handled by the strategy.  See https://"
+        "json-schema.org/understanding-json-schema/reference/regular_expressions.html"
+    )
+
+
 def string_schema(
     custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
 ) -> st.SearchStrategy[str]:
@@ -402,14 +411,19 @@ def string_schema(
         # See https://json-schema.org/latest/json-schema-validation.html#format
         strategy = known_formats[schema["format"]]
         if "pattern" in schema:
-            # This isn't really supported, but we'll do our best.
-            strategy = strategy.filter(re.compile(schema["pattern"]).search)
+            try:
+                # This isn't really supported, but we'll do our best with a filter.
+                strategy = strategy.filter(re.compile(schema["pattern"]).search)
+            except re.error as err:
+                _warn_invalid_regex(schema["pattern"], err)
+                return st.nothing()
     elif "pattern" in schema:
         try:
             re.compile(schema["pattern"])
             strategy = st.from_regex(schema["pattern"])
-        except re.error:
+        except re.error as err:
             # Patterns that are invalid in Python, or just malformed
+            _warn_invalid_regex(schema["pattern"], err)
             return st.nothing()
     # If we have size bounds but we're generating strings from a regex or pattern,
     # apply a filter to ensure our size bounds are respected.
@@ -523,6 +537,15 @@ def object_schema(
     # schema for other values; handled specially if nothing matches
     additional = schema.get("additionalProperties", {})
     additional_allowed = additional != FALSEY
+
+    for key in list(patterns):
+        try:
+            re.compile(key)
+        except re.error as err:
+            _warn_invalid_regex(key, err, "patternProperties entry")
+            if min_size == 0 and not required:
+                return st.builds(dict)
+            return st.nothing()
 
     dependencies = schema.get("dependencies", {})
     dep_names = {k: v for k, v in dependencies.items() if isinstance(v, list)}

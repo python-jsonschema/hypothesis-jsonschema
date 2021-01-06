@@ -1,5 +1,7 @@
 # Changelog
 
+- Correct handling of regex patterns which are invalid in Python (#75)
+
 #### 0.18.2 - 2020-11-22
 - Remove internal caching due to hash collisions (#71)
 - Improve performance for conditional keywords

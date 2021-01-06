@@ -27,6 +27,10 @@ from hypothesis_jsonschema._canonicalise import (
 )
 from hypothesis_jsonschema._from_schema import from_schema, rfc3339
 
+# We use this as a placeholder for all schemas which resolve to nothing()
+# but do not canonicalise to FALSEY
+INVALID_REGEX_SCHEMA = {"type": "string", "pattern": "["}
+
 
 @settings(
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much],
@@ -73,6 +77,20 @@ def test_invalid_schemas_raise(schema):
         from_schema(schema).example()
 
 
+@pytest.mark.parametrize(
+    "schema",
+    [
+        INVALID_REGEX_SCHEMA,
+        {"type": "string", "pattern": "[", "format": "color"},
+        {"type": "object", "patternProperties": {"[": False}},
+        {"type": "object", "patternProperties": {"[": False}, "required": ["a"]},
+    ],
+)
+def test_invalid_regex_emit_warning(schema):
+    with pytest.warns(UserWarning):
+        from_schema(schema).validate()
+
+
 INVALID_SCHEMAS = {
     # Empty list for requires, which is invalid
     "Release Drafter configuration file",
@@ -97,6 +115,7 @@ UNSUPPORTED_SCHEMAS = {
     # Technically valid, but using regex patterns not supported by Python
     "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
+    "JSON Schema for mime type collections",
 }
 FLAKY_SCHEMAS = {
     # The following schemas refer to an `$id` rather than a JSON pointer.
