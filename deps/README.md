@@ -1,6 +1,6 @@
 # Pinning dependencies
 
-Hypothesmith pins *all* our dependencies for testing, and disables installation
+`hypothesis-jsonschema` pins *all* our dependencies for testing, and disables installation
 of any unlisted dependencies to make sure the set of pins is complete.
 
 How does this work?

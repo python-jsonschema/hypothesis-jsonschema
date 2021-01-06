@@ -390,6 +390,10 @@
                 "type": "boolean"
             }
         },
+        "draft7/all integers are multiples of 0.5, if overflow is handled": {
+            "multipleOf": 0.5,
+            "type": "integer"
+        },
         "draft7/allOf": {
             "allOf": [
                 {
@@ -828,6 +832,27 @@
                 }
             }
         },
+        "draft7/evaluating the same schema location against the same data location twice is not a sign of an infinite loop": {
+            "allOf": [
+                {
+                    "properties": {
+                        "foo": {
+                            "$ref": "#/definitions/int"
+                        }
+                    }
+                },
+                {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/int"
+                    }
+                }
+            ],
+            "definitions": {
+                "int": {
+                    "type": "integer"
+                }
+            }
+        },
         "draft7/exclusiveMaximum validation": {
             "exclusiveMaximum": 3.0
         },
@@ -1081,6 +1106,18 @@
             "type": [
                 "integer",
                 "string"
+            ]
+        },
+        "draft7/naive replacement of $ref with its destination is not correct": {
+            "definitions": {
+                "a_string": {
+                    "type": "string"
+                }
+            },
+            "enum": [
+                {
+                    "$ref": "#/definitions/a_string"
+                }
             ]
         },
         "draft7/nested allOf, to check validation semantics": {
@@ -1773,6 +1810,10 @@
         "draft7/boolean schema 'false'": false,
         "draft7/invalid definition": {
             "$ref": "http://json-schema.org/draft-07/schema#"
+        },
+        "draft7/invalid instance should not raise error when float division = inf": {
+            "multipleOf": 0.123456789,
+            "type": "integer"
         },
         "draft7/not with boolean schema true": {
             "not": true
