@@ -1,5 +1,7 @@
 # Changelog
 
+#### 0.19.0 - 2021-01-06
+- Generate empty lists when `maxItems > 0` but no elements are allowed (#75)
 - Correct handling of regex patterns which are invalid in Python (#75)
 
 #### 0.18.2 - 2020-11-22

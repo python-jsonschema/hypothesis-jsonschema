@@ -302,6 +302,27 @@
         "format": "Unknown formats should be treated as annotations and pass validation",
         "type": "string"
     },
+    "unique array with list-items and required additionalItems": {
+        "additionalItems": {
+            "const": 2
+        },
+        "items": [
+            {
+                "const": 1
+            }
+        ],
+        "minItems": 2,
+        "type": "array",
+        "uniqueItems": true
+    },
+    "unique array with list-items without additionalItems": {
+        "items": [
+            {}
+        ],
+        "maxItems": 1,
+        "type": "array",
+        "uniqueItems": true
+    },
     "unmergable allOf schema can still be resolved": {
         "allOf": [
             {

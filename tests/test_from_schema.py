@@ -2,6 +2,7 @@
 
 import json
 import re
+import warnings
 from pathlib import Path
 
 import jsonschema
@@ -388,6 +389,19 @@ def test_impossible_multiplier(type_):
     assert strategy.is_empty
 
 
+def test_unsatisfiable_array_returns_nothing():
+    schema = {
+        "type": "array",
+        "items": [],
+        "additionalItems": INVALID_REGEX_SCHEMA,
+        "minItems": 1,
+    }
+    with pytest.warns(UserWarning):
+        strategy = from_schema(schema)
+    strategy.validate()
+    assert strategy.is_empty
+
+
 ALLOF_CONTAINS = {
     "type": "array",
     "items": {"type": "string"},
@@ -444,3 +458,26 @@ def test_allowed_custom_format(num):
 def test_allowed_unknown_custom_format(string):
     assert string == "hello world"
     assert "not registered" not in jsonschema.FormatChecker().checkers
+
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+
+    @given(
+        from_schema({"type": "array", "items": INVALID_REGEX_SCHEMA, "maxItems": 10})
+    )
+    def test_can_generate_empty_list_with_max_size_and_no_allowed_items(val):
+        assert val == []
+
+    @given(
+        from_schema(
+            {
+                "type": "array",
+                "items": [{"const": 1}, {"const": 2}, {"const": 3}],
+                "additionalItems": INVALID_REGEX_SCHEMA,
+                "maxItems": 10,
+            }
+        )
+    )
+    def test_can_generate_list_with_max_size_and_no_allowed_additional_items(val):
+        assert val == [1, 2, 3]

@@ -464,6 +464,14 @@ def array_schema(
             if contains_additional is not None:
                 additional_items_strat |= _from_schema_(contains_additional)
 
+        # Hypothesis raises InvalidArgument for empty elements and non-None
+        # max_size, because the user has asked for a possibility which will
+        # never happen... but we can work around that here.
+        if additional_items_strat.is_empty:
+            if min_size >= 1:
+                return st.nothing()
+            max_size = 0
+
         if unique:
 
             @st.composite  # type: ignore
@@ -477,6 +485,8 @@ def array_schema(
                 for strat in items_strats:
                     elems.append(draw(strat.filter(not_seen)))
                     seen.add(encode_canonical_json(elems[-1]))
+                if max_size == 0:
+                    return elems
                 extra_items = st.lists(
                     additional_items_strat.filter(not_seen),
                     min_size=min_size,
@@ -487,6 +497,8 @@ def array_schema(
                 return elems + more_elems
 
             strat = compose_lists_with_filter()
+        elif max_size == 0:
+            strat = st.tuples(*items_strats).map(list)
         else:
             strat = st.builds(
                 operator.add,
@@ -504,7 +516,9 @@ def array_schema(
                 # heterogeneous) and hope it works out anyway.
                 contains_strat = contains_strat.filter(make_validator(items).is_valid)
             items_strat |= contains_strat
-
+        elif items_strat.is_empty and min_size == 0 and max_size is not None:
+            # As above, work around a Hypothesis check for unsatisfiable max_size.
+            return st.builds(list)
         strat = st.lists(
             items_strat,
             min_size=min_size,
