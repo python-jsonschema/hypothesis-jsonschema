@@ -26,9 +26,9 @@ from ._canonicalise import (
     get_type,
     make_validator,
     merged,
-    resolve_all_refs,
 )
 from ._encode import JSONType, encode_canonical_json
+from ._resolve import resolve_all_refs
 
 JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
     st.none()

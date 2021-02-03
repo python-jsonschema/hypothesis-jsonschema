@@ -24,9 +24,9 @@ from hypothesis.internal.reflection import proxies
 from hypothesis_jsonschema._canonicalise import (
     HypothesisRefResolutionError,
     canonicalish,
-    resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import from_schema, rfc3339
+from hypothesis_jsonschema._resolve import resolve_all_refs
 
 # We use this as a placeholder for all schemas which resolve to nothing()
 # but do not canonicalise to FALSEY

@@ -14,9 +14,9 @@ from hypothesis_jsonschema._canonicalise import (
     make_validator,
     merged,
     next_up,
-    resolve_all_refs,
 )
 from hypothesis_jsonschema._from_schema import JSON_STRATEGY
+from hypothesis_jsonschema._resolve import resolve_all_refs
 
 
 def is_valid(instance, schema):
