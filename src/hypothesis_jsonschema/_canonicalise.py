@@ -858,6 +858,10 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             elif out[k] != v and k in ALL_KEYWORDS:
                 # If non-validation keys like `title` or `description` don't match,
                 # that doesn't really matter and we'll just go with first we saw.
+                #
+                # TODO: note that this is NOT TRUE in the case of recursive references,
+                # where we might change the value at some location that a reference
+                # still points to!
                 return None
         out = canonicalish(out)
         if out == FALSEY:
