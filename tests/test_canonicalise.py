@@ -558,3 +558,19 @@ def test_validators_use_proper_draft():
     }
     cc = canonicalish(schema)
     jsonschema.validators.validator_for(cc).check_schema(cc)
+
+
+def test_reference_resolver_issue_65_regression():
+    schema = {
+        "allOf": [{"$ref": "#/definitions/ref"}, {"required": ["foo"]}],
+        "properties": {"foo": {}},
+        "definitions": {"ref": {"maxProperties": 1}},
+        "type": "object",
+    }
+    res = resolve_all_refs(schema)
+    can = canonicalish(res)
+    assert "$ref" not in res
+    assert "$ref" not in can
+    for s in (schema, res, can):
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate({}, s)
