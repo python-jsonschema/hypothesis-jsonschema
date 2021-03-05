@@ -11,7 +11,7 @@ JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
 
 if PYTHON_IMPLEMENTATION != "PyPy":
     from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
-else:
+else:  # pragma: no cover
     _make_iterencode = None
     encode_basestring_ascii = None
 
@@ -27,7 +27,7 @@ def _floatstr(o: float) -> str:
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
 
-    if PYTHON_IMPLEMENTATION == "PyPy":
+    if PYTHON_IMPLEMENTATION == "PyPy":  # pragma: no cover
 
         def _JSONEncoder__floatstr(self, o: float) -> str:  # noqa: N802
             return _floatstr(o)

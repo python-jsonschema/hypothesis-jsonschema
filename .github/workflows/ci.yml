@@ -37,7 +37,8 @@ jobs:
     - name: Install dependencies
       run: python -m pip install --upgrade pip setuptools tox
     - name: Run tests
-      run: python -m tox --recreate -e test
+      # Disable coverage on PyPy
+      run: python -m tox --recreate -e test $(${{ startsWith(matrix.python-version, 'pypy') }} && echo '-- -n auto --no-cov')
 
   release:
     runs-on: ubuntu-latest
