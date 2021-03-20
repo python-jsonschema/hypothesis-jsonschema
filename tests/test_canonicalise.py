@@ -451,6 +451,16 @@ def test_canonicalises_to_expected(schema, expected):
                 "additionalItems": FALSEY,
             },
         ),
+        (
+            [
+                {"items": [{}, {"type": "string"}], "additionalItems": False},
+                {"items": {"type": "string"}},
+            ],
+            {
+                "items": [{"type": "string"}, {"type": "string"}],
+                "additionalItems": FALSEY,
+            },
+        ),
     ]
     + [
         ([{lo: 0, hi: 9}, {lo: 1, hi: 10}], {lo: 1, hi: 9})
