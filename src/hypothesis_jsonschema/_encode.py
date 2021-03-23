@@ -1,38 +1,53 @@
 """Canonical encoding for the JSONSchema semantics, where 1 == 1.0."""
 import json
 import math
-from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
+import platform
 from typing import Any, Dict, Tuple, Union
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
+PYTHON_IMPLEMENTATION = platform.python_implementation()
 JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
+
+if PYTHON_IMPLEMENTATION != "PyPy":
+    from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
+else:  # pragma: no cover
+    _make_iterencode = None
+    encode_basestring_ascii = None
+
+
+def _floatstr(o: float) -> str:
+    # This is the bit we're overriding - integer-valued floats are
+    # encoded as integers, to support JSONschemas's uniqueness.
+    assert math.isfinite(o)
+    if o == int(o):
+        return repr(int(o))
+    return repr(o)
 
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
-    def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
-        """Replace a stdlib method, so we encode integer-valued floats as ints."""
 
-        def floatstr(o: float) -> str:
-            # This is the bit we're overriding - integer-valued floats are
-            # encoded as integers, to support JSONschemas's uniqueness.
-            assert math.isfinite(o)
-            if o == int(o):
-                return repr(int(o))
-            return repr(o)
+    if PYTHON_IMPLEMENTATION == "PyPy":  # pragma: no cover
 
-        return _make_iterencode(
-            {},
-            self.default,
-            encode_basestring_ascii,
-            self.indent,
-            floatstr,
-            self.key_separator,
-            self.item_separator,
-            self.sort_keys,
-            self.skipkeys,
-            _one_shot,
-        )(o, 0)
+        def _JSONEncoder__floatstr(self, o: float) -> str:  # noqa: N802
+            return _floatstr(o)
+
+    else:
+
+        def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
+            """Replace a stdlib method, so we encode integer-valued floats as ints."""
+            return _make_iterencode(
+                {},
+                self.default,
+                encode_basestring_ascii,
+                self.indent,
+                _floatstr,
+                self.key_separator,
+                self.item_separator,
+                self.sort_keys,
+                self.skipkeys,
+                _one_shot,
+            )(o, 0)
 
 
 def encode_canonical_json(value: JSONType) -> str:
