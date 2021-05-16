@@ -373,6 +373,8 @@ RFC3339_FORMATS = (
 STRING_FORMATS = {
     **{name: rfc3339(name) for name in RFC3339_FORMATS},
     "color": st.from_regex(_WEBCOLOR_REGEX) | st.sampled_from(_CSS21_COLOR_NAMES),
+    "date": rfc3339("full-date"),
+    "time": rfc3339("full-time"),
     "email": st.emails(),
     "idn-email": st.emails(),
     "hostname": prov.domains(),
