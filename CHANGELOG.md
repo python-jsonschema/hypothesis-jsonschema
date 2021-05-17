@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.19.2 - 2021-05-17
+- Fix support `date` and `time` formats (#79)
+
 #### 0.19.1 - 2021-03-23
 - PyPy support (#77)
 
