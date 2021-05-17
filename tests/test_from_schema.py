@@ -116,6 +116,7 @@ UNSUPPORTED_SCHEMAS = {
     # Technically valid, but using regex patterns not supported by Python
     "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
+    "JSON schema for nodemon.json configuration files.",
     "JSON Schema for mime type collections",
 }
 FLAKY_SCHEMAS = {
