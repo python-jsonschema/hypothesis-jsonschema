@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.20.0 - 2021-06-02
+- Allow `custom_formats` for known string formats (#83)
+
 #### 0.19.2 - 2021-05-17
 - Fix support `date` and `time` formats (#79)
 

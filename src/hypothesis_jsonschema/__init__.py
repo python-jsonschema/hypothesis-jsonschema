@@ -3,7 +3,7 @@
 The only public API is `from_schema`; check the docstring for details.
 """
 
-__version__ = "0.19.2"
+__version__ = "0.20.0"
 __all__ = ["from_schema"]
 
 from ._from_schema import from_schema

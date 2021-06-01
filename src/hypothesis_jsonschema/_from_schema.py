@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
 import jsonschema
 from hypothesis import assume, provisional as prov, strategies as st
-from hypothesis.errors import InvalidArgument
+from hypothesis.errors import HypothesisWarning, InvalidArgument
 from hypothesis.internal.conjecture import utils as cu
 
 from ._canonicalise import (
@@ -76,8 +76,11 @@ def from_schema(
 ) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
-    Schema reuse with "definitions" and "$ref" is not yet supported, but
-    everything else in drafts 04, 05, and 07 is fully tested and working.
+    To generate specific string formats, pass a ``custom_formats`` dict
+    mapping the format name to a strategy for allowed strings.
+
+    Supports JSONSchema drafts 04, 06, and 07, with the exception of
+    recursive references.
     """
     try:
         return __from_schema(schema, custom_formats=custom_formats)
@@ -127,12 +130,17 @@ def __from_schema(
         for name, strat in custom_formats.items():
             if not isinstance(name, str):
                 raise InvalidArgument(f"format name {name!r} must be a string")
-            if name in STRING_FORMATS:
-                raise InvalidArgument(f"Cannot redefine standard format {name!r}")
             if not isinstance(strat, st.SearchStrategy):
                 raise InvalidArgument(
                     f"custom_formats[{name!r}]={strat!r} must be a Hypothesis "
                     "strategy which generates strings matching this format."
+                )
+            if name in STRING_FORMATS:
+                warnings.warn(
+                    f"Overriding standard format {name!r} - was "
+                    f"{STRING_FORMATS[name]!r}, now {strat!r}",
+                    HypothesisWarning,
+                    stacklevel=2,
                 )
         format_checker = jsonschema.FormatChecker()
         custom_formats = {
@@ -406,7 +414,7 @@ def string_schema(
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength")
     strategy = st.text(min_size=min_size, max_size=max_size)
-    known_formats = {**(custom_formats or {}), **STRING_FORMATS}
+    known_formats = {**STRING_FORMATS, **(custom_formats or {})}
     if schema.get("format") in known_formats:
         # Unknown "format" specifiers should be ignored for validation.
         # See https://json-schema.org/latest/json-schema-validation.html#format

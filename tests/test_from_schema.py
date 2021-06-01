@@ -18,7 +18,7 @@ from hypothesis import (
     settings,
     strategies as st,
 )
-from hypothesis.errors import FailedHealthCheck, InvalidArgument
+from hypothesis.errors import FailedHealthCheck, HypothesisWarning, InvalidArgument
 from hypothesis.internal.reflection import proxies
 
 from hypothesis_jsonschema._canonicalise import (
@@ -430,7 +430,6 @@ def validate_card_format(string):
     [
         {"foo": "not a strategy"},
         {5: st.just("name is not a string")},
-        {"full-date": st.just("2000-01-01")},  # can't override a standard format
         {"card-test": st.just("not a valid card")},
         {"card-test": st.none()},  # Not a string
     ],
@@ -461,6 +460,18 @@ def test_allowed_custom_format(num):
 def test_allowed_unknown_custom_format(string):
     assert string == "hello world"
     assert "not registered" not in jsonschema.FormatChecker().checkers
+
+
+@given(data=st.data())
+def test_overriding_standard_format(data):
+    expected = "2000-01-01"
+    schema = {"type": "string", "format": "full-date"}
+    custom_formats = {"full-date": st.just(expected)}
+    with pytest.warns(
+        HypothesisWarning, match="Overriding standard format 'full-date'"
+    ):
+        value = data.draw(from_schema(schema, custom_formats=custom_formats))
+    assert value == expected
 
 
 with warnings.catch_warnings():
