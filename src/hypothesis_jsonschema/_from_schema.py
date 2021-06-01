@@ -97,9 +97,10 @@ def _get_format_filter(
 ) -> st.SearchStrategy[str]:
     def check_valid(string: str) -> str:
         try:
-            assert isinstance(string, str)
+            if not isinstance(string, str):
+                raise jsonschema.FormatError(f"{string!r} is not a string")
             checker.check(string, format=format_name)
-        except (AssertionError, jsonschema.FormatError) as err:
+        except jsonschema.FormatError as err:
             raise InvalidArgument(
                 f"Got string={string!r} from strategy {strategy!r}, but this "
                 f"is not a valid value for the {format_name!r} checker."
@@ -136,8 +137,6 @@ def __from_schema(
         format_checker = jsonschema.FormatChecker()
         custom_formats = {
             name: _get_format_filter(name, format_checker, strategy)
-            if name in format_checker.checkers
-            else strategy
             for name, strategy in custom_formats.items()
         }
         custom_formats[_FORMATS_TOKEN] = None  # type: ignore

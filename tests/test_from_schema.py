@@ -432,6 +432,7 @@ def validate_card_format(string):
         {5: st.just("name is not a string")},
         {"full-date": st.just("2000-01-01")},  # can't override a standard format
         {"card-test": st.just("not a valid card")},
+        {"card-test": st.none()},  # Not a string
     ],
 )
 @given(data=st.data())
