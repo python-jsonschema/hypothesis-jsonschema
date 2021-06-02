@@ -660,7 +660,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     # not in the schema and there were unmergable pattern schemas.
                     return None
                 m = merged([out_combined, s_combined])
-                if m is None:
+                if m is None:  # pragma: no cover
                     return None
                 out_props[prop_name] = m
         # With all the property names done, it's time to handle the patterns.  This is

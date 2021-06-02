@@ -139,6 +139,13 @@ FLAKY_SCHEMAS = {
     # Apparently we're not handling this one correctly?
     "draft4/additionalProperties should not look in applicators",
     "draft7/additionalProperties should not look in applicators",
+    # $id (sometimes) rejected as invalid/unknown URL type
+    "A JSON schema for a Dolittle bounded context's artifacts",
+    "A JSON schema for a Dolittle bounded context's resource configurations",
+    # This one fails because of a hard-to-find (and on the surface impossible)
+    # counterexample involving oneOf, which doesn't fail if validated directly!
+    # {'requirements': {'': [{'location': None, 'rule': 'dir'}]}}
+    "CLI config for enforcing environment settings",
 }
 SLOW_SCHEMAS = {
     "snapcraft project  (https://snapcraft.io)",
@@ -162,6 +169,13 @@ SLOW_SCHEMAS = {
     "Ansible task files-2.7",
     "Ansible task files-2.9",
     "JSON Schema for GraphQL Code Generator config file",
+    "Schema for CircleCI 2.0 config files",
+    "Schema for Camel K YAML DSL",
+    "The AWS Serverless Application Model (AWS SAM, previously known as Project Flourish) extends AWS CloudFormation to provide a simplified way of defining the Amazon API Gateway APIs, AWS Lambda functions, and Amazon DynamoDB tables needed by your serverless application.",
+    "AWS CloudFormation provides a common language for you to describe and provision all the infrastructure resources in your cloud environment.",
+    "JSON API document",
+    "Prometheus configuration file",
+    "JSON schema for electron-build configuration file.",
     # oneOf on property names means only objects are valid, but it's a very
     # filter-heavy way to express that.  TODO: canonicalise oneOf to anyOf.
     "draft7/oneOf complex types",
