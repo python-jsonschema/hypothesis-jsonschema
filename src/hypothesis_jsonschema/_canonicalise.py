@@ -16,6 +16,7 @@ import itertools
 import json
 import math
 import re
+from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jsonschema
@@ -206,7 +207,7 @@ def _is_two_to_a_negative_power(mul: Optional[float]) -> bool:
     # treat this as a schema for integers.  Note that overflow to infinity is handled
     # elsewhere in jsonschema validation by falling back to Fraction logic.
     # See https://github.com/Julian/jsonschema/pull/746
-    if mul is None or not 0 < mul < 1:
+    if mul is None or 1 < mul:
         return False
     numerator, denominator = mul.as_integer_ratio()
     return numerator == 1 and (denominator & (denominator - 1) == 0)
@@ -286,10 +287,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             del schema["exclusiveMaximum"]
         lo, hi, exmin, exmax = get_number_bounds(schema)
         mul = schema.get("multipleOf")
-        if isinstance(mul, int) or _is_two_to_a_negative_power(mul):
+        if isinstance(mul, int):
             # Numbers which are a multiple of an integer?  That's the integer type.
-            # The same logic applies if `mul==1/n`; and if n is an integer power
-            # of two we can even rely on exact floating-point results!
             type_.remove("number")
             type_ = [t for t in TYPE_STRINGS if t in type_ or t == "integer"]
             if mul is not None and 0 < mul <= 1:
@@ -307,6 +306,11 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if "integer" in type_:
         lo, hi = get_integer_bounds(schema)
         mul = schema.get("multipleOf")
+        if _is_two_to_a_negative_power(mul) and "number" not in type_:
+            # Numbers which are a multiple of 1/n are always integers; and when
+            # n=2**k for integer k >= 0 we ca rely on exact floating-point math.
+            schema.pop("multipleOf")
+            mul = None
         if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):
             lo += mul - (lo % mul)
         if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
@@ -720,8 +724,8 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             if isinstance(x, int) and isinstance(y, int):
                 out["multipleOf"] = x * y // math.gcd(x, y)
             elif x != y:
-                ratio = max(x, y) / min(x, y)
-                if ratio == int(ratio):  # e.g. x=0.5, y=2
+                ratio = Fraction(max(x, y)) / Fraction(min(x, y))
+                if ratio.denominator == 1:  # e.g. .75, 1.5
                     out["multipleOf"] = max(x, y)
                 else:
                     return None

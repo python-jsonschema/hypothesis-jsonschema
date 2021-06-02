@@ -121,6 +121,12 @@ def test_dependencies_canonicalises_to_fixpoint():
             "exclusiveMaximum": 3,
             "multipleOf": 3,
         },
+        {
+            "type": "number",
+            "exclusiveMinimum": 6 / 8,
+            "exclusiveMaximum": 7 / 8,
+            "multipleOf": 1 / 8,
+        },
         {"not": {"type": ["integer", "number"]}, "type": "number"},
         {"not": {"anyOf": [{"type": "integer"}, {"type": "number"}]}, "type": "number"},
         {"not": {"enum": [1, 2, 3]}, "const": 2},
@@ -306,6 +312,14 @@ def test_canonicalises_to_empty(schema):
             {"if": {"type": "integer"}, "then": {}, "else": {}, "type": "number"},
             {"type": "number"},
         ),
+        (
+            {"allOf": [{"multipleOf": 1.5}], "multipleOf": 1.5},
+            {"multipleOf": 1.5},
+        ),
+        (
+            {"type": "integer", "allOf": [{"multipleOf": 0.5}, {"multipleOf": 1e308}]},
+            {"type": "integer", "multipleOf": 1e308},
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
@@ -363,13 +377,14 @@ def test_canonicalises_to_expected(schema, expected):
         ),
         (
             [
-                {"allOf": [{"multipleOf": 1.5}, {"multipleOf": 0.75}]},
-                {"allOf": [{"multipleOf": 1.5}, {"multipleOf": 1.25}]},
+                {"allOf": [{"multipleOf": 3.5}, {"multipleOf": 0.75}]},
+                {"allOf": [{"multipleOf": 3.5}, {"multipleOf": 1.25}]},
             ],
             {
                 "allOf": [
+                    {"multipleOf": 0.75},
                     {"multipleOf": 1.25},
-                    {"multipleOf": 1.5},
+                    {"multipleOf": 3.5},
                 ]
             },
         ),
