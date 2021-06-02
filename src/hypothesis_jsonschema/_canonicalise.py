@@ -201,6 +201,17 @@ def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
     return lower, upper
 
 
+def _is_two_to_a_negative_power(mul: Optional[float]) -> bool:
+    # If this is true, then `x/mul == int(x/mul)` for any float x and we can therefore
+    # treat this as a schema for integers.  Note that overflow to infinity is handled
+    # elsewhere in jsonschema validation by falling back to Fraction logic.
+    # See https://github.com/Julian/jsonschema/pull/746
+    if mul is None or not 0 < mul < 1:
+        return False
+    numerator, denominator = mul.as_integer_ratio()
+    return numerator == 1 and (denominator & (denominator - 1) == 0)
+
+
 def canonicalish(schema: JSONType) -> Dict[str, Any]:
     """Convert a schema into a more-canonical form.
 
@@ -263,6 +274,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
+    # multipleOf is semantically unaffected by the sign, so ensure it's positive
+    if "multipleOf" in schema:
+        schema["multipleOf"] = abs(schema["multipleOf"])
 
     type_ = get_type(schema)
     if "number" in type_:
@@ -272,10 +286,14 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             del schema["exclusiveMaximum"]
         lo, hi, exmin, exmax = get_number_bounds(schema)
         mul = schema.get("multipleOf")
-        if isinstance(mul, int):
+        if isinstance(mul, int) or _is_two_to_a_negative_power(mul):
             # Numbers which are a multiple of an integer?  That's the integer type.
+            # The same logic applies if `mul==1/n`; and if n is an integer power
+            # of two we can even rely on exact floating-point results!
             type_.remove("number")
             type_ = [t for t in TYPE_STRINGS if t in type_ or t == "integer"]
+            if mul is not None and 0 < mul <= 1:
+                schema.pop("multipleOf")
         elif lo is not None and hi is not None:
             lobound = next_up(lo) if exmin else lo
             hibound = next_down(hi) if exmax else hi
@@ -303,6 +321,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
         if lo is not None and hi is not None and lo > hi:
             type_.remove("integer")
+        elif type_ == ["integer"] and lo == hi and make_validator(schema).is_valid(lo):
+            return {"const": lo}
 
     if "array" in type_ and "contains" in schema:
         if isinstance(schema.get("items"), dict):
@@ -542,11 +562,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             tmp = schema.copy()
             ao = tmp.pop("allOf")
             out = merged([tmp] + ao)
-            if isinstance(out, dict):  # pragma: no branch
+            if out is not None:
                 schema = out
-                # TODO: this assertion is soley because mypy 0.750 doesn't know
-                # that `schema` is a dict otherwise. Needs minimal report upstream.
-                assert isinstance(schema, dict)
+            elif tmp and any(s == merged([tmp, s]) for s in schema["allOf"]):
+                schema = {"allOf": schema["allOf"]}
     if "oneOf" in schema:
         one_of = schema.pop("oneOf")
         assert isinstance(one_of, list)

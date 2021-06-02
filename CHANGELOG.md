@@ -1,5 +1,9 @@
 # Changelog
 
+#### 0.20.1 - 2021-06-02
+- improved handling for fractional `multipleOf` values
+- improved handling of redundant `allOf` sub-schemas
+
 #### 0.20.0 - 2021-06-02
 - Allow `custom_formats` for known string formats (#83)
 

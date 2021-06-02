@@ -41,6 +41,31 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
 
+@pytest.mark.parametrize(
+    "schema, examples",
+    [
+        # See https://github.com/Julian/jsonschema/pull/746
+        pytest.param(
+            {"type": "integer", "multipleOf": 0.75},
+            [1.5e308],
+            marks=pytest.mark.xfail(raises=OverflowError),
+        ),
+    ],
+)
+def test_canonicalises_to_equivalent_fixpoint_examples(schema, examples):
+    """Check that an object drawn from an arbitrary schema is valid.
+
+    This is used to record past regressions from the test above.
+    """
+    cc = canonicalish(schema)
+    assert cc == canonicalish(cc)
+    validator = jsonschema.validators.validator_for(schema)
+    validator.check_schema(schema)
+    validator.check_schema(cc)
+    for instance in examples:
+        assert is_valid(instance, schema) == is_valid(instance, cc)
+
+
 def test_dependencies_canonicalises_to_fixpoint():
     """Check that an object drawn from an arbitrary schema is valid."""
     cc = canonicalish(
@@ -136,6 +161,7 @@ def test_canonicalises_to_empty(schema):
         ({"type": get_type({})}, {}),
         ({"required": []}, {}),
         ({"type": "integer", "not": {"type": "string"}}, {"type": "integer"}),
+        ({"type": "number", "multipleOf": -3.0}, {"type": "integer", "multipleOf": 3}),
         (
             {"type": "array", "items": [True, False, True]},
             {"type": "array", "items": [{}], "maxItems": 1},
@@ -176,15 +202,19 @@ def test_canonicalises_to_empty(schema):
             {
                 "type": "number",
                 "minimum": 1.5,
-                "exclusiveMaximum": 2.5,
+                "exclusiveMaximum": 3.5,
                 "multipleOf": 0.5,
             },
+            {"type": "integer", "minimum": 2, "maximum": 3},
+        ),
+        (
             {
                 "type": "number",
                 "minimum": 1.5,
                 "exclusiveMaximum": 2.5,
                 "multipleOf": 0.5,
             },
+            {"const": 2},
         ),
         ({"enum": ["aa", 2, "z", None, 1]}, {"enum": [None, 1, 2, "z", "aa"]}),
         (
@@ -237,8 +267,8 @@ def test_canonicalises_to_empty(schema):
             {
                 "type": "array",
                 "minItems": 1,
-                "items": {"type": "number", "multipleOf": 0.5},
-                "contains": {"type": "number", "multipleOf": 0.75},
+                "items": {"type": "integer"},
+                "contains": {"type": "integer", "multipleOf": 0.75},
             },
         ),
         (
@@ -295,8 +325,14 @@ def test_canonicalises_to_expected(schema, expected):
         ([{"type": "null"}, {"type": ["null", "boolean"]}], {"const": None}),
         ([{"type": "integer"}, {"maximum": 20}], {"type": "integer", "maximum": 20}),
         ([{"type": "integer"}, {"type": "number"}], {"type": "integer"}),
-        ([{"multipleOf": 0.25}, {"multipleOf": 0.5}], {"multipleOf": 0.5}),
-        ([{"multipleOf": 0.5}, {"multipleOf": 1.5}], {"multipleOf": 1.5}),
+        (
+            [{"type": "number", "multipleOf": 0.25}, {"multipleOf": 0.5}],
+            {"type": "integer"},
+        ),
+        (
+            [{"type": "number", "multipleOf": 0.5}, {"multipleOf": 1.5}],
+            {"type": "integer", "multipleOf": 1.5},
+        ),
         (
             [
                 {"type": "string", "format": "color"},
@@ -327,14 +363,13 @@ def test_canonicalises_to_expected(schema, expected):
         ),
         (
             [
-                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 0.75}]},
-                {"allOf": [{"multipleOf": 0.5}, {"multipleOf": 1.25}]},
+                {"allOf": [{"multipleOf": 1.5}, {"multipleOf": 0.75}]},
+                {"allOf": [{"multipleOf": 1.5}, {"multipleOf": 1.25}]},
             ],
             {
                 "allOf": [
-                    {"multipleOf": 0.5},
-                    {"multipleOf": 0.75},
                     {"multipleOf": 1.25},
+                    {"multipleOf": 1.5},
                 ]
             },
         ),
