@@ -16,6 +16,7 @@ import itertools
 import json
 import math
 import re
+from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jsonschema
@@ -263,6 +264,9 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
+    # multipleOf is semantically unaffected by the sign, so ensure it's positive
+    if "multipleOf" in schema:
+        schema["multipleOf"] = abs(schema["multipleOf"])
 
     type_ = get_type(schema)
     if "number" in type_:
@@ -289,6 +293,10 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if "integer" in type_:
         lo, hi = get_integer_bounds(schema)
         mul = schema.get("multipleOf")
+        if mul is not None and "number" not in type_ and Fraction(mul).numerator == 1:
+            # Every integer is a multiple of 1/n for all natural numbers n.
+            schema.pop("multipleOf")
+            mul = None
         if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):
             lo += mul - (lo % mul)
         if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
@@ -303,6 +311,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
         if lo is not None and hi is not None and lo > hi:
             type_.remove("integer")
+        elif type_ == ["integer"] and lo == hi and make_validator(schema).is_valid(lo):
+            return {"const": lo}
 
     if "array" in type_ and "contains" in schema:
         if isinstance(schema.get("items"), dict):
@@ -542,11 +552,8 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             tmp = schema.copy()
             ao = tmp.pop("allOf")
             out = merged([tmp] + ao)
-            if isinstance(out, dict):  # pragma: no branch
+            if out is not None:
                 schema = out
-                # TODO: this assertion is soley because mypy 0.750 doesn't know
-                # that `schema` is a dict otherwise. Needs minimal report upstream.
-                assert isinstance(schema, dict)
     if "oneOf" in schema:
         one_of = schema.pop("oneOf")
         assert isinstance(one_of, list)
@@ -701,8 +708,8 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             if isinstance(x, int) and isinstance(y, int):
                 out["multipleOf"] = x * y // math.gcd(x, y)
             elif x != y:
-                ratio = max(x, y) / min(x, y)
-                if ratio == int(ratio):  # e.g. x=0.5, y=2
+                ratio = Fraction(max(x, y)) / Fraction(min(x, y))
+                if ratio.denominator == 1:  # e.g. .75, 1.5
                     out["multipleOf"] = max(x, y)
                 else:
                     return None

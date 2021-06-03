@@ -41,6 +41,31 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
     jsonschema.validators.validator_for(schema).check_schema(schema)
 
 
+@pytest.mark.parametrize(
+    "schema, examples",
+    [
+        # See https://github.com/Julian/jsonschema/pull/746
+        pytest.param(
+            {"type": "integer", "multipleOf": 0.75},
+            [1.5e308],
+            marks=pytest.mark.xfail(raises=OverflowError),
+        ),
+    ],
+)
+def test_canonicalises_to_equivalent_fixpoint_examples(schema, examples):
+    """Check that an object drawn from an arbitrary schema is valid.
+
+    This is used to record past regressions from the test above.
+    """
+    cc = canonicalish(schema)
+    assert cc == canonicalish(cc)
+    validator = jsonschema.validators.validator_for(schema)
+    validator.check_schema(schema)
+    validator.check_schema(cc)
+    for instance in examples:
+        assert is_valid(instance, schema) == is_valid(instance, cc)
+
+
 def test_dependencies_canonicalises_to_fixpoint():
     """Check that an object drawn from an arbitrary schema is valid."""
     cc = canonicalish(
@@ -136,6 +161,9 @@ def test_canonicalises_to_empty(schema):
         ({"type": get_type({})}, {}),
         ({"required": []}, {}),
         ({"type": "integer", "not": {"type": "string"}}, {"type": "integer"}),
+        ({"type": "integer", "multipleOf": 1 / 32}, {"type": "integer"}),
+        ({"type": "number", "multipleOf": 1.0}, {"type": "integer"}),
+        ({"type": "number", "multipleOf": -3.0}, {"type": "integer", "multipleOf": 3}),
         (
             {"type": "array", "items": [True, False, True]},
             {"type": "array", "items": [{}], "maxItems": 1},
@@ -275,6 +303,14 @@ def test_canonicalises_to_empty(schema):
         (
             {"if": {"type": "integer"}, "then": {}, "else": {}, "type": "number"},
             {"type": "number"},
+        ),
+        (
+            {"allOf": [{"multipleOf": 1.5}], "multipleOf": 1.5},
+            {"multipleOf": 1.5},
+        ),
+        (
+            {"type": "integer", "allOf": [{"multipleOf": 0.5}, {"multipleOf": 1e308}]},
+            {"type": "integer", "multipleOf": 1e308},
         ),
     ],
 )

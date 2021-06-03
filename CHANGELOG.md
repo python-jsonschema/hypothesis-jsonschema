@@ -1,5 +1,8 @@
 # Changelog
 
+#### 0.20.1 - 2021-06-03
+- improved handling for fractional `multipleOf` values
+
 #### 0.20.0 - 2021-06-02
 - Allow `custom_formats` for known string formats (#83)
 
