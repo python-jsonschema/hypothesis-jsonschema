@@ -1,5 +1,26 @@
 [
     {
+        "draft4/$ref prevents a sibling id from changing the base uri": {
+            "allOf": [
+                {
+                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not ttp://localhost:1234/sibling_id/foo.json",
+                    "$ref": "foo.json",
+                    "id": "http://localhost:1234/sibling_id/"
+                }
+            ],
+            "definitions": {
+                "base_foo": {
+                    "$comment": "this canonical uri is http://localhost:1234/sibling_id/base/foo.json",
+                    "id": "foo.json",
+                    "minimum": 5
+                },
+                "foo": {
+                    "id": "http://localhost:1234/sibling_id/foo.json",
+                    "minimum": 2
+                }
+            },
+            "id": "http://localhost:1234/sibling_id/base/"
+        },
         "draft4/Location-independent identifier": {
             "allOf": [
                 {
@@ -9,19 +30,6 @@
             "definitions": {
                 "A": {
                     "id": "#foo",
-                    "type": "integer"
-                }
-            }
-        },
-        "draft4/Location-independent identifier with absolute URI": {
-            "allOf": [
-                {
-                    "$ref": "http://localhost:1234/bar#foo"
-                }
-            ],
-            "definitions": {
-                "A": {
-                    "id": "http://localhost:1234/bar#foo",
                     "type": "integer"
                 }
             }
@@ -83,6 +91,10 @@
             ],
             "type": "object"
         },
+        "draft4/all integers are multiples of 0.5, if overflow is handled": {
+            "multipleOf": 0.5,
+            "type": "number"
+        },
         "draft4/base URI change": {
             "id": "http://localhost:1234/",
             "items": {
@@ -140,6 +152,36 @@
             "exclusiveMinimum": true,
             "minimum": 1.1
         },
+        "draft4/id inside an enum is not a real identifier": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/id_in_enum"
+                },
+                {
+                    "$ref": "https://localhost:1234/my_identifier.json"
+                }
+            ],
+            "definitions": {
+                "id_in_enum": {
+                    "enum": [
+                        {
+                            "id": "https://localhost:1234/my_identifier.json",
+                            "type": "null"
+                        }
+                    ]
+                },
+                "real_id_in_schema": {
+                    "id": "https://localhost:1234/my_identifier.json",
+                    "type": "string"
+                },
+                "zzz_id_in_const": {
+                    "const": {
+                        "id": "https://localhost:1234/my_identifier.json",
+                        "type": "null"
+                    }
+                }
+            }
+        },
         "draft4/maximum validation (explicit false exclusivity)": {
             "exclusiveMaximum": false,
             "maximum": 3.0
@@ -181,11 +223,96 @@
             },
             "type": "object"
         },
-        "draft4/valid definition": {
+        "draft4/unicode characters do not match ascii ranges": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "[a-z]cole": {}
+            },
+            "type": "object"
+        },
+        "draft4/unicode digits are more than 0 through 9": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^\\d+$": {}
+            },
+            "type": "object"
+        },
+        "draft4/unicode semantics should be used for all patternProperties matching": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "\\wcole": {}
+            },
+            "type": "object"
+        },
+        "draft4/validate definition against metaschema": {
             "$ref": "http://json-schema.org/draft-04/schema#"
         },
+        "draft7/$id inside an unknown keyword is not a real identifier": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/id_in_unknown0"
+                },
+                {
+                    "$ref": "#/definitions/id_in_unknown1"
+                },
+                {
+                    "$ref": "https://localhost:1234/unknownKeyword/my_identifier.json"
+                }
+            ],
+            "definitions": {
+                "id_in_unknown0": {
+                    "not": {
+                        "array_of_schemas": [
+                            {
+                                "$id": "https://localhost:1234/unknownKeyword/my_identifier.json",
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "id_in_unknown1": {
+                    "not": {
+                        "object_of_schemas": {
+                            "foo": {
+                                "$id": "https://localhost:1234/unknownKeyword/my_identifier.json",
+                                "type": "integer"
+                            }
+                        }
+                    }
+                },
+                "real_id_in_schema": {
+                    "$id": "https://localhost:1234/unknownKeyword/my_identifier.json",
+                    "type": "string"
+                }
+            }
+        },
+        "draft7/$ref prevents a sibling $id from changing the base uri": {
+            "$id": "http://localhost:1234/sibling_id/base/",
+            "allOf": [
+                {
+                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not ttp://localhost:1234/sibling_id/foo.json",
+                    "$id": "http://localhost:1234/sibling_id/",
+                    "$ref": "foo.json"
+                }
+            ],
+            "definitions": {
+                "base_foo": {
+                    "$comment": "this canonical uri is http://localhost:1234/sibling_id/base/foo.json",
+                    "$id": "foo.json",
+                    "minimum": 5
+                },
+                "foo": {
+                    "$id": "http://localhost:1234/sibling_id/foo.json",
+                    "minimum": 2
+                }
+            }
+        },
         "draft7/$ref to boolean schema true": {
-            "$ref": "#/definitions/bool",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/bool"
+                }
+            ],
             "definitions": {
                 "bool": true
             }
@@ -239,19 +366,6 @@
             "definitions": {
                 "A": {
                     "$id": "#foo",
-                    "type": "integer"
-                }
-            }
-        },
-        "draft7/Location-independent identifier with absolute URI": {
-            "allOf": [
-                {
-                    "$ref": "http://localhost:1234/bar#foo"
-                }
-            ],
-            "definitions": {
-                "A": {
-                    "$id": "http://localhost:1234/bar#foo",
                     "type": "integer"
                 }
             }
@@ -585,7 +699,7 @@
                 {}
             ]
         },
-        "draft7/array of items with no additionalItems": {
+        "draft7/array of items with no additionalItems permitted": {
             "additionalItems": false,
             "items": [
                 {},
@@ -726,6 +840,12 @@
         "draft7/contains keyword with const keyword": {
             "contains": {
                 "const": 5
+            }
+        },
+        "draft7/contains with false if subschema": {
+            "contains": {
+                "else": true,
+                "if": false
             }
         },
         "draft7/dependencies": {
@@ -892,6 +1012,36 @@
                 null
             ]
         },
+        "draft7/id inside an enum is not a real identifier": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/id_in_enum"
+                },
+                {
+                    "$ref": "https://localhost:1234/id/my_identifier.json"
+                }
+            ],
+            "definitions": {
+                "id_in_enum": {
+                    "enum": [
+                        {
+                            "$id": "https://localhost:1234/id/my_identifier.json",
+                            "type": "null"
+                        }
+                    ]
+                },
+                "real_id_in_schema": {
+                    "$id": "https://localhost:1234/id/my_identifier.json",
+                    "type": "string"
+                },
+                "zzz_id_in_const": {
+                    "const": {
+                        "$id": "https://localhost:1234/id/my_identifier.json",
+                        "type": "null"
+                    }
+                }
+            }
+        },
         "draft7/if and else without then": {
             "else": {
                 "multipleOf": 2
@@ -1021,9 +1171,15 @@
             ],
             "type": "array"
         },
-        "draft7/items is schema, no additionalItems": {
-            "additionalItems": false,
-            "items": {}
+        "draft7/items validation adjusts the starting index for additionalItems": {
+            "additionalItems": {
+                "type": "integer"
+            },
+            "items": [
+                {
+                    "type": "string"
+                }
+            ]
         },
         "draft7/items with boolean schema (false)": {
             "items": false
@@ -1169,7 +1325,11 @@
             ]
         },
         "draft7/nested refs": {
-            "$ref": "#/definitions/c",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/c"
+                }
+            ],
             "definitions": {
                 "a": {
                     "type": "integer"
@@ -1448,6 +1608,11 @@
                 "maxLength": 3
             }
         },
+        "draft7/propertyNames validation with pattern": {
+            "propertyNames": {
+                "pattern": "^a+$"
+            }
+        },
         "draft7/propertyNames with boolean schema false": {
             "propertyNames": false
         },
@@ -1482,6 +1647,33 @@
                 }
             }
         },
+        "draft7/refs with relative uris and defs": {
+            "$id": "http://example.com/schema-relative-uri-defs1.json",
+            "allOf": [
+                {
+                    "$ref": "schema-relative-uri-defs2.json"
+                }
+            ],
+            "properties": {
+                "foo": {
+                    "$id": "schema-relative-uri-defs2.json",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/inner"
+                        }
+                    ],
+                    "definitions": {
+                        "inner": {
+                            "properties": {
+                                "bar": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "draft7/regexes are not anchored by default and are case sensitive": {
             "patternProperties": {
                 "X_": {
@@ -1512,8 +1704,43 @@
                 }
             }
         },
+        "draft7/relative refs with absolute uris and defs": {
+            "$id": "http://example.com/schema-refs-absolute-uris-defs1.json",
+            "allOf": [
+                {
+                    "$ref": "schema-refs-absolute-uris-defs2.json"
+                }
+            ],
+            "properties": {
+                "foo": {
+                    "$id": "http://example.com/schema-refs-absolute-uris-defs2.json",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/inner"
+                        }
+                    ],
+                    "definitions": {
+                        "inner": {
+                            "properties": {
+                                "bar": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "draft7/remote ref": {
             "$ref": "http://localhost:1234/integer.json"
+        },
+        "draft7/remote ref with ref to definitions": {
+            "$id": "http://localhost:1234/schema-remote-ref-ref-defs1.json",
+            "allOf": [
+                {
+                    "$ref": "ref-and-definitions.json"
+                }
+            ]
         },
         "draft7/remote ref, containing refs itself": {
             "$ref": "http://json-schema.org/draft-07/schema#"
@@ -1575,6 +1802,16 @@
         "draft7/string type matches strings": {
             "type": "string"
         },
+        "draft7/the default keyword does not do anything if the property is missing": {
+            "properties": {
+                "alpha": {
+                    "default": 5,
+                    "maximum": 3,
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
         "draft7/type as array with one item": {
             "type": [
                 "string"
@@ -1592,6 +1829,30 @@
                 "object",
                 "null"
             ]
+        },
+        "draft7/unicode characters do not match ascii ranges": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "[a-z]cole": true
+            },
+            "type": "object"
+        },
+        "draft7/unicode digits are more than 0 through 9": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^\\d+$": true
+            },
+            "type": "object"
+        },
+        "draft7/unicode semantics should be used for all pattern matching": {
+            "pattern": "\\wcole"
+        },
+        "draft7/unicode semantics should be used for all patternProperties matching": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "\\wcole": true
+            },
+            "type": "object"
         },
         "draft7/uniqueItems validation": {
             "uniqueItems": true
@@ -1645,9 +1906,6 @@
             ],
             "uniqueItems": false
         },
-        "draft7/valid definition": {
-            "$ref": "http://json-schema.org/draft-07/schema#"
-        },
         "draft7/validate against correct branch, then vs else": {
             "else": {
                 "multipleOf": 2
@@ -1658,6 +1916,9 @@
             "then": {
                 "minimum": -10
             }
+        },
+        "draft7/validate definition against metaschema": {
+            "$ref": "http://json-schema.org/draft-07/schema#"
         },
         "draft7/validation of IDN e-mail addresses": {
             "format": "idn-email"
@@ -1743,14 +2004,19 @@
         },
         "draft7/validation of time strings": {
             "format": "time"
+        },
+        "draft7/when items is schema, additionalItems does nothing": {
+            "additionalItems": false,
+            "items": {}
         }
     },
     {
-        "draft4/invalid definition": {
-            "$ref": "http://json-schema.org/draft-04/schema#"
-        },
         "draft7/$ref to boolean schema false": {
-            "$ref": "#/definitions/bool",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/bool"
+                }
+            ],
             "definitions": {
                 "bool": false
             }
@@ -1808,9 +2074,6 @@
             ]
         },
         "draft7/boolean schema 'false'": false,
-        "draft7/invalid definition": {
-            "$ref": "http://json-schema.org/draft-07/schema#"
-        },
         "draft7/invalid instance should not raise error when float division = inf": {
             "multipleOf": 0.123456789,
             "type": "integer"

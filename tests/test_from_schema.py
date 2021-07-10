@@ -47,14 +47,9 @@ def test_generated_data_matches_schema(schema_strategy, data):
         value = data.draw(from_schema(schema), "value from schema")
     except InvalidArgument:
         reject()
-    try:
-        jsonschema.validate(value, schema)
-        # This checks that our canonicalisation is semantically equivalent.
-        jsonschema.validate(value, canonicalish(schema))
-    except jsonschema.ValidationError as err:
-        if "'uniqueItems': True" in str(err):
-            pytest.xfail("https://github.com/Julian/jsonschema/issues/686")
-        raise
+    jsonschema.validate(value, schema)
+    # This checks that our canonicalisation is semantically equivalent.
+    jsonschema.validate(value, canonicalish(schema))
 
 
 @given(from_schema(True))
@@ -222,10 +217,12 @@ def test_invalid_ref_schemas_are_invalid(name):
 RECURSIVE_REFS = {
     # From upstream validation test suite
     "draft4/valid definition",
+    "draft7/valid definition",
+    "draft4/validate definition against metaschema",
+    "draft7/validate definition against metaschema",
     "draft4/remote ref, containing refs itself",
     "draft7/remote ref, containing refs itself",
     "draft7/root pointer ref",
-    "draft7/valid definition",
     # Schema also requires draft 03, which hypothesis-jsonschema doesn't support
     "A JSON Schema for ninjs by the IPTC. News and publishing information. See https://iptc.org/standards/ninjs/-1.0",
     # From schemastore
