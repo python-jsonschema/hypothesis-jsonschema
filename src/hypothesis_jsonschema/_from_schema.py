@@ -59,10 +59,10 @@ def merged_as_strategies(
             continue
         s = merged([inputs[g] for g in group])
         if s is not None and s != FALSEY:
-            validators = [make_validator(s) for s in schemas]
+            validators = [make_validator(s).is_valid for s in schemas]
             strats.append(
                 from_schema(s, custom_formats=custom_formats).filter(
-                    lambda obj: all(v.is_valid(obj) for v in validators)
+                    lambda obj: all(v(obj) for v in validators)
                 )
             )
             combined.update(group)
@@ -257,7 +257,7 @@ def number_schema(schema: dict) -> st.SearchStrategy[float]:
         exclude_min=exclude_min,
         exclude_max=exclude_max,
         # Filter out negative-zero as it does not exist in JSON
-    ).filter(lambda n: n != 0 or math.copysign(1, n) == 1)
+    ).map(lambda n: n if n != 0 else abs(n))
 
 
 def rfc3339(name: str) -> st.SearchStrategy[str]:
@@ -575,18 +575,19 @@ def object_schema(
     dep_schemas = {k: v for k, v in dependencies.items() if k not in dep_names}
     del dependencies
 
+    valid_name = make_validator(names).is_valid
+    known_optional_names: List[str] = sorted(
+        set(filter(valid_name, set(dep_names).union(dep_schemas, properties)))
+        - set(required)
+    )
     name_strats = (
-        st.sampled_from(sorted(dep_names) + sorted(dep_schemas) + sorted(properties))
-        if (dep_names or dep_schemas or properties)
-        else st.nothing(),
         from_schema(names, custom_formats=custom_formats)
         if additional_allowed
         else st.nothing(),
-        st.one_of([st.from_regex(p) for p in sorted(patterns)]),
+        st.sampled_from(known_optional_names) if known_optional_names else st.nothing(),
+        st.one_of([st.from_regex(p).filter(valid_name) for p in sorted(patterns)]),
     )
-    all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty]).filter(
-        make_validator(names).is_valid
-    )
+    all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty])
 
     @st.composite  # type: ignore
     def from_object_schema(draw: Any) -> Any:
