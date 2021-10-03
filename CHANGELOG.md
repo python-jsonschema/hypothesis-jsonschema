@@ -4,6 +4,8 @@
 - reduced filtering for object keys (#88)
 - updated to `jsonschema >= 4.0.0` (#89);
   though support for `Draft 2019-09` and `2020-12` will take longer
+- requires Python 3.7+, a few months ahead of the
+  [3.6 end of life date](https://www.python.org/dev/peps/pep-0494/#lifespan)
 
 #### 0.20.1 - 2021-06-03
 - improved handling for fractional `multipleOf` values
