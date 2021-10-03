@@ -38,19 +38,12 @@ def test_canonicalises_to_equivalent_fixpoint(schema_strategy, data):
         assume(False)
     instance = data.draw(JSON_STRATEGY | strat, label="instance")
     assert is_valid(instance, schema) == is_valid(instance, cc)
-    jsonschema.validators.validator_for(schema).check_schema(schema)
+    make_validator(schema)
 
 
 @pytest.mark.parametrize(
     "schema, examples",
-    [
-        # See https://github.com/Julian/jsonschema/pull/746
-        pytest.param(
-            {"type": "integer", "multipleOf": 0.75},
-            [1.5e308],
-            marks=pytest.mark.xfail(raises=OverflowError),
-        ),
-    ],
+    [({"type": "integer", "multipleOf": 0.75}, [1.5e308])],
 )
 def test_canonicalises_to_equivalent_fixpoint_examples(schema, examples):
     """Check that an object drawn from an arbitrary schema is valid.

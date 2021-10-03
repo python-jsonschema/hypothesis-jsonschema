@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=deps/test.txt deps/test.in setup.py
 #
+arrow==1.2.0
+    # via isoduration
 atomicwrites==1.4.0
     # via pytest
 attrs==21.2.0
@@ -11,32 +13,38 @@ attrs==21.2.0
     #   hypothesis
     #   jsonschema
     #   pytest
+cached-property==1.5.2
+    # via fqdn
 colorama==0.4.4
     # via pytest
-coverage==5.5
+coverage==6.0
     # via pytest-cov
 execnet==1.9.0
     # via pytest-xdist
-hypothesis==6.14.1
+fqdn==1.5.1
+    # via jsonschema
+hypothesis==6.23.1
     # via hypothesis-jsonschema (setup.py)
 idna==3.2
     # via jsonschema
-importlib-metadata==4.6.1
+importlib-metadata==4.8.1
     # via
     #   jsonschema
     #   pluggy
     #   pytest
 iniconfig==1.1.1
     # via pytest
+isoduration==20.11.0
+    # via jsonschema
 jsonpointer==2.1
     # via jsonschema
-jsonschema[format]==3.2.0
+jsonschema[format]==4.0.1
     # via
     #   -r deps/test.in
     #   hypothesis-jsonschema (setup.py)
 packaging==21.0
     # via pytest
-pluggy==0.13.1
+pluggy==1.0.0
     # via pytest
 py==1.10.0
     # via
@@ -46,7 +54,7 @@ pyparsing==2.4.7
     # via packaging
 pyrsistent==0.18.0
     # via jsonschema
-pytest==6.2.4
+pytest==6.2.5
     # via
     #   -r deps/test.in
     #   pytest-cov
@@ -56,26 +64,31 @@ pytest-cov==2.12.1
     # via -r deps/test.in
 pytest-forked==1.3.0
     # via pytest-xdist
-pytest-xdist==2.3.0
+pytest-xdist==2.4.0
     # via -r deps/test.in
+python-dateutil==2.8.2
+    # via arrow
+rfc3339-validator==0.1.4
+    # via jsonschema
 rfc3987==1.3.8
     # via jsonschema
 six==1.16.0
-    # via jsonschema
+    # via
+    #   python-dateutil
+    #   rfc3339-validator
 sortedcontainers==2.4.0
     # via hypothesis
-strict-rfc3339==0.7
-    # via jsonschema
 toml==0.10.2
     # via
     #   pytest
     #   pytest-cov
-typing-extensions==3.10.0.0
-    # via importlib-metadata
+typing-extensions==3.10.0.2
+    # via
+    #   arrow
+    #   importlib-metadata
+uri-template==1.1.0
+    # via jsonschema
 webcolors==1.11.1
     # via jsonschema
-zipp==3.5.0
+zipp==3.6.0
     # via importlib-metadata
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools

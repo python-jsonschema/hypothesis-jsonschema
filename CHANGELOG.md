@@ -1,5 +1,10 @@
 # Changelog
 
+#### 0.21.0 - 2021-10-03
+- reduced filtering for object keys (#88)
+- updated to `jsonschema >= 4.0.0` (#89);
+  though support for `Draft 2019-09` and `2020-12` will take longer
+
 #### 0.20.1 - 2021-06-03
 - improved handling for fractional `multipleOf` values
 

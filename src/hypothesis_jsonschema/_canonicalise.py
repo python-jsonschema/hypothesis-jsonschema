@@ -12,6 +12,7 @@ one way to generate any given value... but much more importantly, we can do
 most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
+import contextlib
 import itertools
 import json
 import math
@@ -69,13 +70,15 @@ def next_down(val: float) -> float:
 
 
 def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
-    try:
+    with contextlib.suppress(jsonschema.exceptions.SchemaError):
         validator = jsonschema.validators.validator_for(schema)
         validator.check_schema(schema)
-    except jsonschema.exceptions.SchemaError:
-        validator = jsonschema.Draft4Validator
-        validator.check_schema(schema)
-    return validator
+        return validator
+    with contextlib.suppress(jsonschema.exceptions.SchemaError):
+        jsonschema.Draft7Validator.check_schema(schema)
+        return jsonschema.Draft7Validator
+    jsonschema.Draft4Validator.check_schema(schema)
+    return jsonschema.Draft4Validator
 
 
 def make_validator(schema: Schema) -> JSONSchemaValidator:
