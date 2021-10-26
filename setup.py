@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import setuptools
 
@@ -46,7 +47,7 @@ setuptools.setup(
         "Topic :: Software Development :: Testing",
         "Typing :: Typed",
     ],
-    long_description=open(README).read(),
+    long_description=pathlib.Path(README).read_text(),
     long_description_content_type="text/markdown",
     keywords="python testing fuzzing property-based-testing json-schema",
 )

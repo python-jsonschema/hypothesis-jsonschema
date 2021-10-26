@@ -291,9 +291,9 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
         return st.one_of(st.just("Z"), rfc3339("time-numoffset"))
     if name == "partial-time":
         return st.times().map(str)
-    if name == "date" or name == "full-date":
+    if name in ("date", "full-date"):
         return st.dates().map(str)
-    if name == "time" or name == "full-time":
+    if name in ("time", "full-time"):
         return st.tuples(rfc3339("partial-time"), rfc3339("time-offset")).map("".join)
     assert name == "date-time"
     return st.tuples(rfc3339("full-date"), rfc3339("full-time")).map("T".join)

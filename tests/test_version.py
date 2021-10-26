@@ -1,7 +1,7 @@
 """Tests for the hypothesis-jsonschema library."""
 
 import re
-from datetime import date
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
@@ -33,7 +33,7 @@ def get_releases():
 def test_last_release_against_changelog():
     last_version, last_date = get_releases()[0]
     assert last_version == Version.from_string(hypothesis_jsonschema.__version__)
-    assert last_date <= date.today().isoformat()
+    assert last_date <= datetime.now(timezone.utc).date().isoformat()
 
 
 def test_changelog_is_ordered():

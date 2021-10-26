@@ -6,7 +6,6 @@ complex schemata, and http://schemastore.org/json/ for smaller schemata
 that - as the official test suite - should cover each feature in the spec.
 """
 
-import concurrent.futures
 import io
 import json
 import urllib.request
@@ -20,6 +19,9 @@ def get_json(url: str) -> Any:
     with urllib.request.urlopen(url) as handle:
         return json.load(handle)
 
+
+"""
+import concurrent.futures
 
 # Load cached schemas, so we cope with flaky connections and keep deleted entries
 try:
@@ -54,6 +56,7 @@ with concurrent.futures.ThreadPoolExecutor() as ex:
 # Dump them all back to the catalog file.
 with open("tests/corpus-schemastore-catalog.json", mode="w") as f:
     json.dump(schemata, f, indent=4, sort_keys=True)
+"""
 
 
 # Part two: fetch the official jsonschema compatibility test suite

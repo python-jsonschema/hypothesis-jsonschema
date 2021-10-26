@@ -211,7 +211,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     This is obviously incomplete, but improves best-effort recognition of
     equivalent schemas and makes conversion logic simpler.
     """
-    if schema is True:
+    if schema is True:  # noqa: SIM114
         return {}
     elif schema is False:
         return {"not": {}}
@@ -245,13 +245,16 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if_ = schema.pop("if", None)
     then = schema.pop("then", schema)
     else_ = schema.pop("else", schema)
-    if if_ is not None and (then is not schema or else_ is not schema):
-        if then not in (if_, TRUTHY) or else_ != TRUTHY:
-            alternatives = [
-                {"allOf": [if_, then, schema]},
-                {"allOf": [{"not": if_}, else_, schema]},
-            ]
-            schema = canonicalish({"anyOf": alternatives})
+    if (
+        if_ is not None
+        and (then is not schema or else_ is not schema)
+        and (then not in (if_, TRUTHY) or else_ != TRUTHY)
+    ):
+        alternatives = [
+            {"allOf": [if_, then, schema]},
+            {"allOf": [{"not": if_}, else_, schema]},
+        ]
+        schema = canonicalish({"anyOf": alternatives})
     assert isinstance(schema, dict)
     # Recurse into the value of each keyword with a schema (or list of them) as a value
     for key in SCHEMA_KEYS:
@@ -395,7 +398,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         type_.remove("object")
     # Discard dependencies values that don't restrict anything
     for k, v in schema.get("dependencies", {}).copy().items():
-        if v == [] or v == TRUTHY:
+        if v in ([], TRUTHY):
             schema["dependencies"].pop(k)
     # Remove no-op keywords
     for kw, identity in {
@@ -438,15 +441,13 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         max_ = schema.get("maxProperties", float("inf"))
         assert isinstance(max_, (int, float))
         properties = schema.get("properties", {})
-        if len(schema["required"]) > max_:
+        propnames_validator = make_validator(schema.get("propertyNames", {})).is_valid
+        if (
+            len(schema["required"]) > max_
+            or any(properties.get(name, {}) == FALSEY for name in schema["required"])
+            or not all(propnames_validator(name) for name in schema["required"])
+        ):
             type_.remove("object")
-        elif any(properties.get(name, {}) == FALSEY for name in schema["required"]):
-            type_.remove("object")
-        else:
-            propnames = schema.get("propertyNames", {})
-            validator = make_validator(propnames)
-            if not all(validator.is_valid(name) for name in schema["required"]):
-                type_.remove("object")
 
     for t, kw in TYPE_SPECIFIC_KEYS:
         numeric = {"number", "integer"}
@@ -719,7 +720,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
         if "contains" in out and "contains" in s and out["contains"] != s["contains"]:
             # If one `contains` schema is a subset of the other, we can discard it.
             m = merged([out["contains"], s["contains"]])
-            if m == out["contains"] or m == s["contains"]:
+            if m in (out["contains"], s["contains"]):
                 out["contains"] = m
                 s.pop("contains")
         if "not" in out and "not" in s and out["not"] != s["not"]:
