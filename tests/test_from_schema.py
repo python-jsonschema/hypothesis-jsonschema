@@ -110,6 +110,11 @@ NON_EXISTENT_REF_SCHEMAS = {
 }
 UNSUPPORTED_SCHEMAS = {
     # Technically valid, but using regex patterns not supported by Python
+    "draft4/unicode digits are more than 0 through 9",
+    "draft4/unicode semantics should be used for all patternProperties matching",
+    "draft7/unicode digits are more than 0 through 9",
+    "draft7/unicode semantics should be used for all pattern matching",
+    "draft7/unicode semantics should be used for all patternProperties matching",
     "draft7/ECMA 262 regex escapes control codes with \\c and lower letter",
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
     "JSON schema for nodemon.json configuration files.",
@@ -178,6 +183,7 @@ SLOW_SCHEMAS = {
     "JSON API document",
     "Prometheus configuration file",
     "JSON schema for electron-build configuration file.",
+    "Pyrseas database schema versioning for Postgres databases, v0.8",
     # oneOf on property names means only objects are valid, but it's a very
     # filter-heavy way to express that.  TODO: canonicalise oneOf to anyOf.
     "draft7/oneOf complex types",

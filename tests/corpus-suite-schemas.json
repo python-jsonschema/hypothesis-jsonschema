@@ -3,7 +3,7 @@
         "draft4/$ref prevents a sibling id from changing the base uri": {
             "allOf": [
                 {
-                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not ttp://localhost:1234/sibling_id/foo.json",
+                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not http://localhost:1234/sibling_id/foo.json",
                     "$ref": "foo.json",
                     "id": "http://localhost:1234/sibling_id/"
                 }
@@ -12,11 +12,11 @@
                 "base_foo": {
                     "$comment": "this canonical uri is http://localhost:1234/sibling_id/base/foo.json",
                     "id": "foo.json",
-                    "minimum": 5
+                    "type": "number"
                 },
                 "foo": {
                     "id": "http://localhost:1234/sibling_id/foo.json",
-                    "minimum": 2
+                    "type": "string"
                 }
             },
             "id": "http://localhost:1234/sibling_id/base/"
@@ -89,6 +89,20 @@
                 "meta",
                 "nodes"
             ],
+            "type": "object"
+        },
+        "draft4/\\d in patternProperties matches [0-9], not unicode digits": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^\\d+$": {}
+            },
+            "type": "object"
+        },
+        "draft4/\\w in patternProperties matches [A-Za-z0-9_], not unicode letters": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "\\wcole": {}
+            },
             "type": "object"
         },
         "draft4/all integers are multiples of 0.5, if overflow is handled": {
@@ -182,6 +196,27 @@
                 }
             }
         },
+        "draft4/id must be resolved against nearest parent, not just immediate parent": {
+            "allOf": [
+                {
+                    "$ref": "http://example.com/b/d.json"
+                }
+            ],
+            "definitions": {
+                "x": {
+                    "id": "http://example.com/b/c.json",
+                    "not": {
+                        "definitions": {
+                            "y": {
+                                "id": "d.json",
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            },
+            "id": "http://example.com/a.json"
+        },
         "draft4/maximum validation (explicit false exclusivity)": {
             "exclusiveMaximum": false,
             "maximum": 3.0
@@ -233,14 +268,14 @@
         "draft4/unicode digits are more than 0 through 9": {
             "additionalProperties": false,
             "patternProperties": {
-                "^\\d+$": {}
+                "^\\p{digit}+$": {}
             },
             "type": "object"
         },
         "draft4/unicode semantics should be used for all patternProperties matching": {
             "additionalProperties": false,
             "patternProperties": {
-                "\\wcole": {}
+                "\\p{Letter}cole": {}
             },
             "type": "object"
         },
@@ -286,11 +321,32 @@
                 }
             }
         },
+        "draft7/$id must be resolved against nearest parent, not just immediate parent": {
+            "$id": "http://example.com/a.json",
+            "allOf": [
+                {
+                    "$ref": "http://example.com/b/d.json"
+                }
+            ],
+            "definitions": {
+                "x": {
+                    "$id": "http://example.com/b/c.json",
+                    "not": {
+                        "definitions": {
+                            "y": {
+                                "$id": "d.json",
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "draft7/$ref prevents a sibling $id from changing the base uri": {
             "$id": "http://localhost:1234/sibling_id/base/",
             "allOf": [
                 {
-                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not ttp://localhost:1234/sibling_id/foo.json",
+                    "$comment": "$ref resolves to http://localhost:1234/sibling_id/base/foo.json, not http://localhost:1234/sibling_id/foo.json",
                     "$id": "http://localhost:1234/sibling_id/",
                     "$ref": "foo.json"
                 }
@@ -299,11 +355,11 @@
                 "base_foo": {
                     "$comment": "this canonical uri is http://localhost:1234/sibling_id/base/foo.json",
                     "$id": "foo.json",
-                    "minimum": 5
+                    "type": "number"
                 },
                 "foo": {
                     "$id": "http://localhost:1234/sibling_id/foo.json",
-                    "minimum": 2
+                    "type": "string"
                 }
             }
         },
@@ -436,6 +492,26 @@
                 "nodes"
             ],
             "type": "object"
+        },
+        "draft7/\\d in pattern matches [0-9], not unicode digits": {
+            "pattern": "^\\d+$"
+        },
+        "draft7/\\d in patternProperties matches [0-9], not unicode digits": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^\\d+$": true
+            },
+            "type": "object"
+        },
+        "draft7/\\w in patternProperties matches [A-Za-z0-9_], not unicode letters": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "\\wcole": true
+            },
+            "type": "object"
+        },
+        "draft7/\\w in patterns matches [A-Za-z0-9_], not unicode letters": {
+            "pattern": "\\wcole"
         },
         "draft7/a schema given for items": {
             "items": {
@@ -848,6 +924,12 @@
                 "if": false
             }
         },
+        "draft7/date format": {
+            "format": "date"
+        },
+        "draft7/date-time format": {
+            "format": "date-time"
+        },
         "draft7/dependencies": {
             "dependencies": {
                 "bar": [
@@ -883,6 +965,9 @@
                     ]
                 }
             }
+        },
+        "draft7/email format": {
+            "format": "email"
         },
         "draft7/enum with 0 does not match false": {
             "enum": [
@@ -1012,6 +1097,9 @@
                 null
             ]
         },
+        "draft7/hostname format": {
+            "format": "hostname"
+        },
         "draft7/id inside an enum is not a real identifier": {
             "anyOf": [
                 {
@@ -1041,6 +1129,12 @@
                     }
                 }
             }
+        },
+        "draft7/idn-email format": {
+            "format": "idn-email"
+        },
+        "draft7/idn-hostname format": {
+            "format": "idn-hostname"
         },
         "draft7/if and else without then": {
             "else": {
@@ -1128,6 +1222,18 @@
                 }
             }
         },
+        "draft7/ipv4 format": {
+            "format": "ipv4"
+        },
+        "draft7/ipv6 format": {
+            "format": "ipv6"
+        },
+        "draft7/iri format": {
+            "format": "iri"
+        },
+        "draft7/iri-reference format": {
+            "format": "iri-reference"
+        },
         "draft7/items + contains": {
             "contains": {
                 "multipleOf": 3
@@ -1192,6 +1298,9 @@
                 true,
                 false
             ]
+        },
+        "draft7/json-pointer format": {
+            "format": "json-pointer"
         },
         "draft7/maxItems validation": {
             "maxItems": 2
@@ -1674,6 +1783,9 @@
                 }
             }
         },
+        "draft7/regex format": {
+            "format": "regex"
+        },
         "draft7/regexes are not anchored by default and are case sensitive": {
             "patternProperties": {
                 "X_": {
@@ -1730,6 +1842,9 @@
                     }
                 }
             }
+        },
+        "draft7/relative-json-pointer format": {
+            "format": "relative-json-pointer"
         },
         "draft7/remote ref": {
             "$ref": "http://localhost:1234/integer.json"
@@ -1812,6 +1927,9 @@
             },
             "type": "object"
         },
+        "draft7/time format": {
+            "format": "time"
+        },
         "draft7/type as array with one item": {
             "type": [
                 "string"
@@ -1840,17 +1958,17 @@
         "draft7/unicode digits are more than 0 through 9": {
             "additionalProperties": false,
             "patternProperties": {
-                "^\\d+$": true
+                "^\\p{digit}+$": true
             },
             "type": "object"
         },
         "draft7/unicode semantics should be used for all pattern matching": {
-            "pattern": "\\wcole"
+            "pattern": "\\p{Letter}cole"
         },
         "draft7/unicode semantics should be used for all patternProperties matching": {
             "additionalProperties": false,
             "patternProperties": {
-                "\\wcole": true
+                "\\p{Letter}cole": true
             },
             "type": "object"
         },
@@ -1906,6 +2024,15 @@
             ],
             "uniqueItems": false
         },
+        "draft7/uri format": {
+            "format": "uri"
+        },
+        "draft7/uri-reference format": {
+            "format": "uri-reference"
+        },
+        "draft7/uri-template format": {
+            "format": "uri-template"
+        },
         "draft7/validate against correct branch, then vs else": {
             "else": {
                 "multipleOf": 2
@@ -1920,12 +2047,6 @@
         "draft7/validate definition against metaschema": {
             "$ref": "http://json-schema.org/draft-07/schema#"
         },
-        "draft7/validation of IDN e-mail addresses": {
-            "format": "idn-email"
-        },
-        "draft7/validation of IDN hostnames": {
-            "format": "idn-hostname"
-        },
         "draft7/validation of IP addresses": {
             "format": "ipv4"
         },
@@ -1935,14 +2056,8 @@
         "draft7/validation of IRI References": {
             "format": "iri-reference"
         },
-        "draft7/validation of IRI references": {
-            "format": "iri-reference"
-        },
         "draft7/validation of IRIs": {
             "format": "iri"
-        },
-        "draft7/validation of JSON pointers": {
-            "format": "json-pointer"
         },
         "draft7/validation of JSON-pointers (JSON String Representation)": {
             "format": "json-pointer"
@@ -1952,12 +2067,6 @@
         },
         "draft7/validation of URI References": {
             "format": "uri-reference"
-        },
-        "draft7/validation of URI references": {
-            "format": "uri-reference"
-        },
-        "draft7/validation of URI templates": {
-            "format": "uri-template"
         },
         "draft7/validation of URIs": {
             "format": "uri"
@@ -1984,20 +2093,11 @@
         "draft7/validation of host names": {
             "format": "hostname"
         },
-        "draft7/validation of hostnames": {
-            "format": "hostname"
-        },
         "draft7/validation of internationalized host names": {
             "format": "idn-hostname"
         },
-        "draft7/validation of regexes": {
-            "format": "regex"
-        },
         "draft7/validation of regular expressions": {
             "format": "regex"
-        },
-        "draft7/validation of relative JSON pointers": {
-            "format": "relative-json-pointer"
         },
         "draft7/validation of string-encoded content based on media type": {
             "contentMediaType": "application/json"
