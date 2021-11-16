@@ -305,6 +305,27 @@ def test_canonicalises_to_empty(schema):
             {"type": "integer", "allOf": [{"multipleOf": 0.5}, {"multipleOf": 1e308}]},
             {"type": "integer", "multipleOf": 1e308},
         ),
+        (
+            {
+                "additionalProperties": {"not": {}},
+                "properties": {"a": {"not": {}}},
+                "type": "object",
+            },
+            {"maxProperties": 0, "type": "object"},
+        ),
+        (
+            {
+                "additionalProperties": {"not": {}},
+                "properties": {"a": {"not": {}}, "b": {}},
+                "type": "object",
+            },
+            {
+                "additionalProperties": {"not": {}},
+                "properties": {"b": {}},
+                "maxProperties": 1,
+                "type": "object",
+            },
+        ),
     ],
 )
 def test_canonicalises_to_expected(schema, expected):
