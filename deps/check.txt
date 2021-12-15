@@ -10,18 +10,18 @@ attrs==21.2.0
     # via flake8-bugbear
 autoflake==1.4
     # via shed
-bandit==1.7.0
+bandit==1.7.1
     # via flake8-bandit
-black==21.9b0
+black==21.12b0
     # via shed
 click==8.0.3
     # via black
+com2ann==0.3.0
+    # via shed
 colorama==0.4.4
     # via
     #   bandit
     #   click
-com2ann==0.3.0
-    # via shed
 flake8==4.0.1
     # via
     #   -r deps/check.in
@@ -39,11 +39,11 @@ flake8==4.0.1
     #   flake8-simplify
     #   flake8-strftime
     #   pep8-naming
-flake8-2020==1.6.0
+flake8-2020==1.6.1
     # via -r deps/check.in
 flake8-bandit==2.1.2
     # via -r deps/check.in
-flake8-bugbear==21.9.2
+flake8-bugbear==21.11.29
     # via -r deps/check.in
 flake8-builtins==1.5.3
     # via -r deps/check.in
@@ -53,7 +53,7 @@ flake8-datetimez==20.10.0
     # via -r deps/check.in
 flake8-docstrings==1.6.0
     # via -r deps/check.in
-flake8-helper==0.1.1
+flake8-helper==0.2.0
     # via flake8-strftime
 flake8-mutable==1.2.0
     # via -r deps/check.in
@@ -79,9 +79,9 @@ importlib-metadata==4.2.0
     #   flake8-comprehensions
     #   flake8-simplify
     #   stevedore
-isort==5.9.3
+isort==5.10.1
     # via shed
-libcst==0.3.21
+libcst==0.3.23
     # via shed
 mccabe==0.6.1
     # via flake8
@@ -94,7 +94,7 @@ mypy-extensions==0.4.3
     #   typing-inspect
 pathspec==0.9.0
     # via black
-pbr==5.6.0
+pbr==5.8.0
     # via stevedore
 pep8-naming==0.12.1
     # via -r deps/check.in
@@ -111,23 +111,19 @@ pyflakes==2.4.0
     # via
     #   autoflake
     #   flake8
-pyupgrade==2.29.0
+pyupgrade==2.29.1
     # via shed
 pyyaml==6.0
     # via
     #   bandit
     #   libcst
-regex==2021.10.23
-    # via black
 shed==0.5.3
     # via -r deps/check.in
 six==1.16.0
-    # via
-    #   bandit
-    #   flake8-print
+    # via flake8-print
 smmap==5.0.0
     # via gitdb
-snowballstemmer==2.1.0
+snowballstemmer==2.2.0
     # via pydocstyle
 stevedore==3.5.0
     # via bandit
@@ -135,13 +131,13 @@ tokenize-rt==4.2.1
     # via pyupgrade
 toml==0.10.2
     # via mypy
-tomli==1.2.2
+tomli==1.2.3
     # via black
 typed-ast==1.4.3
     # via
     #   black
     #   mypy
-typing-extensions==3.10.0.2
+typing-extensions==4.0.1
     # via
     #   black
     #   gitpython
@@ -151,3 +147,5 @@ typing-extensions==3.10.0.2
     #   typing-inspect
 typing-inspect==0.7.1
     # via libcst
+zipp==3.6.0
+    # via importlib-metadata
