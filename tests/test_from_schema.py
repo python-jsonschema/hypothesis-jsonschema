@@ -535,3 +535,8 @@ with warnings.catch_warnings():
     )
     def test_can_generate_list_with_max_size_and_no_allowed_additional_items(val):
         assert val == [1, 2, 3]
+
+
+@given(string=from_schema({"type": "string", "pattern": "^[a-z]+$"}))
+def test_does_not_generate_trailing_newline_from_dollar_pattern(string):
+    assert not string.endswith("\n")

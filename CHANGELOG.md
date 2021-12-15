@@ -1,5 +1,9 @@
 # Changelog
 
+#### 0.22.0 - 2021-12-15
+- never generate trailing newlines for regex patterns ending in `$`
+  (allowed by Python, but not by JSON Schema)
+
 #### 0.21.0 - 2021-10-03
 - reduced filtering for object keys (#88)
 - updated to `jsonschema >= 4.0.0` (#89);

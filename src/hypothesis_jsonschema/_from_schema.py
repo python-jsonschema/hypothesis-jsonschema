@@ -7,12 +7,14 @@ import re
 import warnings
 from fractions import Fraction
 from functools import partial
+from inspect import signature
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
 import jsonschema
 from hypothesis import assume, provisional as prov, strategies as st
 from hypothesis.errors import HypothesisWarning, InvalidArgument
 from hypothesis.internal.conjecture import utils as cu
+from hypothesis.strategies._internal.regex import regex_strategy
 
 from ._canonicalise import (
     FALSEY,
@@ -40,6 +42,17 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
     | st.dictionaries(st.text(), strategy, max_size=3),
 )
 _FORMATS_TOKEN = object()
+
+from_js_regex: Callable[[str], st.SearchStrategy[str]] = st.from_regex
+if len(signature(regex_strategy).parameters) == 3:  # pragma: no branch
+    # On Hypothesis >= 6.31.6, we can use this to get the ECMA semantics of "$".
+    # Conditionally-defined so that we degrade relatively gracefully if you update
+    # Hypothesis but not hypothesis-jsonschema once we have a more general fix.
+
+    def from_js_regex(pattern: str) -> st.SearchStrategy[str]:
+        return regex_strategy(
+            pattern, fullmatch=False, _temp_jsonschema_hack_no_end_newline=True
+        )
 
 
 def merged_as_strategies(
@@ -429,7 +442,7 @@ def string_schema(
     elif "pattern" in schema:
         try:
             re.compile(schema["pattern"])
-            strategy = st.from_regex(schema["pattern"])
+            strategy = from_js_regex(schema["pattern"])
         except re.error as err:
             # Patterns that are invalid in Python, or just malformed
             _warn_invalid_regex(schema["pattern"], err)
@@ -585,7 +598,7 @@ def object_schema(
         if additional_allowed
         else st.nothing(),
         st.sampled_from(known_optional_names) if known_optional_names else st.nothing(),
-        st.one_of([st.from_regex(p).filter(valid_name) for p in sorted(patterns)]),
+        st.one_of([from_js_regex(p).filter(valid_name) for p in sorted(patterns)]),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty])
 
