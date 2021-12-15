@@ -142,6 +142,7 @@ def test_dependencies_canonicalises_to_fixpoint():
             "minItems": 8,
             "uniqueItems": True,
         },
+        {"type": "object", "required": ["a"], "properties": {"a": False}},
     ],
 )
 def test_canonicalises_to_empty(schema):
