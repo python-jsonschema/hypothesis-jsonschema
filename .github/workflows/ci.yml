@@ -38,7 +38,29 @@ jobs:
       run: python -m pip install --upgrade pip setuptools tox
     - name: Run tests
       # Disable coverage on PyPy
-      run: python -m tox --recreate -e test $(${{ startsWith(matrix.python-version, 'pypy') }} && echo '-- -n auto --no-cov')
+      run: |
+        python -m tox --recreate -e test \
+          -- -n auto --durations=10 -k "not test_can_generate_for_real_large_schema" \
+          $(${{ startsWith(matrix.python-version, 'pypy') }} && echo '--no-cov')
+
+  test-slow:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "pypy-3.7", "pypy-3.8"]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: python -m pip install --upgrade pip setuptools tox
+    - name: Run slow tests
+      run: |
+        python -m tox --recreate -e test \
+        -- -n auto --durations=10 --no-cov -k test_can_generate_for_real_large_schema
 
   release:
     runs-on: ubuntu-latest

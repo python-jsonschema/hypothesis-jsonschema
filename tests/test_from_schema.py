@@ -66,6 +66,11 @@ def test_boolean_true_is_valid_schema_and_resolvable(_):
         {"type": "an unknown type"},
         {"allOf": [{"type": "boolean"}, {"const": None}]},
         {"allOf": [{"type": "boolean"}, {"enum": [None]}]},
+        {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "maximum": 10,
+            "exclusiveMaximum": True,
+        },
     ],
 )
 def test_invalid_schemas_raise(schema):
@@ -86,6 +91,19 @@ def test_invalid_schemas_raise(schema):
 def test_invalid_regex_emit_warning(schema):
     with pytest.warns(UserWarning):
         from_schema(schema).validate()
+
+
+@given(
+    from_schema(
+        {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "maximum": 10,
+            "exclusiveMaximum": True,
+        }
+    )
+)
+def test_can_generate_with_explicit_schema_version(_):
+    pass
 
 
 INVALID_SCHEMAS = {
@@ -205,10 +223,8 @@ def to_name_params(corpus):
             continue
         if n in UNSUPPORTED_SCHEMAS:
             continue
-        elif n in SLOW_SCHEMAS:
+        elif n in SLOW_SCHEMAS | FLAKY_SCHEMAS:
             yield pytest.param(n, marks=pytest.mark.skip)
-        elif n in FLAKY_SCHEMAS:
-            yield pytest.param(n, marks=pytest.mark.xfail(strict=False))
         else:
             if isinstance(corpus[n], dict) and "$schema" in corpus[n]:
                 jsonschema.validators.validator_for(corpus[n]).check_schema(corpus[n])

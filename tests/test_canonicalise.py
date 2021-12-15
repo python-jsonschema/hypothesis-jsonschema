@@ -158,6 +158,10 @@ def test_canonicalises_to_empty(schema):
         ({"type": "number", "multipleOf": 1.0}, {"type": "integer"}),
         ({"type": "number", "multipleOf": -3.0}, {"type": "integer", "multipleOf": 3}),
         (
+            {"type": "number", "multipleOf": 0.75, "not": {"multipleOf": 1.25}},
+            {"type": "number", "multipleOf": 0.75, "not": {"multipleOf": 1.25}},
+        ),
+        (
             {"type": "array", "items": [True, False, True]},
             {"type": "array", "items": [{}], "maxItems": 1},
         ),
