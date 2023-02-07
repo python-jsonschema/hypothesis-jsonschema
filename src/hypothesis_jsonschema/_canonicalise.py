@@ -82,7 +82,9 @@ class CacheableSchema:
         self.schema = schema
         self.encoded = hash(json.dumps(schema, sort_keys=True))
 
-    def __eq__(self, other: "CacheableSchema") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CacheableSchema):
+            return NotImplemented
         return self.encoded == other.encoded
 
     def __hash__(self) -> int:
