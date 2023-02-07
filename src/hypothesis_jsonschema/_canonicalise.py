@@ -17,7 +17,9 @@ import itertools
 import json
 import math
 import re
+from dataclasses import dataclass
 from fractions import Fraction
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jsonschema
@@ -69,7 +71,30 @@ def next_down(val: float) -> float:
     return out
 
 
+@dataclass(eq=False, slots=True)
+class CacheableSchema:
+    """Cache schema by its JSON representation.
+
+    Canonicalisation is not required as schemas with the same JSON representation
+    will have the same validator.
+    """
+    schema: Schema
+    hash_value: int
+
+    def __eq__(self, other: "CacheableSchema") -> bool:
+        return self.hash_value == other.hash_value
+
+    def __hash__(self) -> int:
+        return self.hash_value
+
+
 def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
+    return __get_validator_class(CacheableSchema(schema, hash(json.dumps(schema))))
+
+
+@lru_cache(maxsize=128)
+def __get_validator_class(wrapper: CacheableSchema) -> JSONSchemaValidator:
+    schema = wrapper.schema
     with contextlib.suppress(jsonschema.exceptions.SchemaError):
         validator = jsonschema.validators.validator_for(schema)
         validator.check_schema(schema)

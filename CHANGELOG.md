@@ -1,5 +1,7 @@
 # Changelog
 
+- Cache JSON Schema validators by their schema's JSON representation
+
 #### 0.22.0 - 2021-12-15
 - never generate trailing newlines for regex patterns ending in `$`
   (allowed by Python, but not by JSON Schema)
