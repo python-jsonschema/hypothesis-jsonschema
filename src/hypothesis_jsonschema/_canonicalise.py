@@ -17,7 +17,6 @@ import itertools
 import json
 import math
 import re
-from dataclasses import dataclass
 from fractions import Fraction
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Union
