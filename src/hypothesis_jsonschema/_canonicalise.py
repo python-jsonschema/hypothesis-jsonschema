@@ -18,6 +18,7 @@ import json
 import math
 import re
 from fractions import Fraction
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jsonschema
@@ -69,7 +70,33 @@ def next_down(val: float) -> float:
     return out
 
 
+class CacheableSchema:
+    """Cache schema by its JSON representation.
+
+    Canonicalisation is not required as schemas with the same JSON representation
+    will have the same validator.
+    """
+
+    __slots__ = ("schema", "encoded")
+
+    def __init__(self, schema: Schema) -> None:
+        self.schema = schema
+        self.encoded = hash(json.dumps(schema, sort_keys=True))
+
+    def __eq__(self, other: "CacheableSchema") -> bool:  # type: ignore
+        return self.encoded == other.encoded
+
+    def __hash__(self) -> int:
+        return self.encoded
+
+
 def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
+    return __get_validator_class(CacheableSchema(schema))
+
+
+@lru_cache(maxsize=128)
+def __get_validator_class(wrapper: CacheableSchema) -> JSONSchemaValidator:
+    schema = wrapper.schema
     with contextlib.suppress(jsonschema.exceptions.SchemaError):
         validator = jsonschema.validators.validator_for(schema)
         validator.check_schema(schema)
