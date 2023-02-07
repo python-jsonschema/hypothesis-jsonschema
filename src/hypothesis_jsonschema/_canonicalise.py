@@ -76,6 +76,7 @@ class CacheableSchema:
     Canonicalisation is not required as schemas with the same JSON representation
     will have the same validator.
     """
+
     __slots__ = ("schema", "encoded")
 
     def __init__(self, schema: Schema) -> None:
