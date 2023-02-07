@@ -71,25 +71,27 @@ def next_down(val: float) -> float:
     return out
 
 
-@dataclass(eq=False, slots=True)
 class CacheableSchema:
     """Cache schema by its JSON representation.
 
     Canonicalisation is not required as schemas with the same JSON representation
     will have the same validator.
     """
-    schema: Schema
-    hash_value: int
+    __slots__ = ("schema", "encoded")
+
+    def __init__(self, schema: Schema) -> None:
+        self.schema = schema
+        self.encoded = hash(json.dumps(schema, sort_keys=True))
 
     def __eq__(self, other: "CacheableSchema") -> bool:
-        return self.hash_value == other.hash_value
+        return self.encoded == other.encoded
 
     def __hash__(self) -> int:
-        return self.hash_value
+        return self.encoded
 
 
 def _get_validator_class(schema: Schema) -> JSONSchemaValidator:
-    return __get_validator_class(CacheableSchema(schema, hash(json.dumps(schema))))
+    return __get_validator_class(CacheableSchema(schema))
 
 
 @lru_cache(maxsize=128)

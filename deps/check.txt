@@ -4,8 +4,6 @@
 #
 #    pip-compile --output-file=deps/check.txt deps/check.in
 #
-astor==0.8.1
-    # via flake8-simplify
 attrs==21.2.0
     # via flake8-bugbear
 autoflake==1.4
@@ -36,7 +34,6 @@ flake8==4.0.1
     #   flake8-mutable
     #   flake8-polyfill
     #   flake8-print
-    #   flake8-simplify
     #   flake8-strftime
     #   pep8-naming
 flake8-2020==1.6.1
@@ -63,8 +60,6 @@ flake8-polyfill==1.0.2
     #   pep8-naming
 flake8-print==4.0.0
     # via -r deps/check.in
-flake8-simplify==0.14.2
-    # via -r deps/check.in
 flake8-strftime==0.3.2
     # via -r deps/check.in
 gitdb==4.0.9
@@ -77,7 +72,6 @@ importlib-metadata==4.2.0
     #   flake8
     #   flake8-2020
     #   flake8-comprehensions
-    #   flake8-simplify
     #   stevedore
 isort==5.10.1
     # via shed
