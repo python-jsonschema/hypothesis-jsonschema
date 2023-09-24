@@ -33,6 +33,15 @@ def test_integers(value):
 def test_card_numbers(value):
     assert isinstance(value, str)
     assert re.match(r"^\d{4} \d{4} \d{4} \d{4}$", value)
+
+
+@given(from_schema({}, allow_x00=False, codec="utf-8").map(json.dumps))
+def test_card_numbers(payload):
+    assert isinstance(payload, str)
+    assert "\0" not in payload  # use allow_x00=False to exclude null characters
+    # If you want to restrict generated strings characters which are valid in
+    # a specific character encoding, you can do that with the `codec=` argument.
+    payload.encode(codec="utf-8")
 ```
 
 For more details on property-based testing and how to use or customise

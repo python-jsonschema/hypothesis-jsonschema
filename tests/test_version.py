@@ -19,7 +19,7 @@ class Version(NamedTuple):
         return cls(*map(int, string.split(".")))
 
 
-@lru_cache()
+@lru_cache
 def get_releases():
     pattern = re.compile(r"^#### (\d+\.\d+\.\d+) - (\d\d\d\d-\d\d-\d\d)$")
     with open(Path(__file__).parent.parent / "CHANGELOG.md") as f:

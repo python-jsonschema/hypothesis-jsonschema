@@ -26,15 +26,14 @@ def _floatstr(o: float) -> str:
 
 
 class CanonicalisingJsonEncoder(json.JSONEncoder):
-
     if PYTHON_IMPLEMENTATION == "PyPy":  # pragma: no cover
 
-        def _JSONEncoder__floatstr(self, o: float) -> str:  # noqa: N802
+        def _JSONEncoder__floatstr(self, o: float) -> str:
             return _floatstr(o)
 
     else:
 
-        def iterencode(self, o: Any, _one_shot: bool = False) -> Any:
+        def iterencode(self, o: Any, _one_shot: bool = False) -> Any:  # noqa
             """Replace a stdlib method, so we encode integer-valued floats as ints."""
             return _make_iterencode(
                 {},

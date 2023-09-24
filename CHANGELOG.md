@@ -1,5 +1,12 @@
 # Changelog
 
+#### 0.23.0 - 2023-09-24
+- Add new `allow_x00=` and `codec=` arguments to `from_schema()`, so that you can
+  control generated strings more precisely.
+- Require hypothesis 6.84+ and jsonschema 4.18+, to support new features and
+  avoid deprecations.
+- Requires Python 3.8 or later (3.7 is end-of-life), tested on Python 3.11
+
 #### 0.22.1 - 2023-02-07
 - Cache JSON Schema validators by their schema's JSON representation
 

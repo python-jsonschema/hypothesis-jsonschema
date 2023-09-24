@@ -26,7 +26,7 @@ def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
 
 
 @st.composite  # type: ignore
-def _json_schemata(draw: Any, recur: bool = True) -> Any:
+def _json_schemata(draw: Any, *, recur: bool = True) -> Any:
     # Current version of jsonschema does not support boolean schemata,
     # but 3.0 will.  See https://github.com/Julian/jsonschema/issues/337
     options = [
@@ -77,7 +77,7 @@ def gen_if_then_else(draw: Any) -> Schema:
 @st.composite  # type: ignore
 def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     """Draw a numeric schema."""
-    max_int_float = 2 ** 53
+    max_int_float = 2**53
     lower = draw(st.none() | st.integers(-max_int_float, max_int_float))
     upper = draw(st.none() | st.integers(-max_int_float, max_int_float))
     if lower is not None and upper is not None and lower > upper:

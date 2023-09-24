@@ -7,10 +7,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-import rfc3339_validator
 from gen_schemas import schema_strategy_params
 from hypothesis import (
     HealthCheck,
+    Phase,
     assume,
     given,
     note,
@@ -19,6 +19,7 @@ from hypothesis import (
     strategies as st,
 )
 from hypothesis.errors import FailedHealthCheck, HypothesisWarning, InvalidArgument
+from hypothesis.internal.compat import PYPY
 from hypothesis.internal.reflection import proxies
 
 from hypothesis_jsonschema._canonicalise import (
@@ -26,7 +27,7 @@ from hypothesis_jsonschema._canonicalise import (
     canonicalish,
     make_validator,
 )
-from hypothesis_jsonschema._from_schema import from_schema, rfc3339
+from hypothesis_jsonschema._from_schema import from_schema
 from hypothesis_jsonschema._resolve import resolve_all_refs
 
 # We use this as a placeholder for all schemas which resolve to nothing()
@@ -43,7 +44,7 @@ INVALID_REGEX_SCHEMA = {"type": "string", "pattern": "["}
 def test_generated_data_matches_schema(schema_strategy, data):
     """Check that an object drawn from an arbitrary schema is valid."""
     schema = data.draw(schema_strategy)
-    note(schema)
+    note(f"{schema=}")
     try:
         value = data.draw(from_schema(schema), "value from schema")
     except InvalidArgument:
@@ -112,13 +113,11 @@ INVALID_SCHEMAS = {
     # Many, many schemas have invalid $schema keys, which emit a warning (-Werror)
     "A JSON schema for CRYENGINE projects (.cryproj files)",
     "JSDoc configuration file",
-    "Meta-validation schema for JSON Schema Draft 8",
     "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.2",
     "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.3",
     "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.4",
     "Static Analysis Results Format (SARIF) External Property File Format, Version 2.1.0-rtm.5",
     "Static Analysis Results Format (SARIF), Version 2.1.0-rtm.2",
-    "Zuul CI configuration file",
 }
 NON_EXISTENT_REF_SCHEMAS = {
     "Cirrus CI configuration files",
@@ -137,6 +136,11 @@ UNSUPPORTED_SCHEMAS = {
     "draft7/ECMA 262 regex escapes control codes with \\c and upper letter",
     "JSON schema for nodemon.json configuration files.",
     "JSON Schema for mime type collections",
+}
+SKIP_ON_PYPY_SCHEMAS = {
+    # Cause crashes or recursion errors, but only under PyPy
+    "Swagger API 2.0 schema",
+    "Language grammar description files in Textmate and compatible editors",
 }
 FLAKY_SCHEMAS = {
     # The following schemas refer to an `$id` rather than a JSON pointer.
@@ -223,6 +227,8 @@ def to_name_params(corpus):
             continue
         if n in UNSUPPORTED_SCHEMAS:
             continue
+        if n in SKIP_ON_PYPY_SCHEMAS:
+            yield pytest.param(n, marks=pytest.mark.skipif(PYPY, reason="broken"))
         elif n in SLOW_SCHEMAS | FLAKY_SCHEMAS:
             yield pytest.param(n, marks=pytest.mark.skip)
         else:
@@ -305,7 +311,7 @@ def xfail_on_reference_resolve_error(f):
         try:
             f(*args, **kwargs)
             assert name not in RECURSIVE_REFS
-        except jsonschema.exceptions.RefResolutionError as err:
+        except jsonschema.exceptions._RefResolutionError as err:
             if (
                 isinstance(err, HypothesisRefResolutionError)
                 or isinstance(err._cause, HypothesisRefResolutionError)
@@ -321,7 +327,7 @@ def xfail_on_reference_resolve_error(f):
 
 
 @pytest.mark.parametrize("name", to_name_params(catalog))
-@settings(deadline=None, max_examples=5, suppress_health_check=HealthCheck.all())
+@settings(deadline=None, max_examples=5, suppress_health_check=list(HealthCheck))
 @given(data=st.data())
 @xfail_on_reference_resolve_error
 def test_can_generate_for_real_large_schema(data, name):
@@ -339,7 +345,7 @@ def test_can_generate_for_real_large_schema(data, name):
 @given(data=st.data())
 @xfail_on_reference_resolve_error
 def test_can_generate_for_test_suite_schema(data, name):
-    note(suite[name])
+    note(f"{suite[name]=}")
     value = data.draw(from_schema(suite[name]))
     try:
         jsonschema.validate(value, suite[name])
@@ -387,11 +393,6 @@ SCHEMA = {
 def test_single_property_can_generate_nonempty(query):
     # See https://github.com/Zac-HD/hypothesis-jsonschema/issues/25
     assume(query)
-
-
-@given(rfc3339("date-time"))
-def test_generated_rfc3339_datetime_strings_are_valid(datetime_string):
-    assert rfc3339_validator.validate_rfc3339(datetime_string)
 
 
 UNIQUE_NUMERIC_ARRAY_SCHEMA = {
@@ -459,7 +460,7 @@ def test_multiple_contains_behind_allof(value):
     jsonschema.validate(value, ALLOF_CONTAINS)
 
 
-@jsonschema.FormatChecker.cls_checks("card-test")
+@jsonschema.FormatChecker._cls_checks("card-test")
 def validate_card_format(string):
     # For the real thing, you'd want use the Luhn algorithm; this is enough for tests.
     return bool(re.match(r"^\d{4} \d{4} \d{4} \d{4}$", string))
@@ -479,6 +480,26 @@ def test_custom_formats_validation(data, kw):
     s = from_schema({"type": "string", "format": "card-test"}, custom_formats=kw)
     with pytest.raises(InvalidArgument):
         data.draw(s)
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"required": ["\x00"]},
+        {"properties": {"\x00": {"type": "integer"}}},
+        {"dependencies": {"\x00": ["a"]}},
+        {"dependencies": {"\x00": {"type": "integer"}}},
+        {"required": ["\xff"]},
+        {"properties": {"\xff": {"type": "integer"}}},
+        {"dependencies": {"\xff": ["a"]}},
+        {"dependencies": {"\xff": {"type": "integer"}}},
+    ],
+)
+@settings(deadline=None)
+@given(data=st.data())
+def test_alphabet_name_validation(data, schema):
+    with pytest.raises(InvalidArgument):
+        data.draw(from_schema(schema, allow_x00=False, codec="ascii"))
 
 
 @given(
@@ -540,3 +561,18 @@ with warnings.catch_warnings():
 @given(string=from_schema({"type": "string", "pattern": "^[a-z]+$"}))
 def test_does_not_generate_trailing_newline_from_dollar_pattern(string):
     assert not string.endswith("\n")
+
+
+@pytest.mark.xfail(strict=True, raises=UnicodeEncodeError)
+@settings(phases=set(Phase) - {Phase.shrink})
+@given(from_schema({"type": "string", "minLength": 100}, codec=None))
+def test_can_find_non_utf8_string(value):
+    value.encode()
+
+
+@given(st.data())
+def test_errors_on_unencodable_property_name(data):
+    non_ascii_schema = {"type": "object", "properties": {"é": {"type": "integer"}}}
+    data.draw(from_schema(non_ascii_schema, codec=None))
+    with pytest.raises(InvalidArgument, match=r"'é' cannot be encoded as 'ascii'"):
+        data.draw(from_schema(non_ascii_schema, codec="ascii"))
