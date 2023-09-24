@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "pypy-3.8"] # , "pypy-3.9", "pypy-3.10"
+        python-version: ["3.8", "3.9", "3.10", "3.11"]  # FIXME: these segfault PyPy
       fail-fast: false
     steps:
     - uses: actions/checkout@v2
