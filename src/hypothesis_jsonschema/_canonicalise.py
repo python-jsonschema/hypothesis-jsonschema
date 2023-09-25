@@ -55,9 +55,10 @@ SCHEMA_KEYS = tuple(
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
 SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
-ALL_KEYWORDS = tuple(
-    [*SCHEMA_KEYS, *SCHEMA_OBJECT_KEYS]
-    + sum((s.split() for _, s in TYPE_SPECIFIC_KEYS), [])
+ALL_KEYWORDS = (
+    *SCHEMA_KEYS,
+    *SCHEMA_OBJECT_KEYS,
+    *sum((s.split() for _, s in TYPE_SPECIFIC_KEYS), []),
 )
 
 
@@ -113,7 +114,7 @@ def make_validator(schema: Schema) -> JSONSchemaValidator:
     return validator(schema)
 
 
-class HypothesisRefResolutionError(jsonschema.exceptions.RefResolutionError):
+class HypothesisRefResolutionError(jsonschema.exceptions._RefResolutionError):
     pass
 
 
@@ -128,7 +129,8 @@ def get_type(schema: Schema) -> List[str]:
     if isinstance(type_, str):
         assert type_ in TYPE_STRINGS
         return [type_]
-    assert isinstance(type_, list) and set(type_).issubset(TYPE_STRINGS), type_
+    assert isinstance(type_, list), type_
+    assert set(type_).issubset(TYPE_STRINGS), type_
     type_ = [t for t in TYPE_STRINGS if t in type_]
     if "number" in type_ and "integer" in type_:
         type_.remove("integer")  # all integers are numbers, so this is redundant
@@ -161,8 +163,9 @@ def upper_bound_instances(schema: Schema) -> float:
         items_bound = upper_bound_instances(schema["items"])  # type: ignore
         if items_bound < 100:
             lo, hi = schema.get("minItems", 0), schema["maxItems"]
-            assert isinstance(lo, int) and isinstance(hi, int)
-            return sum(items_bound ** n for n in range(lo, hi + 1))
+            assert isinstance(lo, int)
+            assert isinstance(hi, int)
+            return sum(items_bound**n for n in range(lo, hi + 1))
     return math.inf
 
 
@@ -238,7 +241,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     This is obviously incomplete, but improves best-effort recognition of
     equivalent schemas and makes conversion logic simpler.
     """
-    if schema is True:  # noqa: SIM114
+    if schema is True:
         return {}
     elif schema is False:
         return {"not": {}}
@@ -330,20 +333,20 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             # Every integer is a multiple of 1/n for all natural numbers n.
             schema.pop("multipleOf")
             mul = None
-        if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):
-            lo += mul - (lo % mul)
-        if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
-            hi -= hi % mul
+        if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):  # type: ignore[unreachable]
+            lo += mul - (lo % mul)  # type: ignore[unreachable]
+        if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):  # type: ignore[unreachable]
+            hi -= hi % mul  # type: ignore[unreachable]
 
         if lo is not None:
-            schema["minimum"] = lo
+            schema["minimum"] = lo  # type: ignore[unreachable]
             schema.pop("exclusiveMinimum", None)
         if hi is not None:
-            schema["maximum"] = hi
+            schema["maximum"] = hi  # type: ignore[unreachable]
             schema.pop("exclusiveMaximum", None)
 
-        if lo is not None and hi is not None and lo > hi:
-            type_.remove("integer")
+        if lo is not None and hi is not None and lo > hi:  # type: ignore[unreachable]
+            type_.remove("integer")  # type: ignore[unreachable]
         elif type_ == ["integer"] and lo == hi and make_validator(schema).is_valid(lo):
             return {"const": lo}
 
@@ -588,7 +591,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         else:
             tmp = schema.copy()
             ao = tmp.pop("allOf")
-            out = merged([tmp] + ao)
+            out = merged([tmp, *ao])
             if out is not None:
                 schema = out
     if "oneOf" in schema:
@@ -852,7 +855,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
 
 def has_divisibles(
-    start: float, end: float, divisor: float, exmin: bool, exmax: bool
+    start: float, end: float, divisor: float, exmin: bool, exmax: bool  # noqa
 ) -> bool:
     """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
     divisible_num = end // divisor - start // divisor

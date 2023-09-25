@@ -7,14 +7,15 @@ import re
 import warnings
 from fractions import Fraction
 from functools import partial
-from inspect import signature
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
 import jsonschema
+import jsonschema.exceptions
 from hypothesis import assume, provisional as prov, strategies as st
 from hypothesis.errors import HypothesisWarning, InvalidArgument
 from hypothesis.internal.conjecture import utils as cu
 from hypothesis.strategies._internal.regex import regex_strategy
+from hypothesis.strategies._internal.strings import OneCharStringStrategy
 
 from ._canonicalise import (
     FALSEY,
@@ -43,16 +44,38 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
 )
 _FORMATS_TOKEN = object()
 
-from_js_regex: Callable[[str], st.SearchStrategy[str]] = st.from_regex
-if len(signature(regex_strategy).parameters) == 3:  # pragma: no branch
-    # On Hypothesis >= 6.31.6, we can use this to get the ECMA semantics of "$".
-    # Conditionally-defined so that we degrade relatively gracefully if you update
-    # Hypothesis but not hypothesis-jsonschema once we have a more general fix.
 
-    def from_js_regex(pattern: str) -> st.SearchStrategy[str]:
-        return regex_strategy(
-            pattern, fullmatch=False, _temp_jsonschema_hack_no_end_newline=True
+class CharStrategy(OneCharStringStrategy):
+    allow_x00: bool
+    codec: Optional[str]
+
+    @classmethod
+    def from_args(cls, *, allow_x00: bool, codec: Optional[str]) -> "CharStrategy":
+        self: CharStrategy = cls.from_characters_args(
+            min_codepoint=0 if allow_x00 else 1, codec=codec
         )
+        self.allow_x00 = allow_x00
+        self.codec = codec
+        return self
+
+    def check_name_allowed(self, name: str) -> None:
+        if "\x00" in name and not self.allow_x00:
+            raise InvalidArgument(f"allow_x00=False makes name {name!a} invalid")
+        if self.codec is not None:
+            try:
+                name.encode(self.codec)
+            except Exception:
+                msg = f"{name!r} cannot be encoded as {self.codec!r}"
+                raise InvalidArgument(msg) from None
+
+
+def from_js_regex(pattern: str, alphabet: CharStrategy) -> st.SearchStrategy[str]:
+    return regex_strategy(
+        pattern,
+        fullmatch=False,
+        alphabet=alphabet,
+        _temp_jsonschema_hack_no_end_newline=True,
+    )
 
 
 def merged_as_strategies(
@@ -72,10 +95,11 @@ def merged_as_strategies(
             continue
         s = merged([inputs[g] for g in group])
         if s is not None and s != FALSEY:
-            validators = [make_validator(s).is_valid for s in schemas]
             strats.append(
                 from_schema(s, custom_formats=custom_formats).filter(
-                    lambda obj: all(v(obj) for v in validators)
+                    lambda obj, validators=tuple(
+                        make_validator(s).is_valid for s in schemas
+                    ): all(v(obj) for v in validators)
                 )
             )
             combined.update(group)
@@ -85,18 +109,29 @@ def merged_as_strategies(
 def from_schema(
     schema: Union[bool, Schema],
     *,
-    custom_formats: Dict[str, st.SearchStrategy[str]] = None,
+    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]] = None,
+    allow_x00: bool = True,
+    codec: Optional[str] = "utf-8",
 ) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
     To generate specific string formats, pass a ``custom_formats`` dict
     mapping the format name to a strategy for allowed strings.
 
+    You can constrain strings _other than those from custom format strategies_
+    by passing ``allow_x00=False`` to exclude the null character ``chr(0)``,
+    and/or a ``codec=`` name such as ``"utf-8"``, ``"ascii"``, or any other
+    text encoding supported by Python.
+
     Supports JSONSchema drafts 04, 06, and 07, with the exception of
     recursive references.
     """
     try:
-        return __from_schema(schema, custom_formats=custom_formats)
+        return __from_schema(
+            schema,
+            custom_formats=custom_formats,
+            alphabet=CharStrategy.from_args(allow_x00=allow_x00, codec=codec),
+        )
     except Exception as err:
         error = err
 
@@ -114,9 +149,9 @@ def _get_format_filter(
     def check_valid(string: str) -> str:
         try:
             if not isinstance(string, str):
-                raise jsonschema.FormatError(f"{string!r} is not a string")
+                raise jsonschema.exceptions.FormatError(f"{string!r} is not a string")
             checker.check(string, format=format_name)
-        except jsonschema.FormatError as err:
+        except jsonschema.exceptions.FormatError as err:
             raise InvalidArgument(
                 f"Got string={string!r} from strategy {strategy!r}, but this "
                 f"is not a valid value for the {format_name!r} checker."
@@ -129,7 +164,8 @@ def _get_format_filter(
 def __from_schema(
     schema: Union[bool, Schema],
     *,
-    custom_formats: Dict[str, st.SearchStrategy[str]] = None,
+    alphabet: CharStrategy,
+    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]] = None,
 ) -> st.SearchStrategy[JSONType]:
     try:
         schema = resolve_all_refs(schema)
@@ -193,7 +229,7 @@ def __from_schema(
         tmp = schema.copy()
         ao = tmp.pop("allOf")
         assert isinstance(ao, list)
-        return merged_as_strategies([tmp] + ao, custom_formats)
+        return merged_as_strategies([tmp, *ao], custom_formats)
     if "oneOf" in schema:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
@@ -218,9 +254,9 @@ def __from_schema(
         "boolean": lambda _: st.booleans(),
         "number": number_schema,
         "integer": integer_schema,
-        "string": partial(string_schema, custom_formats),
-        "array": partial(array_schema, custom_formats),
-        "object": partial(object_schema, custom_formats),
+        "string": partial(string_schema, custom_formats, alphabet),
+        "array": partial(array_schema, custom_formats, alphabet),
+        "object": partial(object_schema, custom_formats, alphabet),
     }
     assert set(map_) == set(TYPE_STRINGS)
     return st.one_of([map_[t](schema) for t in get_type(schema)])
@@ -236,12 +272,12 @@ def _numeric_with_multiplier(
         min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
     if max_value is not None:
         max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
-    if min_value is not None and max_value is not None and min_value > max_value:
+    if min_value is not None and max_value is not None and min_value > max_value:  # type: ignore[unreachable]
         # You would think that this is impossible, but it can happen if multipleOf
         # is very small and the bounds are very close togther.  It would be nicer
         # to deal with this when canonicalising, but suffice to say we can't without
         # diverging from the floating-point behaviour of the upstream validator.
-        return st.nothing()
+        return st.nothing()  # type: ignore[unreachable]
     return (
         st.integers(min_value, max_value)
         .map(lambda x: x * multiple_of)
@@ -334,21 +370,19 @@ def regex_patterns(draw: Any) -> str:
 REGEX_PATTERNS = regex_patterns()
 
 
-def json_pointers() -> st.SearchStrategy[str]:
+def json_pointers(alphabet: CharStrategy) -> st.SearchStrategy[str]:
     """Return a strategy for strings in json-pointer format."""
     return st.lists(
-        st.text(st.characters()).map(
-            lambda p: "/" + p.replace("~", "~0").replace("/", "~1")
-        )
+        st.text(alphabet).map(lambda p: "/" + p.replace("~", "~0").replace("/", "~1"))
     ).map("".join)
 
 
-def relative_json_pointers() -> st.SearchStrategy[str]:
+def relative_json_pointers(alphabet: CharStrategy) -> st.SearchStrategy[str]:
     """Return a strategy for strings in relative-json-pointer format."""
     return st.builds(
         operator.add,
-        st.from_regex(r"0|[1-9][0-9]*", fullmatch=True),
-        st.just("#") | json_pointers(),
+        st.from_regex(r"0|[1-9][0-9]*", fullmatch=True, alphabet=alphabet),
+        st.just("#") | json_pointers(alphabet),
     )
 
 
@@ -405,8 +439,8 @@ STRING_FORMATS = {
         name: prov.domains().map("https://{}".format)
         for name in ["uri", "uri-reference", "iri", "iri-reference", "uri-template"]
     },
-    "json-pointer": json_pointers(),
-    "relative-json-pointer": relative_json_pointers(),
+    "json-pointer": json_pointers,
+    "relative-json-pointer": relative_json_pointers,
     "regex": REGEX_PATTERNS,
 }
 
@@ -415,23 +449,28 @@ def _warn_invalid_regex(pattern: str, err: re.error, kw: str = "pattern") -> Non
     warnings.warn(
         f"Got {kw}={pattern!r}, but this is not valid syntax for a Python regular "
         f"expression ({err}) so it will not be handled by the strategy.  See https://"
-        "json-schema.org/understanding-json-schema/reference/regular_expressions.html"
+        "json-schema.org/understanding-json-schema/reference/regular_expressions.html",
+        stacklevel=2,
     )
 
 
 def string_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
+    custom_formats: Dict[str, st.SearchStrategy[str]],
+    alphabet: CharStrategy,
+    schema: dict,
 ) -> st.SearchStrategy[str]:
     """Handle schemata for strings."""
     # also https://json-schema.org/latest/json-schema-validation.html#rfc.section.7
     min_size = schema.get("minLength", 0)
     max_size = schema.get("maxLength")
-    strategy = st.text(min_size=min_size, max_size=max_size)
+    strategy = st.text(alphabet, min_size=min_size, max_size=max_size)
     known_formats = {**STRING_FORMATS, **(custom_formats or {})}
     if schema.get("format") in known_formats:
         # Unknown "format" specifiers should be ignored for validation.
         # See https://json-schema.org/latest/json-schema-validation.html#format
         strategy = known_formats[schema["format"]]
+        if not isinstance(strategy, st.SearchStrategy):
+            strategy = strategy(alphabet)
         if "pattern" in schema:
             try:
                 # This isn't really supported, but we'll do our best with a filter.
@@ -442,7 +481,7 @@ def string_schema(
     elif "pattern" in schema:
         try:
             re.compile(schema["pattern"])
-            strategy = from_js_regex(schema["pattern"])
+            strategy = from_js_regex(schema["pattern"], alphabet=alphabet)
         except re.error as err:
             # Patterns that are invalid in Python, or just malformed
             _warn_invalid_regex(schema["pattern"], err)
@@ -458,10 +497,14 @@ def string_schema(
 
 
 def array_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
+    custom_formats: Dict[str, st.SearchStrategy[str]],
+    alphabet: CharStrategy,
+    schema: dict,
 ) -> st.SearchStrategy[List[JSONType]]:
     """Handle schemata for arrays."""
-    _from_schema_ = partial(from_schema, custom_formats=custom_formats)
+    _from_schema_ = partial(
+        __from_schema, custom_formats=custom_formats, alphabet=alphabet
+    )
     items = schema.get("items", {})
     additional_items = schema.get("additionalItems", {})
     min_size = schema.get("minItems", 0)
@@ -554,7 +597,9 @@ def array_schema(
 
 
 def object_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]], schema: dict
+    custom_formats: Dict[str, st.SearchStrategy[str]],
+    alphabet: CharStrategy,
+    schema: dict,
 ) -> st.SearchStrategy[Dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
     required = schema.get("required", [])  # required keys
@@ -589,16 +634,21 @@ def object_schema(
     del dependencies
 
     valid_name = make_validator(names).is_valid
-    known_optional_names: List[str] = sorted(
-        set(filter(valid_name, set(dep_names).union(dep_schemas, properties)))
-        - set(required)
-    )
+    known: set = set(filter(valid_name, set(dep_names).union(dep_schemas, properties)))
+    for name in sorted(known.union(required)):
+        alphabet.check_name_allowed(name)
+    known_optional_names: List[str] = sorted(known - set(required))
     name_strats = (
-        from_schema(names, custom_formats=custom_formats)
+        __from_schema(names, custom_formats=custom_formats, alphabet=alphabet)
         if additional_allowed
         else st.nothing(),
         st.sampled_from(known_optional_names) if known_optional_names else st.nothing(),
-        st.one_of([from_js_regex(p).filter(valid_name) for p in sorted(patterns)]),
+        st.one_of(
+            [
+                from_js_regex(p, alphabet=alphabet).filter(valid_name)
+                for p in sorted(patterns)
+            ]
+        ),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty])
 
@@ -644,7 +694,11 @@ def object_schema(
             if pattern_schemas:
                 out[key] = draw(merged_as_strategies(pattern_schemas, custom_formats))
             else:
-                out[key] = draw(from_schema(additional, custom_formats=custom_formats))
+                out[key] = draw(
+                    __from_schema(
+                        additional, custom_formats=custom_formats, alphabet=alphabet
+                    )
+                )
 
             for k, v in dep_schemas.items():
                 if k in out and not make_validator(v).is_valid(out):

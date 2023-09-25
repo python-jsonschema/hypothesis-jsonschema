@@ -13,10 +13,10 @@ most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
 from copy import deepcopy
-from typing import NoReturn, Union
+from typing import NoReturn, Optional, Union
 
-import jsonschema
 from hypothesis.errors import InvalidArgument
+from jsonschema.validators import _RefResolver
 
 from ._canonicalise import (
     SCHEMA_KEYS,
@@ -28,7 +28,7 @@ from ._canonicalise import (
 )
 
 
-class LocalResolver(jsonschema.RefResolver):
+class LocalResolver(_RefResolver):
     def resolve_remote(self, uri: str) -> NoReturn:
         raise HypothesisRefResolutionError(
             f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
@@ -36,7 +36,7 @@ class LocalResolver(jsonschema.RefResolver):
 
 
 def resolve_all_refs(
-    schema: Union[bool, Schema], *, resolver: LocalResolver = None
+    schema: Union[bool, Schema], *, resolver: Optional[LocalResolver] = None
 ) -> Schema:
     """
     Resolve all references in the given schema.
@@ -50,7 +50,7 @@ def resolve_all_refs(
     assert isinstance(schema, dict), schema
     if resolver is None:
         resolver = LocalResolver.from_schema(deepcopy(schema))
-    if not isinstance(resolver, jsonschema.RefResolver):
+    if not isinstance(resolver, _RefResolver):
         raise InvalidArgument(
             f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
         )
