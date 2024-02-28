@@ -79,11 +79,16 @@ def from_js_regex(pattern: str, alphabet: CharStrategy) -> st.SearchStrategy[str
 
 
 def merged_as_strategies(
-    schemas: List[Schema], custom_formats: Optional[Dict[str, st.SearchStrategy[str]]]
+    schemas: List[Schema],
+    *,
+    alphabet: CharStrategy,
+    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]],
 ) -> st.SearchStrategy[JSONType]:
     assert schemas, "internal error: must pass at least one schema to merge"
     if len(schemas) == 1:
-        return from_schema(schemas[0], custom_formats=custom_formats)
+        return __from_schema(
+            schemas[0], alphabet=alphabet, custom_formats=custom_formats
+        )
     # Try to merge combinations of strategies.
     strats = []
     combined: Set[str] = set()
@@ -96,7 +101,9 @@ def merged_as_strategies(
         s = merged([inputs[g] for g in group])
         if s is not None and s != FALSEY:
             strats.append(
-                from_schema(s, custom_formats=custom_formats).filter(
+                __from_schema(
+                    s, alphabet=alphabet, custom_formats=custom_formats
+                ).filter(
                     lambda obj, validators=tuple(
                         make_validator(s).is_valid for s in schemas
                     ): all(v(obj) for v in validators)
@@ -165,7 +172,7 @@ def __from_schema(
     schema: Union[bool, Schema],
     *,
     alphabet: CharStrategy,
-    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]] = None,
+    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]],
 ) -> st.SearchStrategy[JSONType]:
     try:
         schema = resolve_all_refs(schema)
@@ -217,19 +224,28 @@ def __from_schema(
         not_ = schema.pop("not")
         assert isinstance(not_, dict)
         validator = make_validator(not_).is_valid
-        return from_schema(schema, custom_formats=custom_formats).filter(
-            lambda v: not validator(v)
-        )
+        return __from_schema(
+            schema, alphabet=alphabet, custom_formats=custom_formats
+        ).filter(lambda v: not validator(v))
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
         assert isinstance(ao, list)
-        return st.one_of([merged_as_strategies([tmp, s], custom_formats) for s in ao])
+        return st.one_of(
+            [
+                merged_as_strategies(
+                    [tmp, s], alphabet=alphabet, custom_formats=custom_formats
+                )
+                for s in ao
+            ]
+        )
     if "allOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("allOf")
         assert isinstance(ao, list)
-        return merged_as_strategies([tmp, *ao], custom_formats)
+        return merged_as_strategies(
+            [tmp, *ao], alphabet=alphabet, custom_formats=custom_formats
+        )
     if "oneOf" in schema:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
@@ -237,7 +253,7 @@ def __from_schema(
         schemas = [merged([tmp, s]) for s in oo]
         return st.one_of(
             [
-                from_schema(s, custom_formats=custom_formats)
+                __from_schema(s, alphabet=alphabet, custom_formats=custom_formats)
                 for s in schemas
                 if s is not None
             ]
@@ -692,7 +708,13 @@ def object_schema(
                 pattern_schemas.insert(0, properties[key])
 
             if pattern_schemas:
-                out[key] = draw(merged_as_strategies(pattern_schemas, custom_formats))
+                out[key] = draw(
+                    merged_as_strategies(
+                        pattern_schemas,
+                        alphabet=alphabet,
+                        custom_formats=custom_formats,
+                    )
+                )
             else:
                 out[key] = draw(
                     __from_schema(
