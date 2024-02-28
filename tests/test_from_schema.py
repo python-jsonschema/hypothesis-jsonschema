@@ -576,3 +576,27 @@ def test_errors_on_unencodable_property_name(data):
     data.draw(from_schema(non_ascii_schema, codec=None))
     with pytest.raises(InvalidArgument, match=r"'é' cannot be encoded as 'ascii'"):
         data.draw(from_schema(non_ascii_schema, codec="ascii"))
+
+
+@settings(deadline=None)
+@given(data=st.data())
+def test_no_null_bytes(data):
+    schema = {
+        "type": "object",
+        "properties": {
+            "p1": {"type": "string"},
+            "p2": {
+                "type": "object",
+                "properties": {"pp1": {"type": "string"}},
+                "required": ["pp1"],
+                "additionalProperties": False,
+            },
+            "p3": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["p1", "p2", "p3"],
+        "additionalProperties": False,
+    }
+    example = data.draw(from_schema(schema, allow_x00=False))
+    assert "\x00" not in example["p1"]
+    assert "\x00" not in example["p2"]["pp1"]
+    assert all("\x00" not in item for item in example["p3"])
