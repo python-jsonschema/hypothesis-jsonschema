@@ -1,5 +1,6 @@
 # Changelog
 
+#### 0.23.1 - 2024-02-28
 - Fix not respecting `allow_x00` and `codec` arguments for values in some schemas
 
 #### 0.23.0 - 2023-09-24
