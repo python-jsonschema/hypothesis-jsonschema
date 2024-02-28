@@ -364,20 +364,22 @@ def test_cannot_generate_for_empty_test_suite_schema(name):
 # merged or otherwise handled correctly, with the exception of the key "ab" which
 # would have to be both an integer and a string (and is thus disallowed).
 OVERLAPPING_PATTERNS_SCHEMA = {
-    "type": "string",
+    "type": "object",
     "patternProperties": {
         r"\A[ab]{1,2}\Z": {},
         r"\Aa[ab]\Z": {"type": "integer"},
         r"\A[ab]b\Z": {"type": "string"},
     },
     "additionalProperties": False,
-    "minimumProperties": 1,
+    "minProperties": 1,
 }
 
 
 @given(from_schema(OVERLAPPING_PATTERNS_SCHEMA))
 def test_handles_overlapping_patternproperties(value):
     jsonschema.validate(value, OVERLAPPING_PATTERNS_SCHEMA)
+    assert isinstance(value, dict)
+    assert len(value) >= 1
     assert "ab" not in value
 
 
