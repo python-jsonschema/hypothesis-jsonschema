@@ -5,6 +5,7 @@ import math
 import operator
 import re
 import warnings
+from copy import deepcopy
 from fractions import Fraction
 from functools import partial
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
@@ -135,7 +136,7 @@ def from_schema(
     """
     try:
         return __from_schema(
-            schema,
+            deepcopy(schema),
             custom_formats=custom_formats,
             alphabet=CharStrategy.from_args(allow_x00=allow_x00, codec=codec),
         )
