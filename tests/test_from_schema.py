@@ -314,9 +314,9 @@ def xfail_on_reference_resolve_error(f):
             assert name not in RECURSIVE_REFS
         except (
             jsonschema.exceptions._RefResolutionError,
-            wre := getattr(jsonschema.exceptions, "_WrappedReferencingError", ()),
+            W := getattr(jsonschema.exceptions, "_WrappedReferencingError", ()),  # noqa
         ) as err:
-            if isinstance(err, wre) and isinstance(
+            if isinstance(err, W) and isinstance(
                 err._wrapped, jsonschema.exceptions._Unresolvable
             ):
                 pytest.xfail()
