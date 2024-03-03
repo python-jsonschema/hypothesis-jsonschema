@@ -21,6 +21,7 @@ from hypothesis import (
 from hypothesis.errors import FailedHealthCheck, HypothesisWarning, InvalidArgument
 from hypothesis.internal.compat import PYPY
 from hypothesis.internal.reflection import proxies
+from hypothesis.strategies._internal.regex import IncompatibleWithAlphabet
 
 from hypothesis_jsonschema._canonicalise import (
     HypothesisRefResolutionError,
@@ -311,10 +312,19 @@ def xfail_on_reference_resolve_error(f):
         try:
             f(*args, **kwargs)
             assert name not in RECURSIVE_REFS
-        except jsonschema.exceptions._RefResolutionError as err:
+        except (
+            jsonschema.exceptions._RefResolutionError,
+            wre := getattr(jsonschema.exceptions, "_WrappedReferencingError", ()),
+        ) as err:
+            if isinstance(err, wre) and isinstance(
+                err._wrapped, jsonschema.exceptions._Unresolvable
+            ):
+                pytest.xfail()
             if (
                 isinstance(err, HypothesisRefResolutionError)
-                or isinstance(err._cause, HypothesisRefResolutionError)
+                or isinstance(
+                    getattr(err, "_cause", None), HypothesisRefResolutionError
+                )
             ) and (
                 "does not fetch remote references" in str(err)
                 or name in RECURSIVE_REFS
@@ -358,6 +368,28 @@ def test_cannot_generate_for_empty_test_suite_schema(name):
     strat = from_schema(invalid_suite[name])
     with pytest.raises(Exception):
         strat.example()
+
+
+@pytest.mark.parametrize("name", to_name_params(suite))
+@settings(
+    suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large],
+    deadline=None,
+    max_examples=20,
+)
+@given(data=st.data())
+@xfail_on_reference_resolve_error
+def test_constrained_alphabet_generation(data, name):
+    note(f"{suite[name]=}")
+    try:
+        value = data.draw(from_schema(suite[name], codec="ascii"))
+    except IncompatibleWithAlphabet:
+        pytest.skip()
+    note(f"{value=}")
+    try:
+        jsonschema.validate(value, suite[name])
+    except jsonschema.exceptions.SchemaError:
+        jsonschema.Draft4Validator(suite[name]).validate(value)
+    json.dumps(value).encode("ascii")
 
 
 # This schema has overlapping patternProperties - this is OK, so long as they're
