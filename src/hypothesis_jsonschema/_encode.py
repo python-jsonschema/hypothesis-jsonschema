@@ -1,4 +1,5 @@
 """Canonical encoding for the JSONSchema semantics, where 1 == 1.0."""
+
 import json
 import math
 import platform

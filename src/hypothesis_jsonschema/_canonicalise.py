@@ -12,6 +12,7 @@ one way to generate any given value... but much more importantly, we can do
 most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
+
 import contextlib
 import itertools
 import json
@@ -58,7 +59,7 @@ SCHEMA_OBJECT_KEYS = ("properties", "patternProperties", "dependencies")
 ALL_KEYWORDS = (
     *SCHEMA_KEYS,
     *SCHEMA_OBJECT_KEYS,
-    *sum((s.split() for _, s in TYPE_SPECIFIC_KEYS), []),
+    *(k for _, s in TYPE_SPECIFIC_KEYS for k in s.split()),
 )
 
 

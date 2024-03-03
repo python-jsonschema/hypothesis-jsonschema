@@ -656,9 +656,11 @@ def object_schema(
         alphabet.check_name_allowed(name)
     known_optional_names: List[str] = sorted(known - set(required))
     name_strats = (
-        __from_schema(names, custom_formats=custom_formats, alphabet=alphabet)
-        if additional_allowed
-        else st.nothing(),
+        (
+            __from_schema(names, custom_formats=custom_formats, alphabet=alphabet)
+            if additional_allowed
+            else st.nothing()
+        ),
         st.sampled_from(known_optional_names) if known_optional_names else st.nothing(),
         st.one_of(
             [

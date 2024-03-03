@@ -12,6 +12,7 @@ one way to generate any given value... but much more importantly, we can do
 most things by construction instead of by filtering.  That's the difference
 between "I'd like it to be faster" and "doesn't finish at all".
 """
+
 from copy import deepcopy
 from typing import NoReturn, Optional, Union
 
