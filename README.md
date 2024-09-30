@@ -11,6 +11,11 @@ The public API consists of just one function: `hypothesis_jsonschema.from_schema
 which takes a JSON schema and returns a strategy for allowed JSON objects.
 
 ```python
+import json
+import re
+
+import hypothesis.strategies as st
+
 from hypothesis import given
 
 from hypothesis_jsonschema import from_schema
@@ -25,9 +30,9 @@ def test_integers(value):
 @given(
     from_schema(
         {"type": "string", "format": "card"},
-        # Standard formats work out of the box.  Custom formats are ignored
-        # by default, but you can pass custom strategies for them - e.g.
-        custom_formats={"card": st.sampled_from(EXAMPLE_CARD_NUMBERS)},
+        custom_formats={
+            "card": st.sampled_from(EXAMPLE_CARD_NUMBERS)
+        },
     )
 )
 def test_card_numbers(value):
@@ -41,7 +46,7 @@ def test_card_numbers(payload):
     assert "\0" not in payload  # use allow_x00=False to exclude null characters
     # If you want to restrict generated strings characters which are valid in
     # a specific character encoding, you can do that with the `codec=` argument.
-    payload.encode(codec="utf-8")
+    payload.encode(encoding="utf-8")
 ```
 
 For more details on property-based testing and how to use or customise
