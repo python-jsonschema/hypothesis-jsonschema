@@ -31,14 +31,10 @@ from ._canonicalise import (
 
 class LocalResolver(_RefResolver):
     def resolve_remote(self, uri: str) -> NoReturn:
-        raise HypothesisRefResolutionError(
-            f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})"
-        )
+        raise HypothesisRefResolutionError(f"hypothesis-jsonschema does not fetch remote references (uri={uri!r})")
 
 
-def resolve_all_refs(
-    schema: Union[bool, Schema], *, resolver: Optional[LocalResolver] = None
-) -> Schema:
+def resolve_all_refs(schema: Union[bool, Schema], *, resolver: Optional[LocalResolver] = None) -> Schema:
     """
     Resolve all references in the given schema.
 
@@ -52,9 +48,7 @@ def resolve_all_refs(
     if resolver is None:
         resolver = LocalResolver.from_schema(deepcopy(schema))
     if not isinstance(resolver, _RefResolver):
-        raise InvalidArgument(
-            f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver"
-        )
+        raise InvalidArgument(f"resolver={resolver} (type {type(resolver).__name__}) is not a RefResolver")
 
     if "$ref" in schema:
         s = dict(schema)
@@ -71,10 +65,7 @@ def resolve_all_refs(
     for key in SCHEMA_KEYS:
         val = schema.get(key, False)
         if isinstance(val, list):
-            schema[key] = [
-                resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
-                for v in val
-            ]
+            schema[key] = [resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v for v in val]
         elif isinstance(val, dict):
             schema[key] = resolve_all_refs(val, resolver=resolver)
         else:
@@ -84,8 +75,7 @@ def resolve_all_refs(
             subschema = schema[key]
             assert isinstance(subschema, dict)
             schema[key] = {
-                k: resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v
-                for k, v in subschema.items()
+                k: resolve_all_refs(v, resolver=resolver) if isinstance(v, dict) else v for k, v in subschema.items()
             }
     assert isinstance(schema, dict)
     assert "$ref" not in schema

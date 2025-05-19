@@ -8,16 +8,8 @@ from pathlib import Path
 import jsonschema
 import pytest
 from gen_schemas import schema_strategy_params
-from hypothesis import (
-    HealthCheck,
-    Phase,
-    assume,
-    given,
-    note,
-    reject,
-    settings,
-    strategies as st,
-)
+from hypothesis import HealthCheck, Phase, assume, given, note, reject, settings
+from hypothesis import strategies as st
 from hypothesis.errors import FailedHealthCheck, HypothesisWarning, InvalidArgument
 from hypothesis.internal.compat import PYPY
 from hypothesis.internal.reflection import proxies
@@ -316,19 +308,14 @@ def xfail_on_reference_resolve_error(f):
             jsonschema.exceptions._RefResolutionError,
             W := getattr(jsonschema.exceptions, "_WrappedReferencingError", ()),  # noqa
         ) as err:
-            if isinstance(err, W) and isinstance(
-                err._wrapped, jsonschema.exceptions._Unresolvable
-            ):
+            if isinstance(err, W) and isinstance(err._wrapped, jsonschema.exceptions._Unresolvable):
                 pytest.xfail()
             if (
                 isinstance(err, HypothesisRefResolutionError)
-                or isinstance(
-                    getattr(err, "_cause", None), HypothesisRefResolutionError
-                )
+                or isinstance(getattr(err, "_cause", None), HypothesisRefResolutionError)
             ) and (
                 "does not fetch remote references" in str(err)
-                or name in RECURSIVE_REFS
-                and "Could not resolve recursive references" in str(err)
+                or (name in RECURSIVE_REFS and "Could not resolve recursive references" in str(err))
             ):
                 pytest.xfail()
             raise
@@ -562,9 +549,7 @@ def test_overriding_standard_format(data):
     expected = "2000-01-01"
     schema = {"type": "string", "format": "full-date"}
     custom_formats = {"full-date": st.just(expected)}
-    with pytest.warns(
-        HypothesisWarning, match="Overriding standard format 'full-date'"
-    ):
+    with pytest.warns(HypothesisWarning, match="Overriding standard format 'full-date'"):
         value = data.draw(from_schema(schema, custom_formats=custom_formats))
     assert value == expected
 
@@ -572,9 +557,7 @@ def test_overriding_standard_format(data):
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
 
-    @given(
-        from_schema({"type": "array", "items": INVALID_REGEX_SCHEMA, "maxItems": 10})
-    )
+    @given(from_schema({"type": "array", "items": INVALID_REGEX_SCHEMA, "maxItems": 10}))
     def test_can_generate_empty_list_with_max_size_and_no_allowed_items(val):
         assert val == []
 

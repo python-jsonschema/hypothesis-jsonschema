@@ -3,7 +3,8 @@
 import jsonschema
 import pytest
 from gen_schemas import gen_number, json_schemata, schema_strategy_params
-from hypothesis import HealthCheck, assume, given, note, settings, strategies as st
+from hypothesis import HealthCheck, assume, given, note, settings
+from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
 from hypothesis_jsonschema import from_schema
@@ -61,9 +62,7 @@ def test_canonicalises_to_equivalent_fixpoint_examples(schema, examples):
 
 def test_dependencies_canonicalises_to_fixpoint():
     """Check that an object drawn from an arbitrary schema is valid."""
-    cc = canonicalish(
-        {"required": [""], "properties": {"": {}}, "dependencies": {"": [""]}}
-    )
+    cc = canonicalish({"required": [""], "properties": {"": {}}, "dependencies": {"": [""]}})
     assert cc == canonicalish(cc)
 
 
@@ -464,9 +463,7 @@ def test_canonicalises_to_expected(schema, expected):
                 {"dependencies": {"a": {"properties": {"b": {"type": "string"}}}}},
             ],
             {
-                "dependencies": {
-                    "a": {"required": ["b"], "properties": {"b": {"type": "string"}}}
-                },
+                "dependencies": {"a": {"required": ["b"], "properties": {"b": {"type": "string"}}}},
             },
         ),
         (
@@ -475,9 +472,7 @@ def test_canonicalises_to_expected(schema, expected):
                 {"dependencies": {"a": ["b"]}},
             ],
             {
-                "dependencies": {
-                    "a": {"required": ["b"], "properties": {"b": {"type": "string"}}}
-                },
+                "dependencies": {"a": {"required": ["b"], "properties": {"b": {"type": "string"}}}},
             },
         ),
         (
@@ -550,9 +545,7 @@ def _merge_semantics_helper(data, s1, s2, combined):
     assert is_valid(i2, s1) == is_valid(i2, combined)
 
 
-@pytest.mark.xfail(
-    strict=False, reason="https://github.com/python-jsonschema/jsonschema/issues/1159"
-)
+@pytest.mark.xfail(strict=False, reason="https://github.com/python-jsonschema/jsonschema/issues/1159")
 @settings(suppress_health_check=list(HealthCheck), deadline=None)
 @given(st.data(), json_schemata(), json_schemata())
 def test_merge_semantics(data, s1, s2):
@@ -564,9 +557,7 @@ def test_merge_semantics(data, s1, s2):
     _merge_semantics_helper(data, s1, s2, combined)
 
 
-@pytest.mark.xfail(
-    strict=False, reason="https://github.com/python-jsonschema/jsonschema/issues/1159"
-)
+@pytest.mark.xfail(strict=False, reason="https://github.com/python-jsonschema/jsonschema/issues/1159")
 @settings(suppress_health_check=list(HealthCheck), deadline=None)
 @given(
     st.data(),

@@ -5,7 +5,8 @@ from typing import Any, Dict, List, Union
 
 import jsonschema
 import pytest
-from hypothesis import assume, strategies as st
+from hypothesis import assume
+from hypothesis import strategies as st
 
 from hypothesis_jsonschema._canonicalise import JSONType, Schema, encode_canonical_json
 from hypothesis_jsonschema._from_schema import (
@@ -58,11 +59,7 @@ def _json_schemata(draw: Any, *, recur: bool = True) -> Any:
 def gen_enum() -> st.SearchStrategy[Dict[str, List[JSONType]]]:
     """Return a strategy for enum schema."""
     return st.fixed_dictionaries(
-        {
-            "enum": st.lists(
-                JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json
-            )
-        }
+        {"enum": st.lists(JSON_STRATEGY, min_size=1, max_size=10, unique_by=encode_canonical_json)}
     )
 
 
@@ -82,9 +79,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     upper = draw(st.none() | st.integers(-max_int_float, max_int_float))
     if lower is not None and upper is not None and lower > upper:
         lower, upper = upper, lower
-    multiple_of = draw(
-        st.none() | st.integers(2, 100) | st.floats(1 / 1024, 100, exclude_min=True)
-    )
+    multiple_of = draw(st.none() | st.integers(2, 100) | st.floats(1 / 1024, 100, exclude_min=True))
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     assert kind in ("integer", "number")
     out: Dict[str, Union[str, float]] = {"type": kind}
@@ -134,9 +129,7 @@ def gen_array(draw: Any) -> Schema:
     if min_size is not None and max_size is not None and min_size > max_size:
         min_size, max_size = max_size, min_size
     items = draw(
-        st.builds(dict)
-        | _json_schemata(recur=False)
-        | st.lists(_json_schemata(recur=False), min_size=1, max_size=10)
+        st.builds(dict) | _json_schemata(recur=False) | st.lists(_json_schemata(recur=False), min_size=1, max_size=10)
     )
     out = {"type": "array", "items": items}
     if isinstance(items, list):
@@ -169,17 +162,13 @@ def gen_object(draw: Any) -> Schema:
     out: Schema = {"type": "object"}
     names = draw(st.sampled_from([None, None, None, draw(gen_string())]))
     name_strat = st.text() if names is None else from_schema(names)
-    required = draw(
-        st.just(False) | st.lists(name_strat, min_size=1, max_size=5, unique=True)
-    )
+    required = draw(st.just(False) | st.lists(name_strat, min_size=1, max_size=5, unique=True))
 
     # Trying to generate schemata that are consistent would mean dealing with
     # overlapping regex and names, and that would suck.  So instead we ensure that
     # there *are* no overlapping requirements, which is much easier.
     properties = draw(st.dictionaries(name_strat, _json_schemata(recur=False)))
-    disjoint = REGEX_PATTERNS.filter(
-        lambda r: all(re.search(r, string=name) is None for name in properties)
-    )
+    disjoint = REGEX_PATTERNS.filter(lambda r: all(re.search(r, string=name) is None for name in properties))
     patterns = draw(st.dictionaries(disjoint, _json_schemata(recur=False), max_size=1))
     additional = draw(st.none() | _json_schemata(recur=False))
 
@@ -205,9 +194,7 @@ def gen_object(draw: Any) -> Schema:
 
         props = st.sampled_from(sorted(properties))
         if draw(st.integers(0, 3)) == 3:
-            out["dependencies"] = draw(
-                st.dictionaries(props, st.lists(props, unique=True))
-            )
+            out["dependencies"] = draw(st.dictionaries(props, st.lists(props, unique=True)))
         elif draw(st.integers(0, 3)) == 3:
             out["dependencies"] = draw(st.dictionaries(props, json_schemata()))
     if patterns:

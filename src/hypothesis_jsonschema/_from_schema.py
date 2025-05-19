@@ -12,7 +12,9 @@ from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
 
 import jsonschema
 import jsonschema.exceptions
-from hypothesis import assume, provisional as prov, strategies as st
+from hypothesis import assume
+from hypothesis import provisional as prov
+from hypothesis import strategies as st
 from hypothesis.errors import HypothesisWarning, InvalidArgument
 from hypothesis.internal.conjecture import utils as cu
 from hypothesis.strategies._internal.regex import regex_strategy
@@ -40,8 +42,7 @@ JSON_STRATEGY: st.SearchStrategy[JSONType] = st.recursive(
     | st.integers()
     | st.floats(allow_nan=False, allow_infinity=False).map(lambda x: x or 0.0)
     | st.text(),
-    lambda strategy: st.lists(strategy, max_size=3)
-    | st.dictionaries(st.text(), strategy, max_size=3),
+    lambda strategy: st.lists(strategy, max_size=3) | st.dictionaries(st.text(), strategy, max_size=3),
 )
 _FORMATS_TOKEN = object()
 
@@ -52,9 +53,7 @@ class CharStrategy(OneCharStringStrategy):
 
     @classmethod
     def from_args(cls, *, allow_x00: bool, codec: Optional[str]) -> "CharStrategy":
-        self: CharStrategy = cls.from_characters_args(
-            min_codepoint=0 if allow_x00 else 1, codec=codec
-        )
+        self: CharStrategy = cls.from_characters_args(min_codepoint=0 if allow_x00 else 1, codec=codec)
         self.allow_x00 = allow_x00
         self.codec = codec
         return self
@@ -87,27 +86,21 @@ def merged_as_strategies(
 ) -> st.SearchStrategy[JSONType]:
     assert schemas, "internal error: must pass at least one schema to merge"
     if len(schemas) == 1:
-        return __from_schema(
-            schemas[0], alphabet=alphabet, custom_formats=custom_formats
-        )
+        return __from_schema(schemas[0], alphabet=alphabet, custom_formats=custom_formats)
     # Try to merge combinations of strategies.
     strats = []
     combined: Set[str] = set()
     inputs = {encode_canonical_json(s): s for s in schemas}
-    for group in itertools.chain.from_iterable(
-        itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)
-    ):
+    for group in itertools.chain.from_iterable(itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)):
         if combined.issuperset(group):
             continue
         s = merged([inputs[g] for g in group])
         if s is not None and s != FALSEY:
             strats.append(
-                __from_schema(
-                    s, alphabet=alphabet, custom_formats=custom_formats
-                ).filter(
-                    lambda obj, validators=tuple(
-                        make_validator(s).is_valid for s in schemas
-                    ): all(v(obj) for v in validators)
+                __from_schema(s, alphabet=alphabet, custom_formats=custom_formats).filter(
+                    lambda obj, validators=tuple(make_validator(s).is_valid for s in schemas): all(
+                        v(obj) for v in validators
+                    )
                 )
             )
             combined.update(group)
@@ -178,9 +171,7 @@ def __from_schema(
     try:
         schema = resolve_all_refs(schema)
     except RecursionError:
-        raise HypothesisRefResolutionError(
-            f"Could not resolve recursive references in schema={schema!r}"
-        ) from None
+        raise HypothesisRefResolutionError(f"Could not resolve recursive references in schema={schema!r}") from None
     # We check for _FORMATS_TOKEN to avoid re-validating known good data.
     if custom_formats is not None and _FORMATS_TOKEN not in custom_formats:
         assert isinstance(custom_formats, dict)
@@ -194,15 +185,13 @@ def __from_schema(
                 )
             if name in STRING_FORMATS:
                 warnings.warn(
-                    f"Overriding standard format {name!r} - was "
-                    f"{STRING_FORMATS[name]!r}, now {strat!r}",
+                    f"Overriding standard format {name!r} - was " f"{STRING_FORMATS[name]!r}, now {strat!r}",
                     HypothesisWarning,
                     stacklevel=2,
                 )
         format_checker = jsonschema.FormatChecker()
         custom_formats = {
-            name: _get_format_filter(name, format_checker, strategy)
-            for name, strategy in custom_formats.items()
+            name: _get_format_filter(name, format_checker, strategy) for name, strategy in custom_formats.items()
         }
         custom_formats[_FORMATS_TOKEN] = None  # type: ignore
 
@@ -225,39 +214,26 @@ def __from_schema(
         not_ = schema.pop("not")
         assert isinstance(not_, dict)
         validator = make_validator(not_).is_valid
-        return __from_schema(
-            schema, alphabet=alphabet, custom_formats=custom_formats
-        ).filter(lambda v: not validator(v))
+        return __from_schema(schema, alphabet=alphabet, custom_formats=custom_formats).filter(
+            lambda v: not validator(v)
+        )
     if "anyOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("anyOf")
         assert isinstance(ao, list)
-        return st.one_of(
-            [
-                merged_as_strategies(
-                    [tmp, s], alphabet=alphabet, custom_formats=custom_formats
-                )
-                for s in ao
-            ]
-        )
+        return st.one_of([merged_as_strategies([tmp, s], alphabet=alphabet, custom_formats=custom_formats) for s in ao])
     if "allOf" in schema:
         tmp = schema.copy()
         ao = tmp.pop("allOf")
         assert isinstance(ao, list)
-        return merged_as_strategies(
-            [tmp, *ao], alphabet=alphabet, custom_formats=custom_formats
-        )
+        return merged_as_strategies([tmp, *ao], alphabet=alphabet, custom_formats=custom_formats)
     if "oneOf" in schema:
         tmp = schema.copy()
         oo = tmp.pop("oneOf")
         assert isinstance(oo, list)
         schemas = [merged([tmp, s]) for s in oo]
         return st.one_of(
-            [
-                __from_schema(s, alphabet=alphabet, custom_formats=custom_formats)
-                for s in schemas
-                if s is not None
-            ]
+            [__from_schema(s, alphabet=alphabet, custom_formats=custom_formats) for s in schemas if s is not None]
         ).filter(make_validator(schema).is_valid)
     # Simple special cases
     if "enum" in schema:
@@ -295,11 +271,7 @@ def _numeric_with_multiplier(
         # to deal with this when canonicalising, but suffice to say we can't without
         # diverging from the floating-point behaviour of the upstream validator.
         return st.nothing()  # type: ignore[unreachable]
-    return (
-        st.integers(min_value, max_value)
-        .map(lambda x: x * multiple_of)
-        .filter(make_validator(schema).is_valid)
-    )
+    return st.integers(min_value, max_value).map(lambda x: x * multiple_of).filter(make_validator(schema).is_valid)
 
 
 def integer_schema(schema: dict) -> st.SearchStrategy[float]:
@@ -350,9 +322,9 @@ def rfc3339(name: str) -> st.SearchStrategy[str]:
     if name in simple:
         return simple[name]
     if name == "time-numoffset":
-        return st.tuples(
-            st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")
-        ).map("%s%s:%s".__mod__)
+        return st.tuples(st.sampled_from(["+", "-"]), rfc3339("time-hour"), rfc3339("time-minute")).map(
+            "%s%s:%s".__mod__
+        )
     if name == "time-offset":
         return st.one_of(st.just("Z"), rfc3339("time-numoffset"))
     if name == "partial-time":
@@ -389,9 +361,7 @@ REGEX_PATTERNS = regex_patterns()
 
 def json_pointers(alphabet: CharStrategy) -> st.SearchStrategy[str]:
     """Return a strategy for strings in json-pointer format."""
-    return st.lists(
-        st.text(alphabet).map(lambda p: "/" + p.replace("~", "~0").replace("/", "~1"))
-    ).map("".join)
+    return st.lists(st.text(alphabet).map(lambda p: "/" + p.replace("~", "~0").replace("/", "~1"))).map("".join)
 
 
 def relative_json_pointers(alphabet: CharStrategy) -> st.SearchStrategy[str]:
@@ -505,9 +475,7 @@ def string_schema(
             return st.nothing()
     # If we have size bounds but we're generating strings from a regex or pattern,
     # apply a filter to ensure our size bounds are respected.
-    if ("format" in schema or "pattern" in schema) and (
-        min_size != 0 or max_size is not None
-    ):
+    if ("format" in schema or "pattern" in schema) and (min_size != 0 or max_size is not None):
         max_size = math.inf if max_size is None else max_size
         strategy = strategy.filter(lambda s: min_size <= len(s) <= max_size)
     return strategy
@@ -519,9 +487,7 @@ def array_schema(
     schema: dict,
 ) -> st.SearchStrategy[List[JSONType]]:
     """Handle schemata for arrays."""
-    _from_schema_ = partial(
-        __from_schema, custom_formats=custom_formats, alphabet=alphabet
-    )
+    _from_schema_ = partial(__from_schema, custom_formats=custom_formats, alphabet=alphabet)
     items = schema.get("items", {})
     additional_items = schema.get("additionalItems", {})
     min_size = schema.get("minItems", 0)
@@ -662,12 +628,7 @@ def object_schema(
             else st.nothing()
         ),
         st.sampled_from(known_optional_names) if known_optional_names else st.nothing(),
-        st.one_of(
-            [
-                from_js_regex(p, alphabet=alphabet).filter(valid_name)
-                for p in sorted(patterns)
-            ]
-        ),
+        st.one_of([from_js_regex(p, alphabet=alphabet).filter(valid_name) for p in sorted(patterns)]),
     )
     all_names_strategy = st.one_of([s for s in name_strats if not s.is_empty])
 
@@ -702,11 +663,7 @@ def object_schema(
                 else:
                     key = draw(all_names_strategy.filter(lambda s: s not in out))
 
-            pattern_schemas = [
-                patterns[rgx]
-                for rgx in sorted(patterns)
-                if re.search(rgx, string=key) is not None
-            ]
+            pattern_schemas = [patterns[rgx] for rgx in sorted(patterns) if re.search(rgx, string=key) is not None]
             if key in properties:
                 pattern_schemas.insert(0, properties[key])
 
@@ -719,11 +676,7 @@ def object_schema(
                     )
                 )
             else:
-                out[key] = draw(
-                    __from_schema(
-                        additional, custom_formats=custom_formats, alphabet=alphabet
-                    )
-                )
+                out[key] = draw(__from_schema(additional, custom_formats=custom_formats, alphabet=alphabet))
 
             for k, v in dep_schemas.items():
                 if k in out and not make_validator(v).is_valid(out):
