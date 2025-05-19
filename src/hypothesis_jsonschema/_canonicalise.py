@@ -51,7 +51,7 @@ TYPE_SPECIFIC_KEYS = (
 )
 # Names of keywords where the associated values may be schemas or lists of schemas.
 SCHEMA_KEYS = tuple(
-    "items additionalItems contains additionalProperties propertyNames " "if then else allOf anyOf oneOf not".split()
+    "items additionalItems contains additionalProperties propertyNames if then else allOf anyOf oneOf not".split()
 )
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
@@ -253,7 +253,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
-        raise InvalidArgument(f"Got schema={schema!r} of type {type(schema).__name__}, " "but expected a dict.")
+        raise InvalidArgument(f"Got schema={schema!r} of type {type(schema).__name__}, but expected a dict.")
 
     if "const" in schema:
         if not make_validator(schema).is_valid(schema["const"]):
@@ -790,8 +790,8 @@ def has_divisibles(
     start: float,
     end: float,
     divisor: float,
-    exmin: bool,
-    exmax: bool,  # noqa
+    exmin: bool,  # noqa: FBT001
+    exmax: bool,  # noqa: FBT001
 ) -> bool:
     """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
     divisible_num = end // divisor - start // divisor

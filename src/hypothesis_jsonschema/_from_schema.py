@@ -185,7 +185,7 @@ def __from_schema(
                 )
             if name in STRING_FORMATS:
                 warnings.warn(
-                    f"Overriding standard format {name!r} - was " f"{STRING_FORMATS[name]!r}, now {strat!r}",
+                    f"Overriding standard format {name!r} - was {STRING_FORMATS[name]!r}, now {strat!r}",
                     HypothesisWarning,
                     stacklevel=2,
                 )

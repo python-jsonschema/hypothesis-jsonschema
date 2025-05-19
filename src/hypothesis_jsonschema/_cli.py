@@ -10,11 +10,11 @@ from hypothesis_jsonschema._from_schema import from_schema
 app = typer.Typer(help="Hypothesis JSONSchema CLI")
 
 
-def version_callback(value: bool) -> None:
+def version_callback(value: bool) -> None:  # noqa: FBT001
     """Callback to show the version of memtab"""
     if value:
         print(vers("hypothesis-jsonschema"))
-        raise typer.Exit()
+        raise typer.Exit(0)
 
 
 @app.command()
@@ -45,4 +45,5 @@ def main(
 
     for _ in range(num):
         ex = sample.example()
+        print(json.dumps(ex))
     typer.Exit(0)
