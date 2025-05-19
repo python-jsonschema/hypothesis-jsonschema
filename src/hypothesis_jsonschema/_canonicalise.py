@@ -24,7 +24,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
-from hypothesis.internal.floats import next_down as ieee_next_down, next_up
+from hypothesis.internal.floats import next_down as ieee_next_down
+from hypothesis.internal.floats import next_up
 
 from ._encode import JSONType, encode_canonical_json, sort_key
 
@@ -50,8 +51,7 @@ TYPE_SPECIFIC_KEYS = (
 )
 # Names of keywords where the associated values may be schemas or lists of schemas.
 SCHEMA_KEYS = tuple(
-    "items additionalItems contains additionalProperties propertyNames "
-    "if then else allOf anyOf oneOf not".split()
+    "items additionalItems contains additionalProperties propertyNames if then else allOf anyOf oneOf not".split()
 )
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
@@ -79,7 +79,7 @@ class CacheableSchema:
     will have the same validator.
     """
 
-    __slots__ = ("schema", "encoded")
+    __slots__ = ("encoded", "schema")
 
     def __init__(self, schema: Schema) -> None:
         self.schema = schema
@@ -253,10 +253,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
 
     # Otherwise, we're dealing with "objects", i.e. dicts.
     if not isinstance(schema, dict):
-        raise InvalidArgument(
-            f"Got schema={schema!r} of type {type(schema).__name__}, "
-            "but expected a dict."
-        )
+        raise InvalidArgument(f"Got schema={schema!r} of type {type(schema).__name__}, but expected a dict.")
 
     if "const" in schema:
         if not make_validator(schema).is_valid(schema["const"]):
@@ -264,9 +261,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         return {"const": schema["const"]}
     if "enum" in schema:
         validator = make_validator(schema)
-        enum_ = sorted(
-            (v for v in schema["enum"] if validator.is_valid(v)), key=sort_key
-        )
+        enum_ = sorted((v for v in schema["enum"] if validator.is_valid(v)), key=sort_key)
         if not enum_:
             return FALSEY
         elif len(enum_) == 1:
@@ -297,10 +292,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             assert key not in schema, (key, schema[key])
     for key in SCHEMA_OBJECT_KEYS:
         if key in schema:
-            schema[key] = {
-                k: v if isinstance(v, list) else canonicalish(v)
-                for k, v in schema[key].items()
-            }
+            schema[key] = {k: v if isinstance(v, list) else canonicalish(v) for k, v in schema[key].items()}
     # multipleOf is semantically unaffected by the sign, so ensure it's positive
     if "multipleOf" in schema:
         schema["multipleOf"] = abs(schema["multipleOf"])
@@ -320,9 +312,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         elif lo is not None and hi is not None:
             lobound = next_up(lo) if exmin else lo
             hibound = next_down(hi) if exmax else hi
-            if (
-                mul and not has_divisibles(lo, hi, mul, exmin, exmax)
-            ) or lobound > hibound:
+            if (mul and not has_divisibles(lo, hi, mul, exmin, exmax)) or lobound > hibound:
                 type_.remove("number")
             elif type_ == ["number"] and lobound == hibound:
                 return {"const": lobound}
@@ -364,27 +354,15 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if schema["contains"] == TRUTHY:
             schema.pop("contains")
             schema["minItems"] = max(schema.get("minItems", 1), 1)
-    if (
-        "array" in type_
-        and "uniqueItems" in schema
-        and isinstance(schema.get("items", []), dict)
-    ):
+    if "array" in type_ and "uniqueItems" in schema and isinstance(schema.get("items", []), dict):
         item_count = upper_bound_instances(schema["items"])
         if math.isfinite(item_count):
             schema["maxItems"] = min(item_count, schema.get("maxItems", math.inf))
-    if "array" in type_ and schema.get("minItems", 0) > schema.get(
-        "maxItems", math.inf
-    ):
+    if "array" in type_ and schema.get("minItems", 0) > schema.get("maxItems", math.inf):
         type_.remove("array")
-    if (
-        "array" in type_
-        and "minItems" in schema
-        and isinstance(schema.get("items", []), dict)
-    ):
+    if "array" in type_ and "minItems" in schema and isinstance(schema.get("items", []), dict):
         count = upper_bound_instances(schema["items"])
-        if (count == 0 and schema["minItems"] > 0) or (
-            schema.get("uniqueItems", False) and count < schema["minItems"]
-        ):
+        if (count == 0 and schema["minItems"] > 0) or (schema.get("uniqueItems", False) and count < schema["minItems"]):
             type_.remove("array")
     if "array" in type_ and isinstance(schema.get("items"), list):
         schema["items"] = schema["items"][: schema.get("maxItems")]
@@ -395,31 +373,20 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 schema.pop("additionalItems", None)
                 break
         if schema.get("minItems", 0) > min(
-            len(schema["items"])
-            + upper_bound_instances(schema.get("additionalItems", TRUTHY)),
+            len(schema["items"]) + upper_bound_instances(schema.get("additionalItems", TRUTHY)),
             schema.get("maxItems", math.inf),
         ):
             type_.remove("array")
-    if (
-        "array" in type_
-        and isinstance(schema.get("items"), list)
-        and schema.get("additionalItems") == FALSEY
-    ):
+    if "array" in type_ and isinstance(schema.get("items"), list) and schema.get("additionalItems") == FALSEY:
         schema.pop("maxItems", None)
-    if "array" in type_ and (
-        schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0
-    ):
+    if "array" in type_ and (schema.get("items") == FALSEY or schema.get("maxItems", 1) == 0):
         schema["maxItems"] = 0
         schema.pop("items", None)
         schema.pop("uniqueItems", None)
         schema.pop("additionalItems", None)
     if "array" in type_ and schema.get("items", TRUTHY) == TRUTHY:
         schema.pop("items", None)
-    if (
-        "properties" in schema
-        and not schema.get("patternProperties")
-        and schema.get("additionalProperties") == FALSEY
-    ):
+    if "properties" in schema and not schema.get("patternProperties") and schema.get("additionalProperties") == FALSEY:
         max_props = schema.get("maxProperties", math.inf)
         assert isinstance(max_props, (int, float))
         for k, v in list(schema["properties"].items()):
@@ -429,9 +396,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
     if schema.get("maxProperties", math.inf) == 0:
         for k in ("properties", "patternProperties", "additionalProperties"):
             schema.pop(k, None)
-    if "object" in type_ and schema.get("minProperties", 0) > schema.get(
-        "maxProperties", math.inf
-    ):
+    if "object" in type_ and schema.get("minProperties", 0) > schema.get("maxProperties", math.inf):
         type_.remove("object")
     # Discard dependencies values that don't restrict anything
     for k, v in schema.get("dependencies", {}).copy().items():
@@ -459,11 +424,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
         if schema.get("dependencies"):
             # When the presence of a required property requires other properties via
             # dependencies, those properties can be moved to the base required keys.
-            dep_names = {
-                k: sorted(set(v))
-                for k, v in schema["dependencies"].items()
-                if isinstance(v, list)
-            }
+            dep_names = {k: sorted(set(v)) for k, v in schema["dependencies"].items() if isinstance(v, list)}
             schema["dependencies"].update(dep_names)
             while reqs.intersection(dep_names):
                 for r in reqs.intersection(dep_names):
@@ -552,10 +513,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 continue
             i += 1
         schema["anyOf"] = [
-            json.loads(s)
-            for s in sorted(
-                {encode_canonical_json(a) for a in schema["anyOf"] if a != FALSEY}
-            )
+            json.loads(s) for s in sorted({encode_canonical_json(a) for a in schema["anyOf"] if a != FALSEY})
         ]
         if not schema["anyOf"]:
             return FALSEY
@@ -579,10 +537,7 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             schema = merged([schema, new_types])
             assert isinstance(schema, dict)  # merging was certainly valid
     if "allOf" in schema:
-        schema["allOf"] = [
-            json.loads(enc)
-            for enc in sorted(set(map(encode_canonical_json, schema["allOf"])))
-        ]
+        schema["allOf"] = [json.loads(enc) for enc in sorted(set(map(encode_canonical_json, schema["allOf"])))]
         if any(s == FALSEY for s in schema["allOf"]):
             return FALSEY
         if all(s == TRUTHY for s in schema["allOf"]):
@@ -657,15 +612,13 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             ot = get_type(out)
             if "number" in ot:
                 ot.append("integer")
-            out["type"] = [
-                t for t in ot if t in tt or t == "integer" and "number" in tt
-            ]
+            out["type"] = [t for t in ot if t in tt or (t == "integer" and "number" in tt)]
             out_type = get_type(out)
             if not out_type:
                 return FALSEY
             for t, kw in TYPE_SPECIFIC_KEYS:
                 numeric = ["number", "integer"]
-                if t in out_type or t in numeric and t in out_type + numeric:
+                if t in out_type or (t in numeric and t in out_type + numeric):
                     continue
                 for k in kw.split():
                     s.pop(k, None)
@@ -691,17 +644,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 if prop_name in out_props:
                     out_combined = out_props[prop_name]
                 else:
-                    out_combined = merged(
-                        [s for p, s in out_pat.items() if re.search(p, prop_name)]
-                        or [out_add]
-                    )
+                    out_combined = merged([s for p, s in out_pat.items() if re.search(p, prop_name)] or [out_add])
                 if prop_name in s_props:
                     s_combined = s_props[prop_name]
                 else:
-                    s_combined = merged(
-                        [s for p, s in s_pat.items() if re.search(p, prop_name)]
-                        or [s_add]
-                    )
+                    s_combined = merged([s for p, s in s_pat.items() if re.search(p, prop_name)] or [s_add])
                 if out_combined is None or s_combined is None:  # pragma: no cover
                     # Note that this can only be the case if we were actually going to
                     # use the schema which we attempted to merge, i.e. prop_name was
@@ -732,17 +679,9 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             out["allOf"] += s.pop("allOf")
         if "required" in out and "required" in s:
             out["required"] = sorted(set(out["required"] + s.pop("required")))
-        for key in (
-            {"maximum", "exclusiveMaximum", "maxLength", "maxItems", "maxProperties"}
-            & set(s)
-            & set(out)
-        ):
+        for key in {"maximum", "exclusiveMaximum", "maxLength", "maxItems", "maxProperties"} & set(s) & set(out):
             out[key] = min([out[key], s.pop(key)])
-        for key in (
-            {"minimum", "exclusiveMinimum", "minLength", "minItems", "minProperties"}
-            & set(s)
-            & set(out)
-        ):
+        for key in {"minimum", "exclusiveMinimum", "minLength", "minItems", "minProperties"} & set(s) & set(out):
             out[key] = max([out[key], s.pop(key)])
         if "multipleOf" in out and "multipleOf" in s:
             x, y = s.pop("multipleOf"), out["multipleOf"]
@@ -762,11 +701,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                 s.pop("contains")
         if "not" in out and "not" in s and out["not"] != s["not"]:
             out["not"] = {"anyOf": [out["not"], s.pop("not")]}
-        if (
-            "dependencies" in out
-            and "dependencies" in s
-            and out["dependencies"] != s["dependencies"]
-        ):
+        if "dependencies" in out and "dependencies" in s and out["dependencies"] != s["dependencies"]:
             # Note: draft 2019-09 added separate keywords for name-dependencies
             # and schema-dependencies, but when we add support for that it will
             # be by canonicalising to the existing backwards-compatible keyword.
@@ -810,14 +745,10 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
                     out["items"].append(merged([a, b]))
             elif isinstance(oitems, list):
                 out["items"] = [merged([x, sitems]) for x in oitems]
-                out["additionalItems"] = merged(
-                    [out.get("additionalItems", TRUTHY), sitems]
-                )
+                out["additionalItems"] = merged([out.get("additionalItems", TRUTHY), sitems])
             elif isinstance(sitems, list):
                 out["items"] = [merged([x, oitems]) for x in sitems]
-                out["additionalItems"] = merged(
-                    [s.get("additionalItems", TRUTHY), oitems]
-                )
+                out["additionalItems"] = merged([s.get("additionalItems", TRUTHY), oitems])
             else:
                 out["items"] = merged([oitems, sitems])
                 if out["items"] is None:
@@ -856,7 +787,11 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
 
 def has_divisibles(
-    start: float, end: float, divisor: float, exmin: bool, exmax: bool  # noqa
+    start: float,
+    end: float,
+    divisor: float,
+    exmin: bool,  # noqa: FBT001
+    exmax: bool,  # noqa: FBT001
 ) -> bool:
     """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
     divisible_num = end // divisor - start // divisor

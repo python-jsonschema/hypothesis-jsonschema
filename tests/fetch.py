@@ -63,9 +63,7 @@ with open("tests/corpus-schemastore-catalog.json", mode="w") as f:
 suite: dict = {}
 invalid_suite: dict = {}
 
-with urllib.request.urlopen(
-    "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/master.zip"
-) as handle:
+with urllib.request.urlopen("https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/master.zip") as handle:
     start = "JSON-Schema-Test-Suite-master/tests/"
     with zipfile.ZipFile(io.BytesIO(handle.read())) as zf:
         seen = set()
