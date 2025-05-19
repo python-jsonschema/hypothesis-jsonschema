@@ -1,3 +1,67 @@
+[project]
+name = "hypothesis-jsonschema"
+version = "0.23.1"
+
+keywords = [
+  "python",
+  "testing",
+  "fuzzing",
+  "property-based-testing",
+  "json-schema"
+]
+description = "Generate test data from JSON schemata with Hypothesis"
+requires-python = ">=3.8"
+readme = "README.md"
+authors = [
+    { name = "Zac Hatfield-Dodds", email = "zac@zhd.dev"}
+  ]
+classifiers = [
+        "Development Status :: 4 - Beta",
+        "Framework :: Hypothesis",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Topic :: Education :: Testing",
+        "Topic :: Software Development :: Testing",
+        "Typing :: Typed",]
+license = "MPL-2.0"
+
+zip-safe = false
+
+
+dependencies = [
+    "hypothesis>=6.84.3",
+    "jsonschema>=4.18.0",
+    "typer>=0.15.4",
+]
+
+[project.urls]
+repository = "https://github.com/Zac-HD/hypothesis-jsonschema"
+funding = "https://github.com/sponsors/Zac-HD"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "flake8",
+    "ruff",
+    "mypy",
+    "shed"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+hypothesisjson = "hypothesis_jsonschema._cli:app"
+
 [tool.ruff]
 select = [
   "ASYNC",  # flake8-async
@@ -52,3 +116,47 @@ ignore = [
   "UP031",
 ]
 target-version = "py38"
+
+
+# Settings for other tools
+[pytest]
+xfail_strict = true
+addopts = [
+    "-Werror",
+    "--tb=short",
+    "--cov=hypothesis_jsonschema",
+    "--cov-branch",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=100",
+]
+
+[flake8]
+ignore = [
+  "D1",
+  "E203",
+  "E501",
+  "W503",
+  "S101",
+  "S310"
+]
+exclude = [
+  ".*/",
+  "__pycache__"
+]
+
+[mypy]
+python_version = 3.8
+platform = "linux"
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+follow_imports = "silent"
+ignore_missing_imports = true
+implicit_reexport = false
+strict_equality = true
+warn_no_return = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_ignores = true
+warn_unused_configs = true
+warn_redundant_casts = true
