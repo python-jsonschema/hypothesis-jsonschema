@@ -10,16 +10,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v1
+    - uses: actions/checkout@v4
+
+    - name: Install uv and set the python version
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: "3.11"
-    - name: Install dependencies
-      run: python -m pip install --upgrade pip setuptools tox
+
     - name: Run checks
       run: |
-        python -m tox --recreate -e check
+        uv run tox --recreate -e check
         git diff --exit-code
 
   test:
@@ -29,17 +29,16 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "pypy-3.8", "pypy-3.9", "pypy-3.10"]
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+    - name: Install uv and set the python version
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: python -m pip install --upgrade pip setuptools tox
+
     - name: Run tests
       # Disable coverage on PyPy
       run: |
-        python -m tox --recreate -e test \
+        uv run tox --recreate -e test \
           -- -n auto --durations=10 -k "not test_can_generate_for_real_large_schema" \
           $(${{ startsWith(matrix.python-version, 'pypy') }} && echo '--no-cov')
 
@@ -50,16 +49,14 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]  # FIXME: these segfault PyPy
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v4
+    - name: Install uv and set the python version
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: python -m pip install --upgrade pip setuptools tox
     - name: Run slow tests
       run: |
-        python -m tox --recreate -e test \
+        uv run tox --recreate -e test \
         -- -n auto --durations=10 --no-cov -k test_can_generate_for_real_large_schema
 
   release:
@@ -67,15 +64,16 @@ jobs:
     needs: [check, test, test-slow]
     if: github.repository == 'python-jsonschema/hypothesis-jsonschema' &&  github.ref == 'refs/heads/master'
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+    - uses: actions/checkout@v4
+    - name: Install uv and set the python version
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: 3.8
-    - name: Install tools
-      run: python -m pip install --upgrade pip setuptools wheel twine
+        python-version: "3.8"
     - name: Upload new release
       env:
         TWINE_USERNAME: '__token__'
         TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-      run: python setup.py sdist bdist_wheel && twine upload --skip-existing dist/*
+      run: |
+        pip install twine
+        uv build
+        twine upload --skip-existing dist/*
