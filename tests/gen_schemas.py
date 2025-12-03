@@ -1,7 +1,7 @@
 """Hypothesis strategies for generating JSON schemata."""
 
 import re
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import jsonschema
 import pytest
@@ -16,7 +16,7 @@ from hypothesis_jsonschema._from_schema import (
 )
 
 
-def json_schemata() -> st.SearchStrategy[Union[bool, Schema]]:
+def json_schemata() -> st.SearchStrategy[bool | Schema]:
     """Return a Hypothesis strategy for arbitrary JSON schemata.
 
     This strategy may generate anything that can be handled by `from_schema`,
@@ -55,7 +55,7 @@ def _json_schemata(draw: Any, *, recur: bool = True) -> Any:
     return draw(st.one_of(options))
 
 
-def gen_enum() -> st.SearchStrategy[Dict[str, List[JSONType]]]:
+def gen_enum() -> st.SearchStrategy[dict[str, list[JSONType]]]:
     """Return a strategy for enum schema."""
     return st.fixed_dictionaries(
         {
@@ -75,7 +75,7 @@ def gen_if_then_else(draw: Any) -> Schema:
 
 
 @st.composite  # type: ignore
-def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
+def gen_number(draw: Any, kind: str) -> dict[str, str | float]:
     """Draw a numeric schema."""
     max_int_float = 2**53
     lower = draw(st.none() | st.integers(-max_int_float, max_int_float))
@@ -87,7 +87,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
     )
     assume(None in (multiple_of, lower, upper) or multiple_of <= (upper - lower))
     assert kind in ("integer", "number")
-    out: Dict[str, Union[str, float]] = {"type": kind}
+    out: dict[str, str | float] = {"type": kind}
     # Generate the latest draft supported by jsonschema.
     assert hasattr(jsonschema, "Draft7Validator")
     if lower is not None:
@@ -106,7 +106,7 @@ def gen_number(draw: Any, kind: str) -> Dict[str, Union[str, float]]:
 
 
 @st.composite  # type: ignore
-def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
+def gen_string(draw: Any) -> dict[str, str | int]:
     """Draw a string schema."""
     min_size = draw(st.none() | st.integers(0, 10))
     max_size = draw(st.none() | st.integers(0, 1000))
@@ -114,7 +114,7 @@ def gen_string(draw: Any) -> Dict[str, Union[str, int]]:
         min_size, max_size = max_size, min_size
     pattern = draw(st.none() | REGEX_PATTERNS)
     format_ = draw(st.none() | st.sampled_from(sorted(STRING_FORMATS)))
-    out: Dict[str, Union[str, int]] = {"type": "string"}
+    out: dict[str, str | int] = {"type": "string"}
     if pattern is not None:
         out["pattern"] = pattern
     elif format_ is not None:

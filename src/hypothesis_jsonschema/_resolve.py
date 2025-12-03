@@ -14,7 +14,7 @@ between "I'd like it to be faster" and "doesn't finish at all".
 """
 
 from copy import deepcopy
-from typing import NoReturn, Optional, Union
+from typing import NoReturn
 
 from hypothesis.errors import InvalidArgument
 from jsonschema.validators import _RefResolver
@@ -37,7 +37,7 @@ class LocalResolver(_RefResolver):
 
 
 def resolve_all_refs(
-    schema: Union[bool, Schema], *, resolver: Optional[LocalResolver] = None
+    schema: bool | Schema, *, resolver: LocalResolver | None = None
 ) -> Schema:
     """
     Resolve all references in the given schema.

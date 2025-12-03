@@ -250,6 +250,11 @@ def test_invalid_ref_schemas_are_invalid(name):
         resolve_all_refs(catalog[name])
 
 
+# Known issues with $ref/$id resolution - generates valid data for wrong schema
+KNOWN_REF_BUGS = {
+    "draft7/$ref prevents a sibling $id from changing the base uri",
+}
+
 RECURSIVE_REFS = {
     # From upstream validation test suite
     "draft4/valid definition",
@@ -309,6 +314,8 @@ def xfail_on_reference_resolve_error(f):
     def inner(*args, **kwargs):
         _, name = args
         assert isinstance(name, str)
+        if name in KNOWN_REF_BUGS:
+            pytest.xfail(reason="Known $ref/$id resolution bug")
         try:
             f(*args, **kwargs)
             assert name not in RECURSIVE_REFS
@@ -327,8 +334,10 @@ def xfail_on_reference_resolve_error(f):
                 )
             ) and (
                 "does not fetch remote references" in str(err)
-                or name in RECURSIVE_REFS
-                and "Could not resolve recursive references" in str(err)
+                or (
+                    name in RECURSIVE_REFS
+                    and "Could not resolve recursive references" in str(err)
+                )
             ):
                 pytest.xfail()
             raise

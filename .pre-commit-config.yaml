@@ -1,0 +1,3 @@
+# Actual checks run via tox -e check (in CI and locally)
+# This config exists for pre-commit.ci compatibility
+repos: []
