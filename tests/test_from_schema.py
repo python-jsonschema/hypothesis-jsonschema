@@ -253,6 +253,7 @@ def test_invalid_ref_schemas_are_invalid(name):
 # Known issues with $ref/$id resolution - generates valid data for wrong schema
 KNOWN_REF_BUGS = {
     "draft7/$ref prevents a sibling $id from changing the base uri",
+    "Meta-validation schema for JSON Schema Draft 8",
 }
 
 RECURSIVE_REFS = {
