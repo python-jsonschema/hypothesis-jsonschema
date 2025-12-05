@@ -314,9 +314,13 @@ def canonicalish(schema: JSONType) -> dict[str, Any]:
                 for k, v in schema[key].items()
             }
     # multipleOf is semantically unaffected by the sign, so ensure it's positive.
-    # Note: encode_canonical_json already converts integer-valued floats to ints.
+    # On CPython, encode_canonical_json already converts integer-valued floats to ints,
+    # but on PyPy the custom encoder doesn't work so we need to do it explicitly here.
     if "multipleOf" in schema:
-        schema["multipleOf"] = abs(schema["multipleOf"])
+        mul = abs(schema["multipleOf"])
+        if isinstance(mul, float) and mul.is_integer():  # pragma: no cover
+            mul = int(mul)  # Needed for PyPy compatibility
+        schema["multipleOf"] = mul
 
     type_ = get_type(schema)
     if "number" in type_:
