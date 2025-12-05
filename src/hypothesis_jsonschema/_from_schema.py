@@ -5,10 +5,11 @@ import math
 import operator
 import re
 import warnings
+from collections.abc import Callable
 from copy import deepcopy
 from fractions import Fraction
 from functools import partial
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Set, Union
+from typing import Any, NoReturn
 
 import jsonschema
 import jsonschema.exceptions
@@ -48,10 +49,10 @@ _FORMATS_TOKEN = object()
 
 class CharStrategy(OneCharStringStrategy):
     allow_x00: bool
-    codec: Optional[str]
+    codec: str | None
 
     @classmethod
-    def from_args(cls, *, allow_x00: bool, codec: Optional[str]) -> "CharStrategy":
+    def from_args(cls, *, allow_x00: bool, codec: str | None) -> "CharStrategy":
         self: CharStrategy = cls.from_characters_args(
             min_codepoint=0 if allow_x00 else 1, codec=codec
         )
@@ -80,10 +81,10 @@ def from_js_regex(pattern: str, alphabet: CharStrategy) -> st.SearchStrategy[str
 
 
 def merged_as_strategies(
-    schemas: List[Schema],
+    schemas: list[Schema],
     *,
     alphabet: CharStrategy,
-    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]],
+    custom_formats: dict[str, st.SearchStrategy[str]] | None,
 ) -> st.SearchStrategy[JSONType]:
     assert schemas, "internal error: must pass at least one schema to merge"
     if len(schemas) == 1:
@@ -92,7 +93,7 @@ def merged_as_strategies(
         )
     # Try to merge combinations of strategies.
     strats = []
-    combined: Set[str] = set()
+    combined: set[str] = set()
     inputs = {encode_canonical_json(s): s for s in schemas}
     for group in itertools.chain.from_iterable(
         itertools.combinations(inputs, n) for n in range(len(inputs), 0, -1)
@@ -115,11 +116,11 @@ def merged_as_strategies(
 
 
 def from_schema(
-    schema: Union[bool, Schema],
+    schema: bool | Schema,
     *,
-    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]] = None,
+    custom_formats: dict[str, st.SearchStrategy[str]] | None = None,
     allow_x00: bool = True,
-    codec: Optional[str] = "utf-8",
+    codec: str | None = "utf-8",
 ) -> st.SearchStrategy[JSONType]:
     """Take a JSON schema and return a strategy for allowed JSON objects.
 
@@ -170,10 +171,10 @@ def _get_format_filter(
 
 
 def __from_schema(
-    schema: Union[bool, Schema],
+    schema: bool | Schema,
     *,
     alphabet: CharStrategy,
-    custom_formats: Optional[Dict[str, st.SearchStrategy[str]]],
+    custom_formats: dict[str, st.SearchStrategy[str]] | None,
 ) -> st.SearchStrategy[JSONType]:
     try:
         schema = resolve_all_refs(schema)
@@ -266,21 +267,21 @@ def __from_schema(
     if "const" in schema:
         return st.just(schema["const"])
     # Finally, resolve schema by type - defaulting to "object"
-    map_: Dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = {
+    map_: dict[str, Callable[[Schema], st.SearchStrategy[JSONType]]] = {
         "null": lambda _: st.none(),
         "boolean": lambda _: st.booleans(),
         "number": number_schema,
         "integer": integer_schema,
-        "string": partial(string_schema, custom_formats, alphabet),
-        "array": partial(array_schema, custom_formats, alphabet),
-        "object": partial(object_schema, custom_formats, alphabet),
+        "string": partial(string_schema, custom_formats or {}, alphabet),
+        "array": partial(array_schema, custom_formats or {}, alphabet),
+        "object": partial(object_schema, custom_formats or {}, alphabet),
     }
     assert set(map_) == set(TYPE_STRINGS)
     return st.one_of([map_[t](schema) for t in get_type(schema)])
 
 
 def _numeric_with_multiplier(
-    min_value: Optional[float], max_value: Optional[float], schema: Schema
+    min_value: float | None, max_value: float | None, schema: Schema
 ) -> st.SearchStrategy[float]:
     """Handle numeric schemata containing the multipleOf key."""
     multiple_of = schema["multipleOf"]
@@ -289,12 +290,12 @@ def _numeric_with_multiplier(
         min_value = math.ceil(Fraction(min_value) / Fraction(multiple_of))
     if max_value is not None:
         max_value = math.floor(Fraction(max_value) / Fraction(multiple_of))
-    if min_value is not None and max_value is not None and min_value > max_value:  # type: ignore[unreachable]
+    if min_value is not None and max_value is not None and min_value > max_value:
         # You would think that this is impossible, but it can happen if multipleOf
         # is very small and the bounds are very close togther.  It would be nicer
         # to deal with this when canonicalising, but suffice to say we can't without
         # diverging from the floating-point behaviour of the upstream validator.
-        return st.nothing()  # type: ignore[unreachable]
+        return st.nothing()
     return (
         st.integers(min_value, max_value)
         .map(lambda x: x * multiple_of)
@@ -472,7 +473,7 @@ def _warn_invalid_regex(pattern: str, err: re.error, kw: str = "pattern") -> Non
 
 
 def string_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]],
+    custom_formats: dict[str, st.SearchStrategy[str]],
     alphabet: CharStrategy,
     schema: dict,
 ) -> st.SearchStrategy[str]:
@@ -514,10 +515,10 @@ def string_schema(
 
 
 def array_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]],
+    custom_formats: dict[str, st.SearchStrategy[str]],
     alphabet: CharStrategy,
     schema: dict,
-) -> st.SearchStrategy[List[JSONType]]:
+) -> st.SearchStrategy[list[JSONType]]:
     """Handle schemata for arrays."""
     _from_schema_ = partial(
         __from_schema, custom_formats=custom_formats, alphabet=alphabet
@@ -557,9 +558,9 @@ def array_schema(
         if unique:
 
             @st.composite  # type: ignore
-            def compose_lists_with_filter(draw: Any) -> List[JSONType]:
+            def compose_lists_with_filter(draw: Any) -> list[JSONType]:
                 elems = []
-                seen: Set[str] = set()
+                seen: set[str] = set()
 
                 def not_seen(elem: JSONType) -> bool:
                     return encode_canonical_json(elem) not in seen
@@ -575,7 +576,7 @@ def array_schema(
                     max_size=max_size,
                     unique_by=encode_canonical_json,
                 )
-                more_elems: List[JSONType] = draw(extra_items)
+                more_elems: list[JSONType] = draw(extra_items)
                 return elems + more_elems
 
             strat = compose_lists_with_filter()
@@ -614,10 +615,10 @@ def array_schema(
 
 
 def object_schema(
-    custom_formats: Dict[str, st.SearchStrategy[str]],
+    custom_formats: dict[str, st.SearchStrategy[str]],
     alphabet: CharStrategy,
     schema: dict,
-) -> st.SearchStrategy[Dict[str, JSONType]]:
+) -> st.SearchStrategy[dict[str, JSONType]]:
     """Handle a manageable subset of possible schemata for objects."""
     required = schema.get("required", [])  # required keys
     min_size = max(len(required), schema.get("minProperties", 0))
@@ -654,7 +655,7 @@ def object_schema(
     known: set = set(filter(valid_name, set(dep_names).union(dep_schemas, properties)))
     for name in sorted(known.union(required)):
         alphabet.check_name_allowed(name)
-    known_optional_names: List[str] = sorted(known - set(required))
+    known_optional_names: list[str] = sorted(known - set(required))
     name_strats = (
         (
             __from_schema(names, custom_formats=custom_formats, alphabet=alphabet)

@@ -3,18 +3,18 @@
 import json
 import math
 import platform
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Union
 
 # Mypy does not (yet!) support recursive type definitions.
 # (and writing a few steps by hand is a DoS attack on the AST walker in Pytest)
 PYTHON_IMPLEMENTATION = platform.python_implementation()
-JSONType = Union[None, bool, float, str, list, Dict[str, Any]]
+JSONType = Union[None, bool, float, str, list, dict[str, Any]]
 
 if PYTHON_IMPLEMENTATION != "PyPy":
     from json.encoder import _make_iterencode, encode_basestring_ascii  # type: ignore
 else:  # pragma: no cover
     _make_iterencode = None
-    encode_basestring_ascii = None
+    encode_basestring_ascii = None  # type: ignore[assignment]
 
 
 def _floatstr(o: float) -> str:
@@ -55,7 +55,7 @@ def encode_canonical_json(value: JSONType) -> str:
     return json.dumps(value, sort_keys=True, cls=CanonicalisingJsonEncoder)
 
 
-def sort_key(value: JSONType) -> Tuple[int, float, Union[float, str]]:
+def sort_key(value: JSONType) -> tuple[int, float, float | str]:
     """Return a sort key (type, guess, tiebreak) that can compare any JSON value.
 
     Sorts scalar types before collections, and within each type tries for a

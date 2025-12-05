@@ -20,7 +20,7 @@ import math
 import re
 from fractions import Fraction
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Union
 
 import jsonschema
 from hypothesis.errors import InvalidArgument
@@ -28,7 +28,7 @@ from hypothesis.internal.floats import next_down as ieee_next_down, next_up
 
 from ._encode import JSONType, encode_canonical_json, sort_key
 
-Schema = Dict[str, JSONType]
+Schema = dict[str, JSONType]
 JSONSchemaValidator = Union[
     jsonschema.validators.Draft4Validator,
     jsonschema.validators.Draft6Validator,
@@ -49,9 +49,19 @@ TYPE_SPECIFIC_KEYS = (
     ),
 )
 # Names of keywords where the associated values may be schemas or lists of schemas.
-SCHEMA_KEYS = tuple(
-    "items additionalItems contains additionalProperties propertyNames "
-    "if then else allOf anyOf oneOf not".split()
+SCHEMA_KEYS = (
+    "items",
+    "additionalItems",
+    "contains",
+    "additionalProperties",
+    "propertyNames",
+    "if",
+    "then",
+    "else",
+    "allOf",
+    "anyOf",
+    "oneOf",
+    "not",
 )
 # Names of keywords where the value is an object whose values are schemas.
 # Note that in some cases ("dependencies"), the value may be a list of strings.
@@ -79,7 +89,7 @@ class CacheableSchema:
     will have the same validator.
     """
 
-    __slots__ = ("schema", "encoded")
+    __slots__ = ("encoded", "schema")
 
     def __init__(self, schema: Schema) -> None:
         self.schema = schema
@@ -119,7 +129,7 @@ class HypothesisRefResolutionError(jsonschema.exceptions._RefResolutionError):
     pass
 
 
-def get_type(schema: Schema) -> List[str]:
+def get_type(schema: Schema) -> list[str]:
     """Return a canonical value for the "type" key.
 
     Note that this will return [], the empty list, if the value is a list without
@@ -172,7 +182,7 @@ def upper_bound_instances(schema: Schema) -> float:
 
 def _get_numeric_bounds(
     schema: Schema,
-) -> Tuple[Optional[float], Optional[float], bool, bool]:
+) -> tuple[float | None, float | None, bool, bool]:
     """Get the min and max allowed numbers, and whether they are exclusive."""
     lower = schema.get("minimum")
     upper = schema.get("maximum")
@@ -201,7 +211,7 @@ def _get_numeric_bounds(
 
 def get_number_bounds(
     schema: Schema,
-) -> Tuple[Optional[float], Optional[float], bool, bool]:
+) -> tuple[float | None, float | None, bool, bool]:
     """Get the min and max allowed floats, and whether they are exclusive."""
     lower, upper, exmin, exmax = _get_numeric_bounds(schema)
     if lower is not None:
@@ -209,17 +219,19 @@ def get_number_bounds(
         if lo < lower:
             lo = next_up(lo)
             exmin = False
-        lower = lo
+        # Normalise -0.0 to 0.0 for consistent comparisons (especially on PyPy)
+        lower = lo + 0.0
     if upper is not None:
         hi = float(upper)
         if hi > upper:
             hi = next_down(hi)
             exmax = False
-        upper = hi
+        # Normalise -0.0 to 0.0 for consistent comparisons (especially on PyPy)
+        upper = hi + 0.0
     return lower, upper, exmin, exmax
 
 
-def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
+def get_integer_bounds(schema: Schema) -> tuple[int | None, int | None]:
     """Get the min and max allowed integers."""
     lower, upper, exmin, exmax = _get_numeric_bounds(schema)
     # Adjust bounds and cast to int
@@ -236,7 +248,7 @@ def get_integer_bounds(schema: Schema) -> Tuple[Optional[int], Optional[int]]:
     return lower, upper
 
 
-def canonicalish(schema: JSONType) -> Dict[str, Any]:
+def canonicalish(schema: JSONType) -> dict[str, Any]:
     """Convert a schema into a more-canonical form.
 
     This is obviously incomplete, but improves best-effort recognition of
@@ -301,9 +313,14 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
                 k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
-    # multipleOf is semantically unaffected by the sign, so ensure it's positive
+    # multipleOf is semantically unaffected by the sign, so ensure it's positive.
+    # On CPython, encode_canonical_json already converts integer-valued floats to ints,
+    # but on PyPy the custom encoder doesn't work so we need to do it explicitly here.
     if "multipleOf" in schema:
-        schema["multipleOf"] = abs(schema["multipleOf"])
+        mul = abs(schema["multipleOf"])
+        if isinstance(mul, float) and mul.is_integer():  # pragma: no cover
+            mul = int(mul)  # Needed for PyPy compatibility
+        schema["multipleOf"] = mul
 
     type_ = get_type(schema)
     if "number" in type_:
@@ -334,20 +351,20 @@ def canonicalish(schema: JSONType) -> Dict[str, Any]:
             # Every integer is a multiple of 1/n for all natural numbers n.
             schema.pop("multipleOf")
             mul = None
-        if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):  # type: ignore[unreachable]
-            lo += mul - (lo % mul)  # type: ignore[unreachable]
-        if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):  # type: ignore[unreachable]
-            hi -= hi % mul  # type: ignore[unreachable]
+        if lo is not None and isinstance(mul, int) and mul > 1 and (lo % mul):
+            lo += mul - (lo % mul)
+        if hi is not None and isinstance(mul, int) and mul > 1 and (hi % mul):
+            hi -= hi % mul
 
         if lo is not None:
-            schema["minimum"] = lo  # type: ignore[unreachable]
+            schema["minimum"] = lo
             schema.pop("exclusiveMinimum", None)
         if hi is not None:
-            schema["maximum"] = hi  # type: ignore[unreachable]
+            schema["maximum"] = hi
             schema.pop("exclusiveMaximum", None)
 
-        if lo is not None and hi is not None and lo > hi:  # type: ignore[unreachable]
-            type_.remove("integer")  # type: ignore[unreachable]
+        if lo is not None and hi is not None and lo > hi:
+            type_.remove("integer")
         elif type_ == ["integer"] and lo == hi and make_validator(schema).is_valid(lo):
             return {"const": lo}
 
@@ -616,7 +633,7 @@ TRUTHY = canonicalish(True)
 FALSEY = canonicalish(False)
 
 
-def merged(schemas: List[Any]) -> Optional[Schema]:
+def merged(schemas: list[Any]) -> Schema | None:
     """Merge *n* schemas into a single schema, or None if result is invalid.
 
     Takes the logical intersection, so any object that validates against the returned
@@ -658,14 +675,14 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
             if "number" in ot:
                 ot.append("integer")
             out["type"] = [
-                t for t in ot if t in tt or t == "integer" and "number" in tt
+                t for t in ot if t in tt or (t == "integer" and "number" in tt)
             ]
             out_type = get_type(out)
             if not out_type:
                 return FALSEY
             for t, kw in TYPE_SPECIFIC_KEYS:
                 numeric = ["number", "integer"]
-                if t in out_type or t in numeric and t in out_type + numeric:
+                if t in out_type or (t in numeric and t in out_type + numeric):
                     continue
                 for k in kw.split():
                     s.pop(k, None)
@@ -856,7 +873,7 @@ def merged(schemas: List[Any]) -> Optional[Schema]:
 
 
 def has_divisibles(
-    start: float, end: float, divisor: float, exmin: bool, exmax: bool  # noqa
+    start: float, end: float, divisor: float, exmin: bool, exmax: bool
 ) -> bool:
     """If the given range from `start` to `end` has any numbers divisible by `divisor`."""
     divisible_num = end // divisor - start // divisor

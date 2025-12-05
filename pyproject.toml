@@ -1,4 +1,7 @@
 [tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
 select = [
   "ASYNC",  # flake8-async
   "B",      # flake8-bugbear
@@ -27,15 +30,18 @@ select = [
 ]
 ignore = [
   "B008",
-  "B018",
   "B017",
+  "B018",
+  "B905",
   "C408",
+  "C409",
   "COM812",
   "DJ008",
   "E501",
   "E721",
   "E731",
   "E741",
+  "FBT001",
   "FBT003",
   "PT001",
   "PT003",
@@ -49,6 +55,7 @@ ignore = [
   "PT019",
   "PT023",
   "PT027",
+  "PT030",
+  "UP007",
   "UP031",
 ]
-target-version = "py38"
