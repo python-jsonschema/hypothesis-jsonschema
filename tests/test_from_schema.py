@@ -447,6 +447,9 @@ UNIQUE_NUMERIC_ARRAY_SCHEMA = {
 }
 
 
+@pytest.mark.skipif(
+    PYPY, reason="PyPy treats 0 and 0.0 as different for set operations"
+)
 @given(from_schema(UNIQUE_NUMERIC_ARRAY_SCHEMA))
 def test_numeric_uniqueness(value):
     # NOTE: this kind of test should usually be embedded in corpus-reported.json,
