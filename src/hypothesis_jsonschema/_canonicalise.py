@@ -219,13 +219,15 @@ def get_number_bounds(
         if lo < lower:
             lo = next_up(lo)
             exmin = False
-        lower = lo
+        # Normalise -0.0 to 0.0 for consistent comparisons (especially on PyPy)
+        lower = lo + 0.0
     if upper is not None:
         hi = float(upper)
         if hi > upper:
             hi = next_down(hi)
             exmax = False
-        upper = hi
+        # Normalise -0.0 to 0.0 for consistent comparisons (especially on PyPy)
+        upper = hi + 0.0
     return lower, upper, exmin, exmax
 
 
@@ -311,9 +313,13 @@ def canonicalish(schema: JSONType) -> dict[str, Any]:
                 k: v if isinstance(v, list) else canonicalish(v)
                 for k, v in schema[key].items()
             }
-    # multipleOf is semantically unaffected by the sign, so ensure it's positive
+    # multipleOf is semantically unaffected by the sign, so ensure it's positive.
+    # Also normalise whole-number floats to ints for consistent isinstance checks.
     if "multipleOf" in schema:
-        schema["multipleOf"] = abs(schema["multipleOf"])
+        mul = abs(schema["multipleOf"])
+        if isinstance(mul, float) and mul.is_integer():
+            mul = int(mul)
+        schema["multipleOf"] = mul
 
     type_ = get_type(schema)
     if "number" in type_:
