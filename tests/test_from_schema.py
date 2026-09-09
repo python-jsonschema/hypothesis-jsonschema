@@ -108,6 +108,46 @@ def test_can_generate_with_explicit_schema_version(_):
     pass
 
 
+@pytest.mark.parametrize("draft", ["04", "06", "07"])
+@pytest.mark.parametrize("definition_key", ["definitions", "$defs"])
+@settings(deadline=None)
+@given(data=st.data())
+def test_ref_siblings_do_not_resolve_against_a_subschema(data, draft, definition_key):
+    # GH-97: items is a sibling of $ref, and must not be resolved or applied.
+    ref = f"#/{definition_key}/foo"
+    schema = {
+        "$schema": f"http://json-schema.org/draft-{draft}/schema#",
+        definition_key: {
+            "foo": {
+                "properties": {"foo": {"type": "string"}},
+                "additionalProperties": False,
+            },
+        },
+        "type": "object",
+        "properties": {
+            "bar": {
+                "$ref": ref,
+                "type": ["object", "array"],
+                "items": {"type": "object", "$ref": ref},
+            },
+        },
+    }
+    value = data.draw(from_schema(schema))
+    jsonschema.validate(value, schema)
+
+
+@pytest.mark.parametrize("draft", ["04", "06", "07"])
+@given(data=st.data())
+def test_ref_ignores_conflicting_sibling_constraints(data, draft):
+    schema = {
+        "$schema": f"http://json-schema.org/draft-{draft}/schema#",
+        "definitions": {"value": {"enum": ["hello"]}},
+        "$ref": "#/definitions/value",
+        "type": "integer",
+    }
+    assert data.draw(from_schema(schema)) == "hello"
+
+
 INVALID_SCHEMAS = {
     # Empty list for requires, which is invalid
     "Release Drafter configuration file",

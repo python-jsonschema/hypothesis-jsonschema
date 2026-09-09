@@ -25,7 +25,6 @@ from ._canonicalise import (
     HypothesisRefResolutionError,
     Schema,
     canonicalish,
-    merged,
 )
 
 
@@ -57,15 +56,9 @@ def resolve_all_refs(
         )
 
     if "$ref" in schema:
-        s = dict(schema)
-        ref = s.pop("$ref")
-        with resolver.resolving(ref) as got:
-            m = merged([s, resolve_all_refs(got, resolver=resolver)])
-            if m is None:  # pragma: no cover
-                msg = f"$ref:{ref!r} had incompatible base schema {s!r}"
-                raise HypothesisRefResolutionError(msg)
-            assert "$ref" not in m
-            return m
+        # All supported drafts (04, 06, 07) ignore siblings of $ref.
+        with resolver.resolving(schema["$ref"]) as got:
+            return resolve_all_refs(got, resolver=resolver)
     assert "$ref" not in schema
 
     for key in SCHEMA_KEYS:
