@@ -1,5 +1,7 @@
 include LICENSE
+include CHANGELOG.md
 include *.json
 include *.py
 include tox.ini
+recursive-include tests *.py *.json
 recursive-include deps *.in *.md *.txt
