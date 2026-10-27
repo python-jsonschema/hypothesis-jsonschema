@@ -296,6 +296,14 @@ def _numeric_with_multiplier(
         # to deal with this when canonicalising, but suffice to say we can't without
         # diverging from the floating-point behaviour of the upstream validator.
         return st.nothing()
+    if isinstance(multiple_of, int):
+        # Canonicalisation converts e.g. `multipleOf: 99.0` to an int, but the
+        # validator then uses float division - which is inexact beyond 2**53.
+        safe = 2**53 // multiple_of
+        if min_value is None:
+            min_value = -safe if max_value is None else min(-safe, max_value)
+        if max_value is None:
+            max_value = max(safe, min_value)
     return (
         st.integers(min_value, max_value)
         .map(lambda x: x * multiple_of)
