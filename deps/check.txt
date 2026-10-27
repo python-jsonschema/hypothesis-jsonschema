@@ -4,45 +4,47 @@
 #
 #    pip-compile --output-file=deps/check.txt deps/check.in
 #
-black==25.11.0
+ast-serialize==0.13.1
+    # via mypy
+black==26.10.1
     # via shed
-click==8.3.1
+click==8.5.0
     # via black
 com2ann==0.3.0
     # via shed
-flake8==7.3.0
+flake8==7.4.1
     # via -r deps/check.in
-libcst==1.8.6
+libcst==1.9.0
     # via shed
-librt==0.6.3
+librt==0.16.0
     # via mypy
 mccabe==0.7.0
     # via flake8
-mypy==1.19.0
+mypy==2.4.0
     # via -r deps/check.in
 mypy-extensions==1.1.0
     # via
     #   black
     #   mypy
-packaging==25.0
+packaging==26.3
     # via black
-pathspec==0.12.1
+pathspec==1.1.1
     # via
     #   black
     #   mypy
-platformdirs==4.5.0
+platformdirs==4.13.6
     # via black
-pycodestyle==2.14.0
+pycodestyle==2.15.0
     # via flake8
-pyflakes==3.4.0
+pyflakes==4.0.3
     # via flake8
-pytokens==0.3.0
+pytokens==0.4.1
     # via black
-pyupgrade==3.21.2
+pyupgrade==3.22.0
     # via shed
 pyyaml==6.0.3
     # via libcst
-ruff==0.14.7
+ruff==0.17.3
     # via
     #   -r deps/check.in
     #   shed
@@ -50,5 +52,5 @@ shed==2025.6.1
     # via -r deps/check.in
 tokenize-rt==6.2.0
     # via pyupgrade
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via mypy

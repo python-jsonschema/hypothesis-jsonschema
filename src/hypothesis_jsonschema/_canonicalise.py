@@ -44,8 +44,10 @@ TYPE_SPECIFIC_KEYS = (
     ("array", "items additionalItems maxItems minItems uniqueItems contains"),
     (
         "object",
-        "maxProperties minProperties required properties patternProperties "
-        "additionalProperties dependencies propertyNames",
+        (
+            "maxProperties minProperties required properties patternProperties "
+            "additionalProperties dependencies propertyNames"
+        ),
     ),
 )
 # Names of keywords where the associated values may be schemas or lists of schemas.
