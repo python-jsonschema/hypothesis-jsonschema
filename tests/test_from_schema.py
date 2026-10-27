@@ -479,6 +479,16 @@ def test_impossible_multiplier(type_):
     assert strategy.is_empty
 
 
+@pytest.mark.parametrize("type_", ["integer", "number"])
+@pytest.mark.parametrize("bounds", [{}, {"minimum": 0}, {"maximum": 0}])
+@given(data=st.data())
+def test_integer_valued_float_multiplier(type_, bounds, data):
+    # jsonschema checks float multipleOf with float division, so we must not
+    # generate multiples beyond 2**53 which it would wrongly reject.
+    schema = {"type": type_, "multipleOf": 99.0, **bounds}
+    jsonschema.validate(data.draw(from_schema(schema)), schema)
+
+
 def test_unsatisfiable_array_returns_nothing():
     schema = {
         "type": "array",
