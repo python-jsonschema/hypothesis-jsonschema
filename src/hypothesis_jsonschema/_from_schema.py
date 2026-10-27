@@ -296,6 +296,14 @@ def _numeric_with_multiplier(
         # to deal with this when canonicalising, but suffice to say we can't without
         # diverging from the floating-point behaviour of the upstream validator.
         return st.nothing()
+    if isinstance(multiple_of, int):
+        # Canonicalisation converts e.g. `multipleOf: 99.0` to an int, but the
+        # validator then uses float division - which is inexact beyond 2**53.
+        safe = 2**53 // multiple_of
+        if min_value is None:
+            min_value = -safe if max_value is None else min(-safe, max_value)
+        if max_value is None:
+            max_value = max(safe, min_value)
     return (
         st.integers(min_value, max_value)
         .map(lambda x: x * multiple_of)
@@ -682,54 +690,55 @@ def object_schema(
         If any Hypothesis maintainers are reading this... I'm so, so sorry.
         """
         # Hypothesis internals are not type-annotated... I do mean *black* magic!
-        elements = cu.many(
+        out: dict = {}
+        with cu.many(
             draw(st.data()).conjecture_data,
             min_size=min_size,
             max_size=max_size,
             average_size=min(min_size + 5, (min_size + max_size) / 2),
-        )
-        out: dict = {}
-        while elements.more():
-            for key in required:
-                if key not in out:
-                    break
-            else:
-                for k in set(dep_names).intersection(out):  # pragma: no cover
-                    # nocover because some of these conditionals are rare enough
-                    # that not all test runs hit them, but are still essential.
-                    key = next((n for n in dep_names[k] if n not in out), None)
-                    if key is not None:
+        ) as elements:
+            for _ in elements:
+                for key in required:
+                    if key not in out:
                         break
                 else:
-                    key = draw(all_names_strategy.filter(lambda s: s not in out))
+                    for k in set(dep_names).intersection(out):  # pragma: no cover
+                        # nocover because some of these conditionals are rare enough
+                        # that not all test runs hit them, but are still essential.
+                        key = next((n for n in dep_names[k] if n not in out), None)
+                        if key is not None:
+                            break
+                    else:
+                        key = draw(all_names_strategy.filter(lambda s: s not in out))
 
-            pattern_schemas = [
-                patterns[rgx]
-                for rgx in sorted(patterns)
-                if re.search(rgx, string=key) is not None
-            ]
-            if key in properties:
-                pattern_schemas.insert(0, properties[key])
+                pattern_schemas = [
+                    patterns[rgx]
+                    for rgx in sorted(patterns)
+                    if re.search(rgx, string=key) is not None
+                ]
+                if key in properties:
+                    pattern_schemas.insert(0, properties[key])
 
-            if pattern_schemas:
-                out[key] = draw(
-                    merged_as_strategies(
-                        pattern_schemas,
-                        alphabet=alphabet,
-                        custom_formats=custom_formats,
+                if pattern_schemas:
+                    out[key] = draw(
+                        merged_as_strategies(
+                            pattern_schemas,
+                            alphabet=alphabet,
+                            custom_formats=custom_formats,
+                        )
                     )
-                )
-            else:
-                out[key] = draw(
-                    __from_schema(
-                        additional, custom_formats=custom_formats, alphabet=alphabet
+                else:
+                    out[key] = draw(
+                        __from_schema(
+                            additional, custom_formats=custom_formats, alphabet=alphabet
+                        )
                     )
-                )
 
-            for k, v in dep_schemas.items():
-                if k in out and not make_validator(v).is_valid(out):
-                    out.pop(key)
-                    elements.reject()
+                for k, v in dep_schemas.items():
+                    if k in out and not make_validator(v).is_valid(out):
+                        out.pop(key)
+                        elements.reject()
+                        break
 
         for k in set(dep_names).intersection(out):
             assume(set(out).issuperset(dep_names[k]))

@@ -53,7 +53,7 @@ As of version 0.11, this includes resolving non-recursive references!
 
 ## Supported versions
 
-`hypothesis-jsonschema` requires Python 3.6 or later.
+`hypothesis-jsonschema` requires Python 3.11 or later.
 In general, 0.x versions will require very recent versions of all dependencies
 because I don't want to deal with compatibility workarounds.
 
