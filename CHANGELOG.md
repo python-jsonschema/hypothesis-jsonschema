@@ -1,5 +1,9 @@
 # Changelog
 
+#### 0.23.2 - 2026-10-27
+- Fix compatibility with Hypothesis 6.170.10 and later, which changed an
+  internal API we use to generate objects (#118), and require that version.
+
 #### 0.23.1 - 2024-02-28
 - Fix not respecting `allow_x00` and `codec` arguments for values in some schemas
 

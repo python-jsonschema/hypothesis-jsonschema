@@ -16,7 +16,7 @@ execnet==2.1.2
     # via pytest-xdist
 fqdn==1.5.1
     # via jsonschema
-hypothesis==6.148.5
+hypothesis==6.170.12
     # via hypothesis-jsonschema (setup.py)
 idna==3.11
     # via jsonschema
