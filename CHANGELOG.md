@@ -5,7 +5,7 @@
   internal API we use to generate objects (#118), and require that version.
 - Fix generating integers which `jsonschema` rejects for integer-valued float
   `multipleOf` values, e.g. `99.0`, when there is no upper or lower bound
-- Requires Python 3.11 or later (3.10 is end-of-life), tested up to Python 3.14
+- Requires Python 3.11 or later (3.10 is end-of-life), tested up to Python 3.15
 
 #### 0.23.1 - 2024-02-28
 - Fix not respecting `allow_x00` and `codec` arguments for values in some schemas
